@@ -1,0 +1,287 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getAdminStats, getActivityLog } from '../../lib/ubikala-db';
+
+const user = Astro.locals.user;
+const stats = await getAdminStats();
+const recentActivity = await getActivityLog({ limit: 10 });
+---
+
+<AdminLayout title="Dashboard">
+  <div class="dashboard">
+    <!-- Welcome -->
+    <div class="welcome-card">
+      <h3>Bienvenido, {user?.name}</h3>
+      <p>Panel de administración de Ubikala. Desde aquí puedes gestionar propiedades, usuarios y más.</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18 M9 8h1 M9 12h1 M9 16h1 M14 8h1 M14 12h1 M14 16h1 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{stats.total_properties}</span>
+          <span class="stat-label">Total Propiedades</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{stats.active_properties}</span>
+          <span class="stat-label">Propiedades Activas</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon yellow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{stats.featured_properties}</span>
+          <span class="stat-label">Destacadas</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <div class="stat-info">
+          <span class="stat-value">{stats.total_users}</span>
+          <span class="stat-label">Usuarios</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section">
+      <h4>Acciones Rápidas</h4>
+      <div class="quick-actions">
+        <a href="/admin/properties/create" class="action-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Nueva Propiedad
+        </a>
+        <a href="/admin/properties" class="action-btn secondary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 21h18 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+          </svg>
+          Ver Propiedades
+        </a>
+        {user?.role === 'admin' && (
+          <a href="/admin/users" class="action-btn secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+            </svg>
+            Gestionar Usuarios
+          </a>
+        )}
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="section">
+      <h4>Actividad Reciente</h4>
+      <div class="activity-list">
+        {recentActivity.length === 0 ? (
+          <p class="no-activity">No hay actividad reciente</p>
+        ) : (
+          recentActivity.map(activity => (
+            <div class="activity-item">
+              <div class="activity-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <div class="activity-content">
+                <span class="activity-action">{activity.action}</span>
+                <span class="activity-user">{activity.user_name || 'Sistema'}</span>
+                <span class="activity-time">{new Date(activity.created_at).toLocaleString('es-DO')}</span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .welcome-card {
+      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      border-radius: 1rem;
+    }
+    .welcome-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .welcome-card p {
+      opacity: 0.9;
+      font-size: 0.9375rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .stat-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+    .stat-icon.blue { background: #dbeafe; color: #3b82f6; }
+    .stat-icon.green { background: #dcfce7; color: #22c55e; }
+    .stat-icon.yellow { background: #fef3c7; color: #f59e0b; }
+    .stat-icon.purple { background: #f3e8ff; color: #a855f7; }
+    .stat-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .stat-label {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .section {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 1rem;
+    }
+    .quick-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1rem;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .action-btn:hover {
+      background: #2563eb;
+    }
+    .action-btn.secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+    .action-btn.secondary:hover {
+      background: #e5e7eb;
+    }
+    .action-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: #f9fafb;
+      border-radius: 0.5rem;
+    }
+    .activity-icon {
+      width: 36px;
+      height: 36px;
+      background: #e5e7eb;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+    }
+    .activity-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .activity-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+    .activity-action {
+      font-weight: 500;
+      color: #111827;
+      font-size: 0.875rem;
+    }
+    .activity-user {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .activity-time {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .no-activity {
+      text-align: center;
+      color: #6b7280;
+      padding: 2rem;
+    }
+  </style>
+</AdminLayout>

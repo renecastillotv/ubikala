@@ -4,7 +4,7 @@ import vercel from '@astrojs/vercel';
 
 export default defineConfig({
   site: 'https://ubikala.com',
-  output: 'static',
+  output: 'server',
   adapter: vercel(),
   integrations: [
     tailwind()

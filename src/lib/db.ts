@@ -1,6 +1,7 @@
 import { neon } from '@neondatabase/serverless';
+import { getUbikalaProperties, getUbikalaPropertyBySlug, type UbikalaProperty } from './ubikala-db';
 
-// Conexión a Neon PostgreSQL
+// Conexión a Neon PostgreSQL (CLIC DB - read only)
 const sql = neon(import.meta.env.DATABASE_URL);
 
 // Tipos base para las tablas
@@ -104,8 +105,51 @@ export interface Location {
   activo: boolean;
 }
 
-// Portal filter - solo propiedades habilitadas para propiedadenrd
-const PORTAL_FILTER = `portales @> '{"propiedadenrd": true}'::jsonb`;
+// Portal filter - propiedades habilitadas para ubikala
+const PORTAL_FILTER = `portales @> '{"ubikala": true}'::jsonb`;
+
+// Helper function to convert Ubikala property to Property interface
+function ubikalaToProperty(up: UbikalaProperty): Property {
+  return {
+    id: parseInt(up.id) || 0,
+    tenant_id: 0,
+    titulo: up.titulo,
+    slug: up.slug,
+    codigo: up.codigo || '',
+    descripcion: up.descripcion || '',
+    tipo: up.tipo,
+    operacion: up.operacion,
+    precio: Number(up.precio),
+    moneda: up.moneda || 'USD',
+    ubicacion: {
+      pais: up.pais || 'República Dominicana',
+      provincia: up.provincia || '',
+      ciudad: up.ciudad || '',
+      sector: up.sector || '',
+      direccion: up.direccion || '',
+      latitud: Number(up.latitud) || 0,
+      longitud: Number(up.longitud) || 0,
+      slug: up.ciudad?.toLowerCase().replace(/\s+/g, '-') || '',
+    },
+    caracteristicas: {
+      habitaciones: up.habitaciones || 0,
+      banos: up.banos || 0,
+      parqueos: up.estacionamientos || 0,
+      area_construida: Number(up.m2_construccion) || 0,
+      area_terreno: Number(up.m2_terreno) || 0,
+      amenidades: up.amenidades || [],
+    },
+    imagenes: up.imagenes || [],
+    portales: { ubikala: true },
+    activo: up.activo,
+    destacada: up.destacada,
+    created_at: up.created_at,
+    updated_at: up.updated_at,
+    // Additional fields for display
+    imagen_principal: up.imagen_principal,
+    source: 'ubikala',
+  } as Property;
+}
 
 // Queries de solo lectura para propiedades
 export async function getProperties(options: {
@@ -159,7 +203,7 @@ export async function getProperties(options: {
     LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
     LEFT JOIN tenants t ON pa.tenant_id = t.id
     WHERE p.activo = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
+    AND p.portales @> '{"ubikala": true}'::jsonb
   `;
 
   const params: any[] = [];
@@ -241,69 +285,95 @@ export async function getPropertyBySlug(slug: string) {
     LEFT JOIN tenants t ON pa.tenant_id = t.id
     WHERE p.slug = ${slug}
     AND p.activo = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
+    AND p.portales @> '{"ubikala": true}'::jsonb
     LIMIT 1
   `;
   return rows[0] as Property | undefined;
 }
 
 export async function getFeaturedProperties(limit = 6) {
-  const rows = await sql`
-    SELECT
-      p.*,
-      u.nombre as captador_nombre,
-      u.apellido as captador_apellido,
-      u.email as captador_email,
-      u.telefono as captador_telefono,
-      u.avatar_url as captador_avatar,
-      pa.slug as captador_slug,
-      pa.foto_url as captador_foto,
-      pa.biografia as captador_bio,
-      pa.whatsapp as captador_whatsapp,
-      pa.titulo_profesional as captador_titulo,
-      pa.stats as captador_stats,
-      t.nombre as empresa_nombre,
-      t.slug as empresa_slug
-    FROM propiedades p
-    LEFT JOIN usuarios u ON p.captador_id = u.id
-    LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
-    LEFT JOIN tenants t ON pa.tenant_id = t.id
-    WHERE p.activo = true
-    AND p.destacada = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
-    ORDER BY p.created_at DESC
-    LIMIT ${limit}
-  `;
-  return rows as Property[];
+  // Dual-read: Get featured from both CLIC and Ubikala
+  const [clicRows, ubikalaRows] = await Promise.all([
+    sql`
+      SELECT
+        p.*,
+        u.nombre as captador_nombre,
+        u.apellido as captador_apellido,
+        u.email as captador_email,
+        u.telefono as captador_telefono,
+        u.avatar_url as captador_avatar,
+        pa.slug as captador_slug,
+        pa.foto_url as captador_foto,
+        pa.biografia as captador_bio,
+        pa.whatsapp as captador_whatsapp,
+        pa.titulo_profesional as captador_titulo,
+        pa.stats as captador_stats,
+        t.nombre as empresa_nombre,
+        t.slug as empresa_slug,
+        'clic' as source
+      FROM propiedades p
+      LEFT JOIN usuarios u ON p.captador_id = u.id
+      LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
+      LEFT JOIN tenants t ON pa.tenant_id = t.id
+      WHERE p.activo = true
+      AND p.destacada = true
+      AND p.portales @> '{"ubikala": true}'::jsonb
+      ORDER BY p.created_at DESC
+      LIMIT ${limit}
+    `,
+    getUbikalaProperties({ limit, activo: true }).then(props =>
+      props.filter(p => p.destacada).map(ubikalaToProperty)
+    )
+  ]);
+
+  // Merge and sort by created_at
+  const merged = [...(clicRows as Property[]), ...ubikalaRows]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit);
+
+  return merged;
 }
 
 export async function getRecentProperties(limit = 12) {
-  const rows = await sql`
-    SELECT
-      p.*,
-      u.nombre as captador_nombre,
-      u.apellido as captador_apellido,
-      u.email as captador_email,
-      u.telefono as captador_telefono,
-      u.avatar_url as captador_avatar,
-      pa.slug as captador_slug,
-      pa.foto_url as captador_foto,
-      pa.biografia as captador_bio,
-      pa.whatsapp as captador_whatsapp,
-      pa.titulo_profesional as captador_titulo,
-      pa.stats as captador_stats,
-      t.nombre as empresa_nombre,
-      t.slug as empresa_slug
-    FROM propiedades p
-    LEFT JOIN usuarios u ON p.captador_id = u.id
-    LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
-    LEFT JOIN tenants t ON pa.tenant_id = t.id
-    WHERE p.activo = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
-    ORDER BY p.created_at DESC
-    LIMIT ${limit}
-  `;
-  return rows as Property[];
+  // Dual-read: Get recent from both CLIC and Ubikala
+  const [clicRows, ubikalaRows] = await Promise.all([
+    sql`
+      SELECT
+        p.*,
+        u.nombre as captador_nombre,
+        u.apellido as captador_apellido,
+        u.email as captador_email,
+        u.telefono as captador_telefono,
+        u.avatar_url as captador_avatar,
+        pa.slug as captador_slug,
+        pa.foto_url as captador_foto,
+        pa.biografia as captador_bio,
+        pa.whatsapp as captador_whatsapp,
+        pa.titulo_profesional as captador_titulo,
+        pa.stats as captador_stats,
+        t.nombre as empresa_nombre,
+        t.slug as empresa_slug,
+        'clic' as source
+      FROM propiedades p
+      LEFT JOIN usuarios u ON p.captador_id = u.id
+      LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
+      LEFT JOIN tenants t ON pa.tenant_id = t.id
+      WHERE p.activo = true
+      AND p.portales @> '{"ubikala": true}'::jsonb
+      ORDER BY p.created_at DESC
+      LIMIT ${limit}
+    `,
+    getUbikalaProperties({ limit, activo: true }).then(props =>
+      props.map(ubikalaToProperty)
+    )
+  ]);
+
+  // Merge and sort by created_at
+  const merged = [...(clicRows as Property[]), ...ubikalaRows]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit);
+
+  return merged;
 }
 
 export async function getPropertiesCount(options: {
@@ -387,7 +457,7 @@ export async function getAgents(options: {
         SELECT COUNT(*)
         FROM propiedades p
         WHERE p.activo = true
-        AND p.portales @> '{"propiedadenrd": true}'::jsonb
+        AND p.portales @> '{"ubikala": true}'::jsonb
         AND EXISTS (
           SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
           WHERE agent->>'slug' = pa.slug
@@ -399,7 +469,7 @@ export async function getAgents(options: {
           SELECT COUNT(*)
           FROM propiedades p
           WHERE p.activo = true
-          AND p.portales @> '{"propiedadenrd": true}'::jsonb
+          AND p.portales @> '{"ubikala": true}'::jsonb
           AND EXISTS (
             SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
             WHERE agent->>'slug' = pa.slug
@@ -416,7 +486,7 @@ export async function getAgents(options: {
     AND EXISTS (
       SELECT 1 FROM propiedades p
       WHERE p.activo = true
-      AND p.portales @> '{"propiedadenrd": true}'::jsonb
+      AND p.portales @> '{"ubikala": true}'::jsonb
       AND EXISTS (
         SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
         WHERE agent->>'slug' = pa.slug
@@ -476,7 +546,7 @@ export async function getAgentBySlug(slug: string) {
         SELECT COUNT(*)
         FROM propiedades p
         WHERE p.activo = true
-        AND p.portales @> '{"propiedadenrd": true}'::jsonb
+        AND p.portales @> '{"ubikala": true}'::jsonb
         AND (
           p.captador_id = pa.usuario_id
           OR EXISTS (
@@ -491,7 +561,7 @@ export async function getAgentBySlug(slug: string) {
           SELECT COUNT(*)
           FROM propiedades p
           WHERE p.activo = true
-          AND p.portales @> '{"propiedadenrd": true}'::jsonb
+          AND p.portales @> '{"ubikala": true}'::jsonb
           AND (
             p.captador_id = pa.usuario_id
             OR EXISTS (
@@ -537,7 +607,7 @@ export async function getAgentProperties(agentSlug: string, agentEmail?: string,
     LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
     LEFT JOIN tenants t ON pa.tenant_id = t.id
     WHERE p.activo = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
+    AND p.portales @> '{"ubikala": true}'::jsonb
     AND pa.slug = ${agentSlug}
     ORDER BY p.destacada DESC, p.created_at DESC
     LIMIT ${limit}
@@ -566,7 +636,7 @@ export async function getAgentProperties(agentSlug: string, agentEmail?: string,
       LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
       LEFT JOIN tenants t ON pa.tenant_id = t.id
       WHERE p.activo = true
-      AND p.portales @> '{"propiedadenrd": true}'::jsonb
+      AND p.portales @> '{"ubikala": true}'::jsonb
       AND u.email = ${agentEmail}
       ORDER BY p.destacada DESC, p.created_at DESC
       LIMIT ${limit}
@@ -636,7 +706,7 @@ export async function getPropertiesByLocation(locationSlug: string, limit = 20, 
     LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
     LEFT JOIN tenants t ON pa.tenant_id = t.id
     WHERE p.activo = true
-    AND p.portales @> '{"propiedadenrd": true}'::jsonb
+    AND p.portales @> '{"ubikala": true}'::jsonb
     AND (
       LOWER(REPLACE(p.ciudad, ' ', '-')) = ${locationSlug}
       OR LOWER(REPLACE(p.sector, ' ', '-')) = ${locationSlug}
@@ -696,7 +766,7 @@ export async function getPopularLocationsWithStats(): Promise<LocationWithStats[
         FROM propiedades p2
         WHERE p2.ciudad = p.ciudad
         AND p2.activo = true
-        AND p2.portales @> '{"propiedadenrd": true}'::jsonb
+        AND p2.portales @> '{"ubikala": true}'::jsonb
         AND p2.imagen_principal IS NOT NULL
         AND p2.imagen_principal != ''
         ORDER BY p2.destacada DESC, p2.created_at DESC
@@ -704,7 +774,7 @@ export async function getPopularLocationsWithStats(): Promise<LocationWithStats[
       ) as sample_image
     FROM propiedades p
     WHERE activo = true
-    AND portales @> '{"propiedadenrd": true}'::jsonb
+    AND portales @> '{"ubikala": true}'::jsonb
     AND ciudad IS NOT NULL
     AND ciudad != ''
     GROUP BY ciudad, provincia
@@ -718,7 +788,7 @@ export async function getPopularLocationsWithStats(): Promise<LocationWithStats[
         SELECT COUNT(*) as count
         FROM propiedades
         WHERE activo = true
-        AND portales @> '{"propiedadenrd": true}'::jsonb
+        AND portales @> '{"ubikala": true}'::jsonb
         AND (
           LOWER(REPLACE(ciudad, ' ', '-')) = ${slug}
           OR LOWER(REPLACE(sector, ' ', '-')) = ${slug}
@@ -751,7 +821,7 @@ export async function getLocationPropertyCount(locationSlug: string): Promise<nu
     SELECT COUNT(*) as total
     FROM propiedades
     WHERE activo = true
-    AND portales @> '{"propiedadenrd": true}'::jsonb
+    AND portales @> '{"ubikala": true}'::jsonb
     AND (
       LOWER(REPLACE(ciudad, ' ', '-')) = ${locationSlug}
       OR LOWER(REPLACE(sector, ' ', '-')) = ${locationSlug}
@@ -775,7 +845,7 @@ export async function getAgentsCount(): Promise<number> {
     AND EXISTS (
       SELECT 1 FROM propiedades p
       WHERE p.activo = true
-      AND p.portales @> '{"propiedadenrd": true}'::jsonb
+      AND p.portales @> '{"ubikala": true}'::jsonb
       AND EXISTS (
         SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
         WHERE agent->>'slug' = pa.slug
@@ -794,7 +864,7 @@ export async function getPropertiesCountByLocation(locationSlug: string): Promis
     SELECT COUNT(*) as total
     FROM propiedades
     WHERE activo = true
-    AND portales @> '{"propiedadenrd": true}'::jsonb
+    AND portales @> '{"ubikala": true}'::jsonb
     AND (
       LOWER(REPLACE(ciudad, ' ', '-')) = ${locationSlug}
       OR LOWER(REPLACE(sector, ' ', '-')) = ${locationSlug}
@@ -817,7 +887,7 @@ export async function getFooterLocations(limit = 6): Promise<{ name: string; slu
       LOWER(REPLACE(REPLACE(ciudad, ' ', '-'), '''', '')) as slug
     FROM propiedades
     WHERE activo = true
-    AND portales @> '{"propiedadenrd": true}'::jsonb
+    AND portales @> '{"ubikala": true}'::jsonb
     AND ciudad IS NOT NULL
     AND ciudad != ''
     GROUP BY ciudad
@@ -832,7 +902,7 @@ export async function getFooterLocations(limit = 6): Promise<{ name: string; slu
         SELECT COUNT(*) as count
         FROM propiedades
         WHERE activo = true
-        AND portales @> '{"propiedadenrd": true}'::jsonb
+        AND portales @> '{"ubikala": true}'::jsonb
         AND (
           LOWER(REPLACE(ciudad, ' ', '-')) = ${slug}
           OR LOWER(REPLACE(sector, ' ', '-')) = ${slug}
@@ -868,7 +938,7 @@ export async function getPortalStats(): Promise<{
       SELECT COUNT(*) as total
       FROM propiedades
       WHERE activo = true
-      AND portales @> '{"propiedadenrd": true}'::jsonb
+      AND portales @> '{"ubikala": true}'::jsonb
     `,
     // Total de agentes con propiedades
     sql`
@@ -880,7 +950,7 @@ export async function getPortalStats(): Promise<{
       AND EXISTS (
         SELECT 1 FROM propiedades p
         WHERE p.activo = true
-        AND p.portales @> '{"propiedadenrd": true}'::jsonb
+        AND p.portales @> '{"ubikala": true}'::jsonb
         AND EXISTS (
           SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
           WHERE agent->>'slug' = pa.slug
@@ -893,7 +963,7 @@ export async function getPortalStats(): Promise<{
       SELECT COUNT(DISTINCT ciudad) as total
       FROM propiedades
       WHERE activo = true
-      AND portales @> '{"propiedadenrd": true}'::jsonb
+      AND portales @> '{"ubikala": true}'::jsonb
       AND ciudad IS NOT NULL
       AND ciudad != ''
     `
