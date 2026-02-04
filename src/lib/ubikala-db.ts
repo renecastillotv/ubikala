@@ -444,8 +444,22 @@ export async function getActivityLog(options: {
 }): Promise<any[]> {
   if (!ubikalaDb) return [];
 
-  const { limit = 50, offset = 0 } = options;
+  const { limit = 50, offset = 0, user_id } = options;
 
+  // If user_id is provided, filter by that user
+  if (user_id) {
+    const rows = await ubikalaDb`
+      SELECT al.*, u.name as user_name, u.email as user_email
+      FROM ubikala_activity_log al
+      LEFT JOIN ubikala_users u ON al.user_id = u.id
+      WHERE al.user_id = ${user_id}
+      ORDER BY al.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+    return rows;
+  }
+
+  // Otherwise return all activity (for admin)
   const rows = await ubikalaDb`
     SELECT al.*, u.name as user_name, u.email as user_email
     FROM ubikala_activity_log al
