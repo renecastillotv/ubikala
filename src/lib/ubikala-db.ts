@@ -22,11 +22,40 @@ export interface UbikalaUser {
   phone: string | null;
   company_name: string | null;  // For inmobiliarias
   license_number: string | null; // Professional license for asesores
+  bio: string | null;  // User biography
+  plan_id: string | null;  // Reference to user's subscription plan
+  parent_user_id: string | null;  // For sub-users under inmobiliarias
+  custom_publication_limit: number | null;  // Custom limit set by parent inmobiliaria
   is_active: boolean;
   is_verified: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Plan types
+export interface UbikalaPlan {
+  id: string;
+  name: string;
+  role: UserRole;
+  max_publications: number;
+  publication_duration_days: number;
+  max_team_members: number | null;
+  max_leads_per_month: number | null;
+  price: number;
+  features: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Team stats interface
+export interface TeamStats {
+  total_members: number;
+  total_publications: number;
+  total_leads: number;
+  leads_by_member: { user_id: string; name: string; leads_count: number }[];
+  publications_by_member: { user_id: string; name: string; count: number }[];
 }
 
 // Role permissions helpers
@@ -177,8 +206,12 @@ export async function updateUser(id: string, data: Partial<{
   role: UserRole;
   phone: string;
   avatar_url: string;
+  bio: string;
   company_name: string;
   license_number: string;
+  plan_id: string | null;
+  parent_user_id: string | null;
+  custom_publication_limit: number | null;
   is_active: boolean;
   is_verified: boolean;
 }>): Promise<UbikalaUser | null> {
@@ -199,6 +232,10 @@ export async function updateUser(id: string, data: Partial<{
   const role = data.role !== undefined ? data.role : currentUser.role;
   const phone = data.phone !== undefined ? data.phone : currentUser.phone;
   const avatar_url = data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url;
+  const bio = data.bio !== undefined ? data.bio : currentUser.bio;
+  const plan_id = data.plan_id !== undefined ? data.plan_id : currentUser.plan_id;
+  const parent_user_id = data.parent_user_id !== undefined ? data.parent_user_id : currentUser.parent_user_id;
+  const custom_publication_limit = data.custom_publication_limit !== undefined ? data.custom_publication_limit : currentUser.custom_publication_limit;
   const is_active = data.is_active !== undefined ? data.is_active : currentUser.is_active;
 
   const rows = await ubikalaDb`
@@ -210,6 +247,10 @@ export async function updateUser(id: string, data: Partial<{
       role = ${role},
       phone = ${phone},
       avatar_url = ${avatar_url},
+      bio = ${bio},
+      plan_id = ${plan_id},
+      parent_user_id = ${parent_user_id},
+      custom_publication_limit = ${custom_publication_limit},
       is_active = ${is_active},
       updated_at = NOW()
     WHERE id = ${id}
@@ -713,4 +754,284 @@ export async function countNewLeads(): Promise<number> {
   `;
 
   return Number(rows[0]?.count || 0);
+}
+
+// ==================== PLANS ====================
+
+// Get all plans
+export async function getAllPlans(): Promise<UbikalaPlan[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_plans
+    ORDER BY role, price ASC
+  `;
+  return rows as UbikalaPlan[];
+}
+
+// Get plans by role
+export async function getPlansByRole(role: UserRole): Promise<UbikalaPlan[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_plans
+    WHERE role = ${role} AND is_active = true
+    ORDER BY price ASC
+  `;
+  return rows as UbikalaPlan[];
+}
+
+// Get plan by ID
+export async function getPlanById(id: string): Promise<UbikalaPlan | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_plans WHERE id = ${id}
+  `;
+  return rows[0] as UbikalaPlan || null;
+}
+
+// Create plan
+export async function createPlan(data: {
+  name: string;
+  role: UserRole;
+  max_publications: number;
+  publication_duration_days: number;
+  max_team_members?: number;
+  max_leads_per_month?: number;
+  price?: number;
+  features?: Record<string, any>;
+}): Promise<UbikalaPlan> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_plans (name, role, max_publications, publication_duration_days, max_team_members, max_leads_per_month, price, features)
+    VALUES (
+      ${data.name},
+      ${data.role},
+      ${data.max_publications},
+      ${data.publication_duration_days},
+      ${data.max_team_members || null},
+      ${data.max_leads_per_month || null},
+      ${data.price || 0},
+      ${JSON.stringify(data.features || {})}
+    )
+    RETURNING *
+  `;
+  return rows[0] as UbikalaPlan;
+}
+
+// Update plan
+export async function updatePlan(id: string, data: Partial<{
+  name: string;
+  role: UserRole;
+  max_publications: number;
+  publication_duration_days: number;
+  max_team_members: number | null;
+  max_leads_per_month: number | null;
+  price: number;
+  features: Record<string, any>;
+  is_active: boolean;
+}>): Promise<UbikalaPlan | null> {
+  if (!ubikalaDb) return null;
+
+  const currentPlan = await getPlanById(id);
+  if (!currentPlan) return null;
+
+  const name = data.name !== undefined ? data.name : currentPlan.name;
+  const role = data.role !== undefined ? data.role : currentPlan.role;
+  const max_publications = data.max_publications !== undefined ? data.max_publications : currentPlan.max_publications;
+  const publication_duration_days = data.publication_duration_days !== undefined ? data.publication_duration_days : currentPlan.publication_duration_days;
+  const max_team_members = data.max_team_members !== undefined ? data.max_team_members : currentPlan.max_team_members;
+  const max_leads_per_month = data.max_leads_per_month !== undefined ? data.max_leads_per_month : currentPlan.max_leads_per_month;
+  const price = data.price !== undefined ? data.price : currentPlan.price;
+  const features = data.features !== undefined ? data.features : currentPlan.features;
+  const is_active = data.is_active !== undefined ? data.is_active : currentPlan.is_active;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_plans
+    SET
+      name = ${name},
+      role = ${role},
+      max_publications = ${max_publications},
+      publication_duration_days = ${publication_duration_days},
+      max_team_members = ${max_team_members},
+      max_leads_per_month = ${max_leads_per_month},
+      price = ${price},
+      features = ${JSON.stringify(features)},
+      is_active = ${is_active},
+      updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaPlan || null;
+}
+
+// Delete plan
+export async function deletePlan(id: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  await ubikalaDb`DELETE FROM ubikala_plans WHERE id = ${id}`;
+  return true;
+}
+
+// ==================== TEAM / HIERARCHY ====================
+
+// Get team members for an inmobiliaria
+export async function getTeamMembers(parentUserId: string): Promise<UbikalaUser[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT id, email, name, role, avatar_url, phone, bio, plan_id, parent_user_id, custom_publication_limit, is_active, is_verified, last_login_at, created_at, updated_at
+    FROM ubikala_users
+    WHERE parent_user_id = ${parentUserId}
+    ORDER BY created_at DESC
+  `;
+  return rows as UbikalaUser[];
+}
+
+// Create team member under inmobiliaria
+export async function createTeamMember(parentUserId: string, data: {
+  email: string;
+  password_hash: string;
+  name: string;
+  role: UserRole;
+  phone?: string;
+  custom_publication_limit?: number;
+}): Promise<UbikalaUser> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_users (email, password_hash, name, role, phone, parent_user_id, custom_publication_limit)
+    VALUES (
+      ${data.email},
+      ${data.password_hash},
+      ${data.name},
+      ${data.role},
+      ${data.phone || null},
+      ${parentUserId},
+      ${data.custom_publication_limit || null}
+    )
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser;
+}
+
+// Get team stats for inmobiliaria
+export async function getTeamStats(parentUserId: string): Promise<TeamStats> {
+  if (!ubikalaDb) return { total_members: 0, total_publications: 0, total_leads: 0, leads_by_member: [], publications_by_member: [] };
+
+  // Get team members
+  const members = await getTeamMembers(parentUserId);
+  const memberIds = members.map(m => m.id);
+
+  if (memberIds.length === 0) {
+    return { total_members: 0, total_publications: 0, total_leads: 0, leads_by_member: [], publications_by_member: [] };
+  }
+
+  // Get publications by member
+  const publications = await ubikalaDb`
+    SELECT created_by as user_id, COUNT(*) as count
+    FROM ubikala_properties
+    WHERE created_by = ANY(${memberIds})
+    GROUP BY created_by
+  `;
+
+  // Get leads by member (using agent_name matching user name)
+  const memberNames = members.map(m => m.name);
+  const leads = await ubikalaDb`
+    SELECT agent_name, COUNT(*) as count
+    FROM leads
+    WHERE agent_name = ANY(${memberNames})
+    GROUP BY agent_name
+  `;
+
+  // Map publications to members
+  const publicationsByMember = members.map(m => {
+    const pub = publications.find((p: any) => p.user_id === m.id);
+    return { user_id: m.id, name: m.name, count: Number(pub?.count || 0) };
+  });
+
+  // Map leads to members
+  const leadsByMember = members.map(m => {
+    const lead = leads.find((l: any) => l.agent_name === m.name);
+    return { user_id: m.id, name: m.name, leads_count: Number(lead?.count || 0) };
+  });
+
+  const totalPublications = publicationsByMember.reduce((sum, p) => sum + p.count, 0);
+  const totalLeads = leadsByMember.reduce((sum, l) => sum + l.leads_count, 0);
+
+  return {
+    total_members: members.length,
+    total_publications: totalPublications,
+    total_leads: totalLeads,
+    leads_by_member: leadsByMember,
+    publications_by_member: publicationsByMember
+  };
+}
+
+// Count team members
+export async function countTeamMembers(parentUserId: string): Promise<number> {
+  if (!ubikalaDb) return 0;
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM ubikala_users WHERE parent_user_id = ${parentUserId}
+  `;
+  return Number(rows[0]?.count || 0);
+}
+
+// Update team member publication limit
+export async function updateTeamMemberLimit(memberId: string, limit: number | null): Promise<UbikalaUser | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    UPDATE ubikala_users
+    SET custom_publication_limit = ${limit}, updated_at = NOW()
+    WHERE id = ${memberId}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser || null;
+}
+
+// ==================== PROFILE ====================
+
+// Update user profile (bio, avatar, phone)
+export async function updateUserProfile(userId: string, data: {
+  bio?: string;
+  avatar_url?: string;
+  phone?: string;
+  name?: string;
+}): Promise<UbikalaUser | null> {
+  if (!ubikalaDb) return null;
+
+  const currentUser = await getUserById(userId);
+  if (!currentUser) return null;
+
+  const bio = data.bio !== undefined ? data.bio : currentUser.bio;
+  const avatar_url = data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url;
+  const phone = data.phone !== undefined ? data.phone : currentUser.phone;
+  const name = data.name !== undefined ? data.name : currentUser.name;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_users
+    SET bio = ${bio}, avatar_url = ${avatar_url}, phone = ${phone}, name = ${name}, updated_at = NOW()
+    WHERE id = ${userId}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser || null;
+}
+
+// Get user with plan info
+export async function getUserWithPlan(userId: string): Promise<(UbikalaUser & { plan?: UbikalaPlan }) | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    SELECT u.*, p.name as plan_name, p.max_publications, p.publication_duration_days, p.max_team_members, p.max_leads_per_month
+    FROM ubikala_users u
+    LEFT JOIN ubikala_plans p ON u.plan_id = p.id
+    WHERE u.id = ${userId}
+  `;
+  if (!rows[0]) return null;
+  const user = rows[0] as any;
+  if (user.plan_id) {
+    user.plan = {
+      id: user.plan_id,
+      name: user.plan_name,
+      max_publications: user.max_publications,
+      publication_duration_days: user.publication_duration_days,
+      max_team_members: user.max_team_members,
+      max_leads_per_month: user.max_leads_per_month
+    };
+  }
+  return user as (UbikalaUser & { plan?: UbikalaPlan });
 }

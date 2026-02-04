@@ -1,7 +1,9 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { locationData, getProvinces } from '../../../lib/location-data';
 
 const user = Astro.locals.user;
+const provinces = getProvinces();
 ---
 
 <AdminLayout title="Nueva Propiedad">
@@ -84,22 +86,35 @@ const user = Astro.locals.user;
 
       <div class="form-section">
         <h4>Ubicación</h4>
-        <div class="form-grid">
+        <div class="form-grid location-grid">
           <div class="form-group">
-            <label for="provincia">Provincia</label>
-            <input type="text" id="provincia" name="provincia" placeholder="Ej: Santo Domingo" />
+            <label for="pais">País</label>
+            <input type="text" id="pais" name="pais" value="República Dominicana" readonly class="readonly-field" />
           </div>
           <div class="form-group">
-            <label for="ciudad">Ciudad</label>
-            <input type="text" id="ciudad" name="ciudad" placeholder="Ej: Santo Domingo Este" />
+            <label for="provincia">Provincia *</label>
+            <select id="provincia" name="provincia" required>
+              <option value="">Seleccionar provincia...</option>
+              {provinces.map(p => (
+                <option value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ciudad">Ciudad *</label>
+            <select id="ciudad" name="ciudad" required disabled>
+              <option value="">Primero selecciona provincia</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="sector">Sector</label>
-            <input type="text" id="sector" name="sector" placeholder="Ej: Piantini" />
+            <select id="sector" name="sector" disabled>
+              <option value="">Primero selecciona ciudad</option>
+            </select>
           </div>
           <div class="form-group full-width">
             <label for="direccion">Dirección</label>
-            <input type="text" id="direccion" name="direccion" placeholder="Dirección completa" />
+            <input type="text" id="direccion" name="direccion" placeholder="Dirección completa (calle, número, etc.)" />
           </div>
           <div class="form-group">
             <label for="latitud">Latitud</label>
@@ -197,7 +212,7 @@ const user = Astro.locals.user;
 
   <style>
     .create-property-page {
-      max-width: 900px;
+      width: 100%;
     }
     .page-header {
       margin-bottom: 1.5rem;
@@ -343,17 +358,110 @@ const user = Astro.locals.user;
     .btn-secondary:hover {
       background: #f3f4f6;
     }
+    .location-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .readonly-field {
+      background: #f9fafb;
+      color: #6b7280;
+      cursor: not-allowed;
+    }
+    .form-group select:disabled {
+      background: #f9fafb;
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+    @media (max-width: 900px) {
+      .location-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
     @media (max-width: 640px) {
       .form-grid {
+        grid-template-columns: 1fr;
+      }
+      .location-grid {
         grid-template-columns: 1fr;
       }
     }
   </style>
 
-  <script>
-    const form = document.getElementById('property-form') as HTMLFormElement;
-    const formError = document.getElementById('form-error') as HTMLDivElement;
-    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  <script define:vars={{ locationDataJson: JSON.stringify(locationData) }}>
+    // Parse location data from server
+    const locationData = JSON.parse(locationDataJson);
+
+    // Helper functions for cascading dropdowns
+    function getCitiesByProvince(provinceName) {
+      const province = locationData.provinces.find(
+        p => p.name.toLowerCase() === provinceName.toLowerCase()
+      );
+      return province ? province.cities.map(c => c.name) : [];
+    }
+
+    function getSectorsByCity(provinceName, cityName) {
+      const province = locationData.provinces.find(
+        p => p.name.toLowerCase() === provinceName.toLowerCase()
+      );
+      if (!province) return [];
+      const city = province.cities.find(
+        c => c.name.toLowerCase() === cityName.toLowerCase()
+      );
+      return city ? city.sectors : [];
+    }
+
+    const provinciaSelect = document.getElementById('provincia');
+    const ciudadSelect = document.getElementById('ciudad');
+    const sectorSelect = document.getElementById('sector');
+
+    // Handle province change
+    provinciaSelect.addEventListener('change', () => {
+      const selectedProvince = provinciaSelect.value;
+
+      // Reset and enable city dropdown
+      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad...</option>';
+      sectorSelect.innerHTML = '<option value="">Primero selecciona ciudad</option>';
+      sectorSelect.disabled = true;
+
+      if (selectedProvince) {
+        const cities = getCitiesByProvince(selectedProvince);
+        cities.forEach(city => {
+          const option = document.createElement('option');
+          option.value = city;
+          option.textContent = city;
+          ciudadSelect.appendChild(option);
+        });
+        ciudadSelect.disabled = false;
+      } else {
+        ciudadSelect.disabled = true;
+      }
+    });
+
+    // Handle city change
+    ciudadSelect.addEventListener('change', () => {
+      const selectedProvince = provinciaSelect.value;
+      const selectedCity = ciudadSelect.value;
+
+      // Reset and enable sector dropdown
+      sectorSelect.innerHTML = '<option value="">Seleccionar sector...</option>';
+
+      if (selectedProvince && selectedCity) {
+        const sectors = getSectorsByCity(selectedProvince, selectedCity);
+        sectors.forEach(sector => {
+          const option = document.createElement('option');
+          option.value = sector;
+          option.textContent = sector;
+          sectorSelect.appendChild(option);
+        });
+        sectorSelect.disabled = false;
+      } else {
+        sectorSelect.innerHTML = '<option value="">Primero selecciona ciudad</option>';
+        sectorSelect.disabled = true;
+      }
+    });
+
+    const form = document.getElementById('property-form');
+    const formError = document.getElementById('form-error');
+    const submitBtn = document.getElementById('submit-btn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -362,7 +470,7 @@ const user = Astro.locals.user;
       submitBtn.textContent = 'Creando...';
 
       const formData = new FormData(form);
-      const data: any = {};
+      const data = {};
 
       // Text fields
       ['titulo', 'tipo', 'operacion', 'estado', 'codigo', 'descripcion', 'moneda',
@@ -377,13 +485,13 @@ const user = Astro.locals.user;
        'm2_construccion', 'm2_terreno', 'pisos', 'ano_construccion', 'latitud', 'longitud'
       ].forEach(field => {
         const value = formData.get(field);
-        if (value) data[field] = parseFloat(value as string);
+        if (value) data[field] = parseFloat(value);
       });
 
       // Boolean fields
-      data.activo = (document.getElementById('activo') as HTMLInputElement).checked;
-      data.destacada = (document.getElementById('destacada') as HTMLInputElement).checked;
-      data.exclusiva = (document.getElementById('exclusiva') as HTMLInputElement).checked;
+      data.activo = document.getElementById('activo').checked;
+      data.destacada = document.getElementById('destacada').checked;
+      data.exclusiva = document.getElementById('exclusiva').checked;
 
       try {
         const response = await fetch('/api/admin/properties', {
@@ -399,7 +507,7 @@ const user = Astro.locals.user;
         }
 
         window.location.href = '/admin/properties';
-      } catch (error: any) {
+      } catch (error) {
         formError.textContent = error.message;
         formError.classList.remove('hidden');
         submitBtn.disabled = false;
