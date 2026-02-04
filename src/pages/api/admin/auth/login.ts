@@ -1,8 +1,20 @@
 import type { APIRoute } from 'astro';
 import { loginUser, createAuthCookie } from '../../../../lib/auth';
+import { ubikalaDb } from '../../../../lib/ubikala-db';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
+    // Check if database is configured
+    if (!ubikalaDb) {
+      console.error('UBIKALA_DATABASE_URL not configured');
+      return new Response(JSON.stringify({
+        error: 'Base de datos no configurada. Verifica UBIKALA_DATABASE_URL en Vercel.'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -32,9 +44,11 @@ export const POST: APIRoute = async ({ request }) => {
         'Set-Cookie': createAuthCookie(result.token),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
-    return new Response(JSON.stringify({ error: 'Error interno del servidor' }), {
+    return new Response(JSON.stringify({
+      error: `Error: ${error.message || 'Error interno del servidor'}`
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
