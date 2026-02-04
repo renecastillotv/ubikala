@@ -32,6 +32,12 @@ ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS parent_user_id UUID REFERENCE
 -- Add custom publication limit for team members
 ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS custom_publication_limit INT DEFAULT NULL;
 
+-- Add company profile columns for inmobiliarias
+ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS company_logo TEXT;
+ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS company_description TEXT;
+ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS company_website VARCHAR(255);
+ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS company_address VARCHAR(500);
+
 -- 3. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_plan_id ON ubikala_users(plan_id);
 CREATE INDEX IF NOT EXISTS idx_users_parent_user_id ON ubikala_users(parent_user_id);

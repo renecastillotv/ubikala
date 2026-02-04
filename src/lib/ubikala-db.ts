@@ -21,6 +21,10 @@ export interface UbikalaUser {
   avatar_url: string | null;
   phone: string | null;
   company_name: string | null;  // For inmobiliarias
+  company_logo: string | null;  // Company logo URL
+  company_description: string | null;  // Company description
+  company_website: string | null;  // Company website
+  company_address: string | null;  // Company address
   license_number: string | null; // Professional license for asesores
   bio: string | null;  // User biography
   plan_id: string | null;  // Reference to user's subscription plan
@@ -1034,4 +1038,149 @@ export async function getUserWithPlan(userId: string): Promise<(UbikalaUser & { 
     };
   }
   return user as (UbikalaUser & { plan?: UbikalaPlan });
+}
+
+// ==================== PARENT COMPANY INFO ====================
+
+// Get parent company info for team members
+export async function getParentCompanyInfo(userId: string): Promise<{
+  company_name: string | null;
+  company_logo: string | null;
+  company_description: string | null;
+  company_website: string | null;
+  company_address: string | null;
+  parent_name: string;
+  parent_email: string;
+  parent_phone: string | null;
+} | null> {
+  if (!ubikalaDb) return null;
+
+  // First get the user to find their parent_user_id
+  const user = await getUserById(userId);
+  if (!user || !user.parent_user_id) return null;
+
+  // Get parent user info
+  const rows = await ubikalaDb`
+    SELECT company_name, company_logo, company_description, company_website, company_address, name, email, phone
+    FROM ubikala_users
+    WHERE id = ${user.parent_user_id}
+  `;
+
+  if (!rows[0]) return null;
+
+  return {
+    company_name: rows[0].company_name,
+    company_logo: rows[0].company_logo,
+    company_description: rows[0].company_description,
+    company_website: rows[0].company_website,
+    company_address: rows[0].company_address,
+    parent_name: rows[0].name,
+    parent_email: rows[0].email,
+    parent_phone: rows[0].phone
+  };
+}
+
+// Get user consumption stats (publications used vs limit)
+export interface UserConsumption {
+  publications_used: number;
+  publications_limit: number | null; // null = unlimited (0 in plan) or no limit set
+  leads_generated: number;
+  leads_limit: number | null;
+  is_team_member: boolean;
+  parent_company_name: string | null;
+}
+
+export async function getUserConsumption(userId: string): Promise<UserConsumption> {
+  if (!ubikalaDb) return { publications_used: 0, publications_limit: null, leads_generated: 0, leads_limit: null, is_team_member: false, parent_company_name: null };
+
+  const user = await getUserById(userId);
+  if (!user) return { publications_used: 0, publications_limit: null, leads_generated: 0, leads_limit: null, is_team_member: false, parent_company_name: null };
+
+  // Count publications
+  const pubRows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM ubikala_properties WHERE created_by = ${userId}
+  `;
+  const publications_used = Number(pubRows[0]?.count || 0);
+
+  // Count leads (by agent_name matching user name)
+  const leadRows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM leads WHERE agent_name = ${user.name}
+  `;
+  const leads_generated = Number(leadRows[0]?.count || 0);
+
+  // Get limit - either from custom limit (if team member) or from plan
+  let publications_limit: number | null = null;
+  let leads_limit: number | null = null;
+  let parent_company_name: string | null = null;
+
+  if (user.parent_user_id) {
+    // Team member - get custom limit or parent's plan
+    if (user.custom_publication_limit !== null) {
+      publications_limit = user.custom_publication_limit === 0 ? null : user.custom_publication_limit;
+    } else {
+      // Get parent's plan limits
+      const parent = await getUserWithPlan(user.parent_user_id);
+      if (parent?.plan) {
+        // Team members don't have individual publication limits from plan, use custom or unlimited
+        publications_limit = null;
+      }
+      parent_company_name = parent?.company_name || null;
+    }
+
+    // Get parent company name if not already set
+    if (!parent_company_name) {
+      const parentInfo = await getParentCompanyInfo(userId);
+      parent_company_name = parentInfo?.company_name || null;
+    }
+  } else if (user.plan_id) {
+    // Has a plan - get limits from plan
+    const userWithPlan = await getUserWithPlan(userId);
+    if (userWithPlan?.plan) {
+      publications_limit = userWithPlan.plan.max_publications === 0 ? null : userWithPlan.plan.max_publications;
+      leads_limit = userWithPlan.plan.max_leads_per_month === 0 ? null : userWithPlan.plan.max_leads_per_month;
+    }
+  }
+
+  return {
+    publications_used,
+    publications_limit,
+    leads_generated,
+    leads_limit,
+    is_team_member: !!user.parent_user_id,
+    parent_company_name
+  };
+}
+
+// Update company profile for inmobiliarias
+export async function updateCompanyProfile(userId: string, data: {
+  company_name?: string;
+  company_logo?: string;
+  company_description?: string;
+  company_website?: string;
+  company_address?: string;
+}): Promise<UbikalaUser | null> {
+  if (!ubikalaDb) return null;
+
+  const user = await getUserById(userId);
+  if (!user) return null;
+
+  const company_name = data.company_name !== undefined ? data.company_name : user.company_name;
+  const company_logo = data.company_logo !== undefined ? data.company_logo : user.company_logo;
+  const company_description = data.company_description !== undefined ? data.company_description : user.company_description;
+  const company_website = data.company_website !== undefined ? data.company_website : user.company_website;
+  const company_address = data.company_address !== undefined ? data.company_address : user.company_address;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_users
+    SET
+      company_name = ${company_name},
+      company_logo = ${company_logo},
+      company_description = ${company_description},
+      company_website = ${company_website},
+      company_address = ${company_address},
+      updated_at = NOW()
+    WHERE id = ${userId}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser || null;
 }

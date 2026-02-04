@@ -48,7 +48,7 @@ const plans = await getAllPlans();
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                {plan.max_publications} publicaciones
+                {plan.max_publications === 0 ? 'Publicaciones ilimitadas' : `${plan.max_publications} publicaciones`}
               </li>
               <li>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,20 +56,20 @@ const plans = await getAllPlans();
                 </svg>
                 {plan.publication_duration_days} días de duración
               </li>
-              {plan.max_team_members && (
+              {(plan.max_team_members !== null && plan.max_team_members !== undefined) && (
                 <li>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  {plan.max_team_members} miembros de equipo
+                  {plan.max_team_members === 0 ? 'Miembros ilimitados' : `${plan.max_team_members} miembros de equipo`}
                 </li>
               )}
-              {plan.max_leads_per_month && (
+              {(plan.max_leads_per_month !== null && plan.max_leads_per_month !== undefined) && (
                 <li>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  {plan.max_leads_per_month} leads/mes
+                  {plan.max_leads_per_month === 0 ? 'Leads ilimitados' : `${plan.max_leads_per_month} leads/mes`}
                 </li>
               )}
             </ul>
@@ -123,8 +123,8 @@ const plans = await getAllPlans();
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="plan-publications">Máx. Publicaciones</label>
-              <input type="number" id="plan-publications" required min="1" placeholder="10" />
+              <label for="plan-publications">Máx. Publicaciones <span class="hint">(0 = ilimitado)</span></label>
+              <input type="number" id="plan-publications" required min="0" placeholder="10" />
             </div>
             <div class="form-group">
               <label for="plan-duration">Duración (días)</label>
@@ -133,11 +133,11 @@ const plans = await getAllPlans();
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="plan-team">Máx. Miembros Equipo <span class="hint">(Solo inmobiliarias)</span></label>
+              <label for="plan-team">Máx. Miembros Equipo <span class="hint">(0 = ilimitado, vacío = N/A)</span></label>
               <input type="number" id="plan-team" min="0" placeholder="5" />
             </div>
             <div class="form-group">
-              <label for="plan-leads">Máx. Leads/Mes <span class="hint">(0 = ilimitado)</span></label>
+              <label for="plan-leads">Máx. Leads/Mes <span class="hint">(0 = ilimitado, vacío = N/A)</span></label>
               <input type="number" id="plan-leads" min="0" placeholder="100" />
             </div>
           </div>

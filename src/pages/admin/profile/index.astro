@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getUserById, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
+import { getUserById, getRoleLabel, getUserConsumption, getParentCompanyInfo, type UserRole } from '../../../lib/ubikala-db';
 
 const user = Astro.locals.user;
 
@@ -9,6 +9,16 @@ if (!user) {
 }
 
 const fullUser = await getUserById(user.id);
+const consumption = await getUserConsumption(user.id);
+
+// Team members are identified by having a parent_user_id (regardless of role)
+const isTeamMember = !!fullUser?.parent_user_id;
+const isInmobiliaria = fullUser?.role === 'inmobiliaria' && !isTeamMember;
+
+// Get parent company info for team members
+const parentCompany = isTeamMember
+  ? await getParentCompanyInfo(user.id)
+  : null;
 ---
 
 <AdminLayout title="Mi Perfil">
@@ -46,6 +56,43 @@ const fullUser = await getUserById(user.id);
           </div>
           <p class="avatar-hint">JPG, PNG o WebP. Máximo 2MB.</p>
         </div>
+
+        <!-- Consumption Stats -->
+        <div class="consumption-section">
+          <h5>Mi Consumo</h5>
+          <div class="consumption-stats">
+            <div class="consumption-item">
+              <div class="consumption-bar">
+                <div
+                  class="consumption-fill"
+                  style={`width: ${consumption.publications_limit ? Math.min((consumption.publications_used / consumption.publications_limit) * 100, 100) : 0}%`}
+                ></div>
+              </div>
+              <div class="consumption-text">
+                <span class="consumption-value">{consumption.publications_used}</span>
+                <span class="consumption-label">
+                  / {consumption.publications_limit === null ? 'Ilimitado' : consumption.publications_limit} publicaciones
+                </span>
+              </div>
+            </div>
+            {consumption.leads_limit !== null && (
+              <div class="consumption-item">
+                <div class="consumption-bar">
+                  <div
+                    class="consumption-fill leads"
+                    style={`width: ${consumption.leads_limit ? Math.min((consumption.leads_generated / consumption.leads_limit) * 100, 100) : 0}%`}
+                  ></div>
+                </div>
+                <div class="consumption-text">
+                  <span class="consumption-value">{consumption.leads_generated}</span>
+                  <span class="consumption-label">
+                    / {consumption.leads_limit === null ? 'Ilimitado' : consumption.leads_limit} leads/mes
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       <!-- Profile Form -->
@@ -74,6 +121,7 @@ const fullUser = await getUserById(user.id);
                 <span class:list={['badge', `badge-${fullUser?.role}`]}>
                   {getRoleLabel(fullUser?.role as UserRole)}
                 </span>
+                {isTeamMember && <span class="team-badge">Miembro de equipo</span>}
               </div>
             </div>
           </div>
@@ -90,6 +138,104 @@ const fullUser = await getUserById(user.id);
           </div>
         </form>
       </div>
+
+      <!-- Parent Company Info (for team members) -->
+      {isTeamMember && parentCompany && (
+        <div class="profile-card company-info-section">
+          <h4>Mi Empresa</h4>
+          <div class="company-info">
+            {parentCompany.company_logo && (
+              <div class="company-logo">
+                <img src={parentCompany.company_logo} alt={parentCompany.company_name || 'Logo'} />
+              </div>
+            )}
+            <div class="company-details">
+              <h5>{parentCompany.company_name || 'Sin nombre de empresa'}</h5>
+              {parentCompany.company_description && <p>{parentCompany.company_description}</p>}
+              <div class="company-contact">
+                <div class="contact-item">
+                  <span class="contact-label">Contacto:</span>
+                  <span class="contact-value">{parentCompany.parent_name}</span>
+                </div>
+                <div class="contact-item">
+                  <span class="contact-label">Email:</span>
+                  <span class="contact-value">{parentCompany.parent_email}</span>
+                </div>
+                {parentCompany.parent_phone && (
+                  <div class="contact-item">
+                    <span class="contact-label">Teléfono:</span>
+                    <span class="contact-value">{parentCompany.parent_phone}</span>
+                  </div>
+                )}
+                {parentCompany.company_website && (
+                  <div class="contact-item">
+                    <span class="contact-label">Web:</span>
+                    <a href={parentCompany.company_website} target="_blank" class="contact-value link">
+                      {parentCompany.company_website}
+                    </a>
+                  </div>
+                )}
+                {parentCompany.company_address && (
+                  <div class="contact-item">
+                    <span class="contact-label">Dirección:</span>
+                    <span class="contact-value">{parentCompany.company_address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <!-- Company Profile (for inmobiliarias) -->
+      {isInmobiliaria && (
+        <div class="profile-card company-profile-section">
+          <h4>Perfil de Empresa</h4>
+          <form id="company-form">
+            <div class="form-group">
+              <label for="company-name">Nombre de la Empresa</label>
+              <input type="text" id="company-name" value={fullUser?.company_name || ''} placeholder="Mi Inmobiliaria S.A." />
+            </div>
+            <div class="form-group">
+              <label for="company-description">Descripción</label>
+              <textarea id="company-description" rows="3" placeholder="Describe tu empresa...">{fullUser?.company_description || ''}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="company-website">Sitio Web</label>
+                <input type="url" id="company-website" value={fullUser?.company_website || ''} placeholder="https://miempresa.com" />
+              </div>
+              <div class="form-group">
+                <label for="company-address">Dirección</label>
+                <input type="text" id="company-address" value={fullUser?.company_address || ''} placeholder="Av. Principal #123" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Logo de Empresa</label>
+              <div class="logo-upload">
+                <div class="logo-preview" id="logo-preview">
+                  {fullUser?.company_logo ? (
+                    <img src={fullUser.company_logo} alt="Logo" id="logo-image" />
+                  ) : (
+                    <span class="logo-placeholder">Logo</span>
+                  )}
+                </div>
+                <div class="logo-actions">
+                  <label for="logo-input" class="btn-secondary">Subir Logo</label>
+                  <input type="file" id="logo-input" accept="image/*" class="hidden" />
+                </div>
+              </div>
+              <span class="field-hint">Este logo aparecerá en el perfil de tus asesores</span>
+            </div>
+            <div id="company-message" class="form-message hidden"></div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary" id="save-company-btn">
+                Guardar Empresa
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <!-- Account Info -->
       <div class="profile-card account-section">
@@ -109,6 +255,12 @@ const fullUser = await getUserById(user.id);
               {fullUser?.is_active ? 'Activo' : 'Inactivo'}
             </span>
           </div>
+          {fullUser?.custom_publication_limit !== null && fullUser?.custom_publication_limit !== undefined && (
+            <div class="info-item">
+              <span class="info-label">Límite personalizado</span>
+              <span class="info-value">{fullUser.custom_publication_limit === 0 ? 'Ilimitado' : `${fullUser.custom_publication_limit} publicaciones`}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -157,8 +309,8 @@ const fullUser = await getUserById(user.id);
       gap: 1rem;
     }
     .avatar-preview {
-      width: 150px;
-      height: 150px;
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
       background: #3b82f6;
       display: flex;
@@ -173,7 +325,7 @@ const fullUser = await getUserById(user.id);
       object-fit: cover;
     }
     .avatar-initials {
-      font-size: 3rem;
+      font-size: 2.5rem;
       font-weight: 600;
       color: white;
     }
@@ -187,6 +339,52 @@ const fullUser = await getUserById(user.id);
       font-size: 0.75rem;
       color: #9ca3af;
       margin: 0;
+    }
+    .consumption-section {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+    }
+    .consumption-section h5 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 1rem 0;
+      text-align: left;
+    }
+    .consumption-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .consumption-item {
+      text-align: left;
+    }
+    .consumption-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+    .consumption-fill {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+    .consumption-fill.leads {
+      background: #8b5cf6;
+    }
+    .consumption-text {
+      font-size: 0.75rem;
+    }
+    .consumption-value {
+      font-weight: 600;
+      color: #111827;
+    }
+    .consumption-label {
+      color: #6b7280;
     }
     .btn-secondary {
       display: inline-flex;
@@ -272,7 +470,7 @@ const fullUser = await getUserById(user.id);
     }
     .form-group textarea {
       resize: vertical;
-      min-height: 100px;
+      min-height: 80px;
     }
     .field-hint {
       display: block;
@@ -282,6 +480,10 @@ const fullUser = await getUserById(user.id);
     }
     .role-display {
       padding: 0.625rem 0;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
     .badge {
       padding: 0.25rem 0.75rem;
@@ -289,21 +491,17 @@ const fullUser = await getUserById(user.id);
       font-size: 0.75rem;
       font-weight: 500;
     }
-    .badge-admin {
+    .badge-admin { background: #fef3c7; color: #92400e; }
+    .badge-inmobiliaria { background: #dbeafe; color: #1e40af; }
+    .badge-asesor_independiente { background: #dcfce7; color: #166534; }
+    .badge-propietario { background: #f3e8ff; color: #7c3aed; }
+    .team-badge {
+      padding: 0.25rem 0.5rem;
       background: #fef3c7;
       color: #92400e;
-    }
-    .badge-inmobiliaria {
-      background: #dbeafe;
-      color: #1e40af;
-    }
-    .badge-asesor_independiente {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .badge-propietario {
-      background: #f3e8ff;
-      color: #7c3aed;
+      border-radius: 0.25rem;
+      font-size: 0.7rem;
+      font-weight: 500;
     }
     .form-message {
       padding: 0.75rem;
@@ -311,19 +509,9 @@ const fullUser = await getUserById(user.id);
       font-size: 0.875rem;
       margin-bottom: 1rem;
     }
-    .form-message.hidden {
-      display: none;
-    }
-    .form-message.success {
-      background: #dcfce7;
-      color: #166534;
-      border: 1px solid #86efac;
-    }
-    .form-message.error {
-      background: #fef2f2;
-      color: #dc2626;
-      border: 1px solid #fecaca;
-    }
+    .form-message.hidden { display: none; }
+    .form-message.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .form-message.error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
     .form-actions {
       display: flex;
       justify-content: flex-end;
@@ -344,29 +532,100 @@ const fullUser = await getUserById(user.id);
       cursor: pointer;
       transition: background 0.2s;
     }
-    .btn-primary:hover {
-      background: #2563eb;
-    }
-    .btn-primary:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
-    .account-section {
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+    .company-info-section, .company-profile-section {
       grid-column: 1 / -1;
     }
+    .company-info {
+      display: flex;
+      gap: 1.5rem;
+      align-items: flex-start;
+    }
+    .company-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #f3f4f6;
+    }
+    .company-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .company-details h5 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 0.5rem 0;
+    }
+    .company-details p {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin: 0 0 1rem 0;
+    }
+    .company-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .contact-item {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .contact-label {
+      color: #6b7280;
+      min-width: 70px;
+    }
+    .contact-value {
+      color: #111827;
+    }
+    .contact-value.link {
+      color: #3b82f6;
+      text-decoration: none;
+    }
+    .contact-value.link:hover {
+      text-decoration: underline;
+    }
+    .logo-upload {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo-preview {
+      width: 80px;
+      height: 80px;
+      border-radius: 0.5rem;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 2px dashed #d1d5db;
+    }
+    .logo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .logo-placeholder {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+    .account-section {
+      grid-column: 1;
+    }
     @media (min-width: 901px) {
-      .account-section {
-        grid-column: 1 / 2;
-        grid-row: 2 / 3;
-      }
-      .form-section {
-        grid-row: 1 / 3;
-      }
+      .form-section { grid-row: 1 / 2; }
+      .account-section { grid-row: 2 / 3; }
     }
     .account-info {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
     .info-item {
       display: flex;
@@ -375,19 +634,9 @@ const fullUser = await getUserById(user.id);
       padding-bottom: 0.75rem;
       border-bottom: 1px solid #e5e7eb;
     }
-    .info-item:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
-    .info-label {
-      font-size: 0.875rem;
-      color: #6b7280;
-    }
-    .info-value {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #111827;
-    }
+    .info-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .info-label { font-size: 0.875rem; color: #6b7280; }
+    .info-value { font-size: 0.875rem; font-weight: 500; color: #111827; }
     .status {
       display: inline-block;
       padding: 0.25rem 0.5rem;
@@ -395,25 +644,17 @@ const fullUser = await getUserById(user.id);
       font-size: 0.75rem;
       font-weight: 500;
     }
-    .status.active {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .status.inactive {
-      background: #fee2e2;
-      color: #991b1b;
-    }
+    .status.active { background: #dcfce7; color: #166534; }
+    .status.inactive { background: #fee2e2; color: #991b1b; }
   </style>
 
   <script>
     const form = document.getElementById('profile-form') as HTMLFormElement;
     const formMessage = document.getElementById('form-message') as HTMLDivElement;
     const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
-
     const nameInput = document.getElementById('profile-name') as HTMLInputElement;
     const phoneInput = document.getElementById('profile-phone') as HTMLInputElement;
     const bioTextarea = document.getElementById('profile-bio') as HTMLTextAreaElement;
-
     const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
     const avatarPreview = document.getElementById('avatar-preview') as HTMLDivElement;
     const removeAvatarBtn = document.getElementById('remove-avatar-btn');
@@ -435,18 +676,13 @@ const fullUser = await getUserById(user.id);
             bio: bioTextarea.value || null,
           }),
         });
-
         const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Error al guardar');
-        }
+        if (!response.ok) throw new Error(result.error || 'Error al guardar');
 
         formMessage.textContent = 'Perfil actualizado correctamente';
         formMessage.className = 'form-message success';
         formMessage.classList.remove('hidden');
 
-        // Update avatar initials if name changed
         const initialsEl = document.getElementById('avatar-initials');
         if (initialsEl && nameInput.value) {
           initialsEl.textContent = nameInput.value.charAt(0).toUpperCase();
@@ -462,48 +698,25 @@ const fullUser = await getUserById(user.id);
     });
 
     // Handle avatar upload
-    avatarInput.addEventListener('change', async (e) => {
+    avatarInput?.addEventListener('change', async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { alert('La imagen es muy grande. Máximo 2MB.'); return; }
+      if (!file.type.startsWith('image/')) { alert('Por favor selecciona una imagen válida.'); return; }
 
-      // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        alert('La imagen es muy grande. Máximo 2MB.');
-        return;
-      }
-
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        alert('Por favor selecciona una imagen válida.');
-        return;
-      }
-
-      // Convert to base64
       const reader = new FileReader();
       reader.onload = async (event) => {
         const base64 = event.target?.result as string;
-
         try {
           const response = await fetch('/api/admin/profile/avatar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ avatar_url: base64 }),
           });
-
           const result = await response.json();
-
-          if (!response.ok) {
-            throw new Error(result.error || 'Error al subir imagen');
-          }
-
-          // Update preview
+          if (!response.ok) throw new Error(result.error || 'Error al subir imagen');
           avatarPreview.innerHTML = `<img src="${base64}" alt="Avatar" id="avatar-image" />`;
-
-          // Show remove button if not visible
-          if (!removeAvatarBtn) {
-            window.location.reload();
-          }
-
+          if (!removeAvatarBtn) window.location.reload();
           formMessage.textContent = 'Foto de perfil actualizada';
           formMessage.className = 'form-message success';
           formMessage.classList.remove('hidden');
@@ -516,33 +729,90 @@ const fullUser = await getUserById(user.id);
 
     // Handle avatar removal
     removeAvatarBtn?.addEventListener('click', async () => {
-      if (!confirm('¿Estás seguro de eliminar tu foto de perfil?')) {
-        return;
-      }
-
+      if (!confirm('¿Estás seguro de eliminar tu foto de perfil?')) return;
       try {
-        const response = await fetch('/api/admin/profile/avatar', {
-          method: 'DELETE',
-        });
-
+        const response = await fetch('/api/admin/profile/avatar', { method: 'DELETE' });
         if (!response.ok) {
           const result = await response.json();
           throw new Error(result.error || 'Error al eliminar');
         }
-
-        // Update preview with initials
         const name = nameInput.value || 'U';
         avatarPreview.innerHTML = `<span class="avatar-initials" id="avatar-initials">${name.charAt(0).toUpperCase()}</span>`;
-
-        // Hide remove button
         removeAvatarBtn.style.display = 'none';
-
         formMessage.textContent = 'Foto de perfil eliminada';
         formMessage.className = 'form-message success';
         formMessage.classList.remove('hidden');
       } catch (error: any) {
         alert(error.message);
       }
+    });
+
+    // Company form handling (for inmobiliarias)
+    const companyForm = document.getElementById('company-form') as HTMLFormElement;
+    const companyMessage = document.getElementById('company-message') as HTMLDivElement;
+    const saveCompanyBtn = document.getElementById('save-company-btn') as HTMLButtonElement;
+    const logoInput = document.getElementById('logo-input') as HTMLInputElement;
+    const logoPreview = document.getElementById('logo-preview') as HTMLDivElement;
+
+    let companyLogo: string | null = null;
+
+    companyForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      companyMessage?.classList.add('hidden');
+      if (saveCompanyBtn) {
+        saveCompanyBtn.disabled = true;
+        saveCompanyBtn.textContent = 'Guardando...';
+      }
+
+      try {
+        const response = await fetch('/api/admin/profile/company', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            company_name: (document.getElementById('company-name') as HTMLInputElement)?.value || null,
+            company_description: (document.getElementById('company-description') as HTMLTextAreaElement)?.value || null,
+            company_website: (document.getElementById('company-website') as HTMLInputElement)?.value || null,
+            company_address: (document.getElementById('company-address') as HTMLInputElement)?.value || null,
+            company_logo: companyLogo,
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Error al guardar');
+
+        if (companyMessage) {
+          companyMessage.textContent = 'Perfil de empresa actualizado';
+          companyMessage.className = 'form-message success';
+          companyMessage.classList.remove('hidden');
+        }
+      } catch (error: any) {
+        if (companyMessage) {
+          companyMessage.textContent = error.message;
+          companyMessage.className = 'form-message error';
+          companyMessage.classList.remove('hidden');
+        }
+      } finally {
+        if (saveCompanyBtn) {
+          saveCompanyBtn.disabled = false;
+          saveCompanyBtn.textContent = 'Guardar Empresa';
+        }
+      }
+    });
+
+    logoInput?.addEventListener('change', async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { alert('La imagen es muy grande. Máximo 2MB.'); return; }
+      if (!file.type.startsWith('image/')) { alert('Por favor selecciona una imagen válida.'); return; }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        companyLogo = base64;
+        if (logoPreview) {
+          logoPreview.innerHTML = `<img src="${base64}" alt="Logo" id="logo-image" />`;
+        }
+      };
+      reader.readAsDataURL(file);
     });
   </script>
 </AdminLayout>

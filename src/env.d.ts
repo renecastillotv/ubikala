@@ -20,9 +20,11 @@ declare namespace App {
       id: string;
       email: string;
       name: string;
-      role: 'admin' | 'agent';
+      role: 'admin' | 'inmobiliaria' | 'asesor_independiente' | 'propietario';
       avatar_url: string | null;
       phone: string | null;
+      company_name?: string | null;
+      license_number?: string | null;
     };
   }
 }
