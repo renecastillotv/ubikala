@@ -645,6 +645,53 @@ const existingImages = property.imagenes || (property.imagen_principal ? [proper
     const imagenesInput = document.getElementById('imagenes');
     let uploadedImages = JSON.parse(existingImagesJson) || [];
 
+    // Image compression function
+    async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.8) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // Calculate new dimensions
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+                } else {
+                  reject(new Error('Error comprimiendo imagen'));
+                }
+              },
+              'image/jpeg',
+              quality
+            );
+          };
+          img.onerror = () => reject(new Error('Error cargando imagen'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('Error leyendo archivo'));
+        reader.readAsDataURL(file);
+      });
+    }
+
     // Find primary image index
     let primaryImageIndex = 0;
     if (currentPrincipal && uploadedImages.length > 0) {
@@ -682,8 +729,8 @@ const existingImages = property.imagenes || (property.imagen_principal ? [proper
     async function handleFiles(files) {
       for (const file of files) {
         if (!file.type.startsWith('image/')) continue;
-        if (file.size > 5 * 1024 * 1024) {
-          alert(`La imagen ${file.name} es muy grande. Máximo 5MB.`);
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`La imagen ${file.name} es muy grande. Máximo 10MB.`);
           continue;
         }
 
@@ -692,10 +739,14 @@ const existingImages = property.imagenes || (property.imagen_principal ? [proper
         const previewEl = createPreviewElement(index, URL.createObjectURL(file), true);
         photoPreviewGrid.appendChild(previewEl);
 
-        // Upload to server
+        // Compress and upload to server
         try {
+          // Compress image before upload
+          const compressedFile = await compressImage(file);
+          console.log(`Compressed ${file.name}: ${(file.size/1024).toFixed(0)}KB -> ${(compressedFile.size/1024).toFixed(0)}KB`);
+
           const formData = new FormData();
-          formData.append('file', file);
+          formData.append('file', compressedFile);
 
           const response = await fetch('/api/admin/upload/image', {
             method: 'POST',
