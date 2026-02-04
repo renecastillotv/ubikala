@@ -327,9 +327,26 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
               </div>
 
               <div class="flex gap-2 mb-4">
-                <button class="btn-primary flex-1 justify-center">
-                  {t.property.contactAgent}
-                </button>
+                <a
+                  href={`tel:${agent?.phone || agent?.whatsapp}`}
+                  class="btn-primary flex-1 justify-center"
+                >
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  Llamar
+                </a>
+                {agent?.email && (
+                  <a
+                    href={`mailto:${agent.email}?subject=Consulta: ${property.title}`}
+                    class="btn-outline flex-1 justify-center"
+                  >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    Email
+                  </a>
+                )}
               </div>
 
               <div class="flex gap-2">
@@ -347,7 +364,7 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   WhatsApp
                 </a>
                 <button
-                  class="btn-outline px-4"
+                  class="btn-outline px-3 flex items-center gap-1"
                   data-favorite-btn
                   data-property-slug={property.slug}
                   data-property-title={property.title}
@@ -355,11 +372,12 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   data-property-price={property.price}
                   data-property-currency={property.currency}
                   data-property-location={`${property.location.sector}, ${property.location.city}`}
-                  aria-label="Guardar en favoritos"
+                  aria-label="Guardar"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
+                  <span class="text-sm">Guardar</span>
                 </button>
                 <button
                   class="btn-outline px-4"

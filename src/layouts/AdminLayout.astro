@@ -11,8 +11,9 @@ const currentPath = Astro.url.pathname;
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: 'home' },
   { href: '/admin/properties', label: 'Propiedades', icon: 'building' },
+  { href: '/admin/leads', label: 'Clientes', icon: 'messages' },
   ...(user?.role === 'admin' ? [{ href: '/admin/users', label: 'Usuarios', icon: 'users' }] : []),
-  { href: '/admin/activity', label: 'Actividad', icon: 'activity' },
+  ...(user?.role === 'admin' ? [{ href: '/admin/activity', label: 'Actividad', icon: 'activity' }] : []),
 ];
 ---
 
@@ -233,6 +234,7 @@ const navItems = [
               <svg class="nav-icon" viewBox="0 0 24 24">
                 {item.icon === 'home' && <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M9 22V12h6v10" />}
                 {item.icon === 'building' && <path d="M3 21h18 M9 8h1 M9 12h1 M9 16h1 M14 8h1 M14 12h1 M14 16h1 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />}
+                {item.icon === 'messages' && <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />}
                 {item.icon === 'users' && <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />}
                 {item.icon === 'activity' && <path d="M22 12h-4l-3 9L9 3l-3 9H2" />}
               </svg>

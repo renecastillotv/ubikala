@@ -495,11 +495,12 @@ export async function getUserStats(userId: string): Promise<{
     ubikalaDb`SELECT COUNT(*) as count FROM ubikala_properties WHERE created_by = ${userId} AND activo = true`,
   ]);
 
+  // Leads are counted separately via the leads table (not linked to user directly)
   return {
     total_properties: Number(properties[0]?.count || 0),
     active_properties: Number(active[0]?.count || 0),
     total_views: 0, // TODO: Implement views tracking
-    total_leads: 0, // TODO: Implement leads tracking
+    total_leads: 0, // Leads shown in admin/leads page
   };
 }
 
@@ -569,4 +570,133 @@ export async function getUsersByRole(role: UserRole): Promise<UbikalaUser[]> {
     ORDER BY created_at DESC
   `;
   return rows as UbikalaUser[];
+}
+
+// Lead/Contact types - matches existing 'leads' table
+export interface Lead {
+  id: number;
+  property_slug: string | null;
+  property_title: string | null;
+  name: string;
+  email: string;
+  phone: string | null;
+  message: string | null;
+  source: string;
+  session_id: string | null;
+  status: 'new' | 'contacted' | 'interested' | 'discarded' | 'closed';
+  notes: string | null;
+  agent_name: string | null;
+  agent_company: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Create a new lead
+export async function createLead(data: {
+  property_slug?: string;
+  property_title?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  message?: string;
+  source?: string;
+  session_id?: string;
+  agent_name?: string;
+  agent_company?: string;
+}): Promise<Lead> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  const rows = await ubikalaDb`
+    INSERT INTO leads (property_slug, property_title, name, email, phone, message, source, session_id, agent_name, agent_company)
+    VALUES (
+      ${data.property_slug || null},
+      ${data.property_title || null},
+      ${data.name},
+      ${data.email},
+      ${data.phone || null},
+      ${data.message || null},
+      ${data.source || 'website'},
+      ${data.session_id || null},
+      ${data.agent_name || null},
+      ${data.agent_company || null}
+    )
+    RETURNING *
+  `;
+
+  return rows[0] as Lead;
+}
+
+// Get leads filtered by agent name (for non-admin users)
+export async function getLeadsByAgent(agentName: string, options: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+}): Promise<Lead[]> {
+  if (!ubikalaDb) return [];
+
+  const { limit = 50, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT * FROM leads
+    WHERE agent_name = ${agentName}
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows as Lead[];
+}
+
+// Get all leads (for admin)
+export async function getAllLeads(options: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+}): Promise<Lead[]> {
+  if (!ubikalaDb) return [];
+
+  const { limit = 50, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT * FROM leads
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows as Lead[];
+}
+
+// Update lead status
+export async function updateLeadStatus(id: number, status: Lead['status'], notes?: string): Promise<Lead | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE leads
+    SET status = ${status}, notes = COALESCE(${notes || null}, notes), updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+
+  return rows[0] as Lead || null;
+}
+
+// Count all leads
+export async function countAllLeads(): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM leads
+  `;
+
+  return Number(rows[0]?.count || 0);
+}
+
+// Count new leads
+export async function countNewLeads(): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM leads WHERE status = 'new'
+  `;
+
+  return Number(rows[0]?.count || 0);
 }

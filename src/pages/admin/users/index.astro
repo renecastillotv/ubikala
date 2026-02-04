@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getAllUsers } from '../../../lib/ubikala-db';
+import { getAllUsers, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
 
 const user = Astro.locals.user;
 
@@ -48,8 +48,8 @@ const users = await getAllUsers();
               </td>
               <td>{u.email}</td>
               <td>
-                <span class:list={['badge', u.role === 'admin' ? 'badge-admin' : 'badge-agent']}>
-                  {u.role === 'admin' ? 'Administrador' : 'Agente'}
+                <span class:list={['badge', `badge-${u.role}`]}>
+                  {getRoleLabel(u.role as UserRole)}
                 </span>
               </td>
               <td>
@@ -107,7 +107,9 @@ const users = await getAllUsers();
           <div class="form-group">
             <label for="user-role">Rol</label>
             <select id="user-role" required>
-              <option value="agent">Agente</option>
+              <option value="propietario">Propietario</option>
+              <option value="asesor_independiente">Asesor Independiente</option>
+              <option value="inmobiliaria">Inmobiliaria</option>
               <option value="admin">Administrador</option>
             </select>
           </div>
@@ -221,6 +223,18 @@ const users = await getAllUsers();
     .badge-admin {
       background: #fef3c7;
       color: #92400e;
+    }
+    .badge-inmobiliaria {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-asesor_independiente {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge-propietario {
+      background: #f3e8ff;
+      color: #7c3aed;
     }
     .badge-agent {
       background: #dbeafe;
