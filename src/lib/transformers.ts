@@ -47,13 +47,19 @@ export interface DBProperty {
   caracteristicas: {
     agents?: Array<{
       id: number;
-      full_name: string;
+      full_name?: string;
+      nombre?: string;
       slug: string;
       email: string;
-      phone: string;
-      avatar: string;
-      bio: string;
-      company?: number;
+      phone?: string;
+      telefono?: string;
+      whatsapp?: string;
+      avatar?: string;
+      foto?: string;
+      bio?: string;
+      company?: number | string;
+      verified?: boolean;
+      role?: string;
     }>;
     [key: string]: any;
   };
@@ -281,17 +287,18 @@ export function transformProperty(dbProp: DBProperty, forceRental: boolean = fal
       }),
       locations: []
     } : legacyAgent ? {
-      // Fallback to caracteristicas.agents (legacy method)
+      // Fallback to caracteristicas.agents (legacy method or Ubikala properties)
       id: String(legacyAgent.id),
       slug: legacyAgent.slug || 'agente',
-      name: legacyAgent.full_name || 'Agente',
+      name: legacyAgent.full_name || legacyAgent.nombre || 'Agente',
       email: legacyAgent.email || '',
-      phone: legacyAgent.phone || '',
-      whatsapp: legacyAgent.phone || '',
-      photo: legacyAgent.avatar || '/images/agent-placeholder.svg',
-      company: undefined,
-      userType: 'agent' as const,
-      verified: true,
+      phone: legacyAgent.phone || legacyAgent.telefono || '',
+      whatsapp: legacyAgent.phone || legacyAgent.whatsapp || '',
+      photo: legacyAgent.avatar || legacyAgent.foto || '/images/agent-placeholder.svg',
+      company: legacyAgent.company || undefined,
+      userType: (legacyAgent.role as any) || 'agent' as const,
+      // For Ubikala properties, use the verified field; for legacy portal properties, default to true
+      verified: legacyAgent.verified !== undefined ? legacyAgent.verified : true,
       rating: 5,
       reviewCount: 0,
       experienceYears: 5,

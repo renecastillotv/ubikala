@@ -149,6 +149,14 @@ export interface UbikalaProperty {
   created_at: string;
   updated_at: string;
   source?: 'ubikala' | 'clic';
+  // Owner info from JOIN
+  owner_name?: string;
+  owner_avatar?: string;
+  owner_phone?: string;
+  owner_email?: string;
+  owner_verified?: boolean;
+  owner_role?: UserRole;
+  owner_company_name?: string;
 }
 
 // User queries
@@ -326,9 +334,19 @@ export async function getUbikalaProperties(options: {
   const { limit = 20, offset = 0, activo = true } = options;
 
   const rows = await ubikalaDb`
-    SELECT * FROM ubikala_properties
-    WHERE activo = ${activo}
-    ORDER BY created_at DESC
+    SELECT
+      p.*,
+      u.name as owner_name,
+      u.avatar_url as owner_avatar,
+      u.phone as owner_phone,
+      u.email as owner_email,
+      u.is_verified as owner_verified,
+      u.role as owner_role,
+      u.company_name as owner_company_name
+    FROM ubikala_properties p
+    LEFT JOIN ubikala_users u ON p.created_by = u.id
+    WHERE p.activo = ${activo}
+    ORDER BY p.created_at DESC
     LIMIT ${limit} OFFSET ${offset}
   `;
 
@@ -338,7 +356,18 @@ export async function getUbikalaProperties(options: {
 export async function getUbikalaPropertyBySlug(slug: string): Promise<UbikalaProperty | null> {
   if (!ubikalaDb) return null;
   const rows = await ubikalaDb`
-    SELECT * FROM ubikala_properties WHERE slug = ${slug}
+    SELECT
+      p.*,
+      u.name as owner_name,
+      u.avatar_url as owner_avatar,
+      u.phone as owner_phone,
+      u.email as owner_email,
+      u.is_verified as owner_verified,
+      u.role as owner_role,
+      u.company_name as owner_company_name
+    FROM ubikala_properties p
+    LEFT JOIN ubikala_users u ON p.created_by = u.id
+    WHERE p.slug = ${slug}
   `;
   return rows[0] ? { ...rows[0], source: 'ubikala' } as UbikalaProperty : null;
 }
@@ -346,7 +375,18 @@ export async function getUbikalaPropertyBySlug(slug: string): Promise<UbikalaPro
 export async function getUbikalaPropertyById(id: string): Promise<UbikalaProperty | null> {
   if (!ubikalaDb) return null;
   const rows = await ubikalaDb`
-    SELECT * FROM ubikala_properties WHERE id = ${id}
+    SELECT
+      p.*,
+      u.name as owner_name,
+      u.avatar_url as owner_avatar,
+      u.phone as owner_phone,
+      u.email as owner_email,
+      u.is_verified as owner_verified,
+      u.role as owner_role,
+      u.company_name as owner_company_name
+    FROM ubikala_properties p
+    LEFT JOIN ubikala_users u ON p.created_by = u.id
+    WHERE p.id = ${id}
   `;
   return rows[0] ? { ...rows[0], source: 'ubikala' } as UbikalaProperty : null;
 }
@@ -1086,15 +1126,28 @@ export interface UserConsumption {
   publications_limit: number | null; // null = unlimited (0 in plan) or no limit set
   leads_generated: number;
   leads_limit: number | null;
+  team_used: number;
+  team_limit: number | null;
   is_team_member: boolean;
   parent_company_name: string | null;
 }
 
 export async function getUserConsumption(userId: string): Promise<UserConsumption> {
-  if (!ubikalaDb) return { publications_used: 0, publications_limit: null, leads_generated: 0, leads_limit: null, is_team_member: false, parent_company_name: null };
+  const defaultReturn: UserConsumption = {
+    publications_used: 0,
+    publications_limit: null,
+    leads_generated: 0,
+    leads_limit: null,
+    team_used: 0,
+    team_limit: null,
+    is_team_member: false,
+    parent_company_name: null
+  };
+
+  if (!ubikalaDb) return defaultReturn;
 
   const user = await getUserById(userId);
-  if (!user) return { publications_used: 0, publications_limit: null, leads_generated: 0, leads_limit: null, is_team_member: false, parent_company_name: null };
+  if (!user) return defaultReturn;
 
   // Count publications
   const pubRows = await ubikalaDb`
@@ -1108,9 +1161,19 @@ export async function getUserConsumption(userId: string): Promise<UserConsumptio
   `;
   const leads_generated = Number(leadRows[0]?.count || 0);
 
+  // Count team members (for inmobiliarias)
+  let team_used = 0;
+  if (user.role === 'inmobiliaria') {
+    const teamRows = await ubikalaDb`
+      SELECT COUNT(*) as count FROM ubikala_users WHERE parent_user_id = ${userId}
+    `;
+    team_used = Number(teamRows[0]?.count || 0);
+  }
+
   // Get limit - either from custom limit (if team member) or from plan
   let publications_limit: number | null = null;
   let leads_limit: number | null = null;
+  let team_limit: number | null = null;
   let parent_company_name: string | null = null;
 
   if (user.parent_user_id) {
@@ -1138,6 +1201,7 @@ export async function getUserConsumption(userId: string): Promise<UserConsumptio
     if (userWithPlan?.plan) {
       publications_limit = userWithPlan.plan.max_publications === 0 ? null : userWithPlan.plan.max_publications;
       leads_limit = userWithPlan.plan.max_leads_per_month === 0 ? null : userWithPlan.plan.max_leads_per_month;
+      team_limit = userWithPlan.plan.max_team_members === 0 ? null : userWithPlan.plan.max_team_members;
     }
   }
 
@@ -1146,6 +1210,8 @@ export async function getUserConsumption(userId: string): Promise<UserConsumptio
     publications_limit,
     leads_generated,
     leads_limit,
+    team_used,
+    team_limit,
     is_team_member: !!user.parent_user_id,
     parent_company_name
   };

@@ -222,6 +222,29 @@ export const en: Translations = {
     terms: 'Terms and Conditions',
   },
 
+  // Page Sections
+  sections: {
+    featuredProperties: 'Featured Properties',
+    featuredPropertiesDesc: 'Discover the best real estate opportunities selected by our experts',
+    featuredAgents: 'Featured Agents',
+    featuredAgentsDesc: 'Connect with the best real estate professionals',
+    propertyTypes: 'Property Types',
+    propertyTypesTitle: 'What Type of Property Are You Looking For?',
+    propertyTypesDesc: 'We have the perfect property for every need',
+    verifiedAgents: 'Verified Agents',
+    meetOurExperts: 'Meet Our Experts',
+    expertsDesc: 'Professionals committed to finding your ideal property',
+    viewAllAgents: 'View All Agents',
+    whyChooseUs: 'Why Choose Us?',
+    portalTitle: 'The #1 Real Estate Portal in the Dominican Republic',
+    smartSearch: 'Smart Search',
+    smartSearchDesc: 'Find exactly what you are looking for with our advanced filters and search by location, price, property type and more.',
+    verifiedProperties: 'Verified Properties',
+    verifiedPropertiesDesc: 'All properties are verified by our team to ensure accurate and reliable information.',
+    expertAgents: 'Expert Agents',
+    expertAgentsDesc: 'Connect with professional real estate agents who know the Dominican market perfectly.',
+  },
+
   // Common Messages
   common: {
     loading: 'Loading...',

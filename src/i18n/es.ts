@@ -220,6 +220,29 @@ export const es = {
     terms: 'Términos y Condiciones',
   },
 
+  // Secciones de la página
+  sections: {
+    featuredProperties: 'Propiedades Destacadas',
+    featuredPropertiesDesc: 'Descubre las mejores oportunidades inmobiliarias seleccionadas por nuestros expertos',
+    featuredAgents: 'Asesores Destacados',
+    featuredAgentsDesc: 'Conecta con los mejores profesionales inmobiliarios',
+    propertyTypes: 'Tipos de Propiedad',
+    propertyTypesTitle: '¿Qué Tipo de Propiedad Buscas?',
+    propertyTypesDesc: 'Tenemos la propiedad perfecta para cada necesidad',
+    verifiedAgents: 'Asesores Verificados',
+    meetOurExperts: 'Conoce a Nuestros Expertos',
+    expertsDesc: 'Profesionales comprometidos con encontrar tu propiedad ideal',
+    viewAllAgents: 'Ver Todos los Asesores',
+    whyChooseUs: '¿Por Qué Elegirnos?',
+    portalTitle: 'El Portal Inmobiliario #1 de República Dominicana',
+    smartSearch: 'Búsqueda Inteligente',
+    smartSearchDesc: 'Encuentra exactamente lo que buscas con nuestros filtros avanzados y búsqueda por ubicación, precio, tipo de propiedad y más.',
+    verifiedProperties: 'Propiedades Verificadas',
+    verifiedPropertiesDesc: 'Todas las propiedades son verificadas por nuestro equipo para garantizar información precisa y confiable.',
+    expertAgents: 'Asesores Expertos',
+    expertAgentsDesc: 'Conecta con asesores inmobiliarios profesionales que conocen el mercado dominicano a la perfección.',
+  },
+
   // Mensajes comunes
   common: {
     loading: 'Cargando...',

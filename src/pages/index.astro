@@ -85,13 +85,13 @@ const organizationSchema = {
     <div class="container-custom">
       <div class="text-center mb-12">
         <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
-          Tipos de Propiedad
+          {t.sections.propertyTypes}
         </span>
         <h2 class="section-title mt-2">
-          ¿Qué Tipo de Propiedad Buscas?
+          {t.sections.propertyTypesTitle}
         </h2>
         <p class="section-subtitle mx-auto">
-          Tenemos la propiedad perfecta para cada necesidad
+          {t.sections.propertyTypesDesc}
         </p>
       </div>
 
@@ -159,17 +159,17 @@ const organizationSchema = {
       <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
         <div>
           <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
-            Asesores Verificados
+            {t.sections.verifiedAgents}
           </span>
           <h2 class="section-title mt-2">
-            Conoce a Nuestros Expertos
+            {t.sections.meetOurExperts}
           </h2>
           <p class="section-subtitle">
-            Profesionales comprometidos con encontrar tu propiedad ideal
+            {t.sections.expertsDesc}
           </p>
         </div>
         <a href="/asesores" class="btn-outline mt-6 md:mt-0">
-          Ver Todos los Asesores
+          {t.sections.viewAllAgents}
           <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
@@ -189,10 +189,10 @@ const organizationSchema = {
     <div class="container-custom">
       <div class="text-center mb-12">
         <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
-          ¿Por Qué Elegirnos?
+          {t.sections.whyChooseUs}
         </span>
         <h2 class="section-title mt-2">
-          El Portal Inmobiliario #1 de República Dominicana
+          {t.sections.portalTitle}
         </h2>
       </div>
 
@@ -203,9 +203,9 @@ const organizationSchema = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-3">Búsqueda Inteligente</h3>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">{t.sections.smartSearch}</h3>
           <p class="text-gray-600">
-            Encuentra exactamente lo que buscas con nuestros filtros avanzados y búsqueda por ubicación, precio, tipo de propiedad y más.
+            {t.sections.smartSearchDesc}
           </p>
         </div>
 
@@ -215,9 +215,9 @@ const organizationSchema = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-3">Propiedades Verificadas</h3>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">{t.sections.verifiedProperties}</h3>
           <p class="text-gray-600">
-            Todas las propiedades son verificadas por nuestro equipo para garantizar información precisa y confiable.
+            {t.sections.verifiedPropertiesDesc}
           </p>
         </div>
 
@@ -227,9 +227,9 @@ const organizationSchema = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <h3 class="text-xl font-semibold text-gray-900 mb-3">Asesores Expertos</h3>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">{t.sections.expertAgents}</h3>
           <p class="text-gray-600">
-            Conecta con asesores inmobiliarios profesionales que conocen el mercado dominicano a la perfección.
+            {t.sections.expertAgentsDesc}
           </p>
         </div>
       </div>

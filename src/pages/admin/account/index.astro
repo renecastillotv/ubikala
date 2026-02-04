@@ -32,7 +32,7 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
           <h3>{currentPlan?.name || 'Sin Plan'}</h3>
           {currentPlan && (
             <div class="plan-price">
-              <span class="price">${currentPlan.price.toFixed(2)}</span>
+              <span class="price">${Number(currentPlan.price).toFixed(2)}</span>
               <span class="period">/mes</span>
             </div>
           )}
@@ -149,7 +149,7 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
                 <div class="plan-option-header">
                   <h4>{plan.name}</h4>
                   <div class="plan-option-price">
-                    <span class="price">${plan.price.toFixed(2)}</span>
+                    <span class="price">${Number(plan.price).toFixed(2)}</span>
                     <span class="period">/mes</span>
                   </div>
                 </div>

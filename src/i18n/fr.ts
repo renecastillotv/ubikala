@@ -222,6 +222,29 @@ export const fr: Translations = {
     terms: 'Termes et Conditions',
   },
 
+  // Sections de page
+  sections: {
+    featuredProperties: 'Propriétés en Vedette',
+    featuredPropertiesDesc: 'Découvrez les meilleures opportunités immobilières sélectionnées par nos experts',
+    featuredAgents: 'Agents en Vedette',
+    featuredAgentsDesc: 'Connectez-vous avec les meilleurs professionnels de l\'immobilier',
+    propertyTypes: 'Types de Propriété',
+    propertyTypesTitle: 'Quel Type de Propriété Recherchez-vous?',
+    propertyTypesDesc: 'Nous avons la propriété parfaite pour chaque besoin',
+    verifiedAgents: 'Agents Vérifiés',
+    meetOurExperts: 'Rencontrez Nos Experts',
+    expertsDesc: 'Des professionnels engagés à trouver votre propriété idéale',
+    viewAllAgents: 'Voir Tous les Agents',
+    whyChooseUs: 'Pourquoi Nous Choisir?',
+    portalTitle: 'Le Portail Immobilier #1 en République Dominicaine',
+    smartSearch: 'Recherche Intelligente',
+    smartSearchDesc: 'Trouvez exactement ce que vous cherchez avec nos filtres avancés et recherche par emplacement, prix, type de propriété et plus.',
+    verifiedProperties: 'Propriétés Vérifiées',
+    verifiedPropertiesDesc: 'Toutes les propriétés sont vérifiées par notre équipe pour garantir des informations précises et fiables.',
+    expertAgents: 'Agents Experts',
+    expertAgentsDesc: 'Connectez-vous avec des agents immobiliers professionnels qui connaissent parfaitement le marché dominicain.',
+  },
+
   // Messages communs
   common: {
     loading: 'Chargement...',

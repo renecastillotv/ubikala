@@ -122,6 +122,20 @@ const PORTAL_FILTER = `(
 
 // Helper function to convert Ubikala property to Property interface
 function ubikalaToProperty(up: UbikalaProperty): Property {
+  // Build agents array with owner info if available
+  const agents = up.owner_name ? [{
+    id: 0,
+    nombre: up.owner_name,
+    telefono: up.owner_phone || up.contacto_telefono || '',
+    whatsapp: up.contacto_whatsapp || up.owner_phone || '',
+    email: up.owner_email || up.contacto_email || '',
+    foto: up.owner_avatar || '/images/agent-placeholder.svg',
+    slug: 'propietario',
+    verified: up.owner_verified || false,
+    company: up.owner_company_name || undefined,
+    role: up.owner_role || 'propietario',
+  }] : [];
+
   return {
     id: parseInt(up.id) || 0,
     tenant_id: 0,
@@ -150,6 +164,7 @@ function ubikalaToProperty(up: UbikalaProperty): Property {
       area_construida: Number(up.m2_construccion) || 0,
       area_terreno: Number(up.m2_terreno) || 0,
       amenidades: up.amenidades || [],
+      agents: agents.length > 0 ? agents : undefined,
     },
     imagenes: up.imagenes || [],
     portales: { ubikala: true },
@@ -160,6 +175,8 @@ function ubikalaToProperty(up: UbikalaProperty): Property {
     // Additional fields for display
     imagen_principal: up.imagen_principal,
     source: 'ubikala',
+    // Owner verification flag for Ubikala properties
+    owner_verified: up.owner_verified || false,
   } as Property;
 }
 
