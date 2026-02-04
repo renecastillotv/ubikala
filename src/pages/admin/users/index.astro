@@ -406,9 +406,15 @@ const users = await getAllUsers();
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .btn-secondary:hover {
       background: #e5e7eb;
+    }
+    .modal-footer .btn-primary {
+      white-space: nowrap;
+      flex-shrink: 0;
     }
   </style>
 

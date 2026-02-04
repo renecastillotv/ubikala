@@ -57,7 +57,8 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
     if (email) updateData.email = email;
     if (name) updateData.name = name;
-    if (role && ['admin', 'agent'].includes(role)) updateData.role = role;
+    const validRoles = ['admin', 'inmobiliaria', 'asesor_independiente', 'propietario'];
+    if (role && validRoles.includes(role)) updateData.role = role;
     if (phone !== undefined) updateData.phone = phone;
     if (is_active !== undefined) updateData.is_active = is_active;
     if (password) updateData.password_hash = await hashPassword(password);

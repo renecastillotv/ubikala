@@ -50,7 +50,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    if (!['admin', 'agent'].includes(role)) {
+    const validRoles = ['admin', 'inmobiliaria', 'asesor_independiente', 'propietario'];
+    if (!validRoles.includes(role)) {
       return new Response(JSON.stringify({ error: 'Rol inválido' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
