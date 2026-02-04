@@ -5,6 +5,7 @@ import { getCurrentUser, getTokenFromRequest, type AuthUser } from './lib/auth';
 const PUBLIC_ROUTES = [
   '/admin/login',
   '/api/admin/auth/login',
+  '/api/admin/auth/register',
 ];
 
 // Check if route is public
