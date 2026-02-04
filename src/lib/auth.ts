@@ -6,6 +6,7 @@ import {
   createSession,
   getSessionByTokenHash,
   deleteSession,
+  deleteUserSessions,
   updateUserLastLogin,
   logActivity,
   type UbikalaUser
@@ -87,20 +88,22 @@ export async function loginUser(
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + TOKEN_EXPIRY_DAYS);
 
-  // Create placeholder session first
+  // Clean up any existing sessions for this user
+  await deleteUserSessions(user.id);
+
+  // Generate a unique temporary hash using timestamp and random string
+  const tempHash = `temp_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+  // Create session with unique temp hash
   const session = await createSession({
     user_id: user.id,
-    token_hash: 'temp', // Will update after generating token
+    token_hash: tempHash,
     expires_at: expiresAt,
     ip_address,
     user_agent,
   });
 
   const token = await generateToken(user.id, session.id);
-  const tokenHash = await hashToken(token);
-
-  // Update session with real token hash
-  // Note: In production, you'd want to do this in a transaction
 
   await updateUserLastLogin(user.id);
 
