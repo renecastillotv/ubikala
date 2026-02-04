@@ -293,7 +293,8 @@ export async function getProperties(options: {
 }
 
 export async function getPropertyBySlug(slug: string) {
-  const rows = await sql`
+  // Dual-read: Check both CLIC and Ubikala databases
+  const clicPromise = sql ? sql`
     SELECT
       p.*,
       u.nombre as captador_nombre,
@@ -312,7 +313,8 @@ export async function getPropertyBySlug(slug: string) {
       pa.stats as captador_stats,
       pa.visible_en_web as captador_visible,
       t.nombre as empresa_nombre,
-      t.slug as empresa_slug
+      t.slug as empresa_slug,
+      'clic' as source
     FROM propiedades p
     LEFT JOIN usuarios u ON p.captador_id = u.id
     LEFT JOIN perfiles_asesor pa ON u.id = pa.usuario_id AND pa.tenant_id = p.tenant_id
@@ -321,8 +323,38 @@ export async function getPropertyBySlug(slug: string) {
     AND p.activo = true
     AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
     LIMIT 1
-  `;
-  return rows[0] as Property | undefined;
+  ` : Promise.resolve([]);
+
+  const ubikalaPromise = getUbikalaPropertyBySlug(slug).then(prop =>
+    prop ? ubikalaToProperty(prop) : null
+  );
+
+  const [clicResult, ubikalaResult] = await Promise.allSettled([
+    clicPromise,
+    ubikalaPromise
+  ]);
+
+  // Log for debugging
+  if (clicResult.status === 'rejected') {
+    console.error('[getPropertyBySlug] CLIC DB error:', clicResult.reason);
+  }
+  if (ubikalaResult.status === 'rejected') {
+    console.error('[getPropertyBySlug] Ubikala DB error:', ubikalaResult.reason);
+  }
+
+  // First check CLIC result
+  const clicProperty = clicResult.status === 'fulfilled' && clicResult.value?.[0];
+  if (clicProperty) {
+    return clicProperty as Property;
+  }
+
+  // Then check Ubikala result
+  const ubikalaProperty = ubikalaResult.status === 'fulfilled' ? ubikalaResult.value : null;
+  if (ubikalaProperty) {
+    return ubikalaProperty as Property;
+  }
+
+  return undefined;
 }
 
 export async function getFeaturedProperties(limit = 6) {
