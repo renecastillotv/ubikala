@@ -140,21 +140,34 @@ export async function updateUser(id: string, data: Partial<{
 }>): Promise<UbikalaUser | null> {
   if (!ubikalaDb) return null;
 
-  const updates: string[] = [];
-  const values: any[] = [];
+  // Check if there's anything to update
+  const hasUpdates = Object.values(data).some(v => v !== undefined);
+  if (!hasUpdates) return getUserById(id);
 
-  Object.entries(data).forEach(([key, value]) => {
-    if (value !== undefined) {
-      updates.push(key);
-      values.push(value);
-    }
-  });
+  // Get current user to merge with updates
+  const currentUser = await getUserById(id);
+  if (!currentUser) return null;
 
-  if (updates.length === 0) return getUserById(id);
+  // Merge current values with provided updates
+  const email = data.email !== undefined ? data.email : currentUser.email;
+  const password_hash = data.password_hash !== undefined ? data.password_hash : currentUser.password_hash;
+  const name = data.name !== undefined ? data.name : currentUser.name;
+  const role = data.role !== undefined ? data.role : currentUser.role;
+  const phone = data.phone !== undefined ? data.phone : currentUser.phone;
+  const avatar_url = data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url;
+  const is_active = data.is_active !== undefined ? data.is_active : currentUser.is_active;
 
   const rows = await ubikalaDb`
     UPDATE ubikala_users
-    SET ${ubikalaDb(data, ...updates)}
+    SET
+      email = ${email},
+      password_hash = ${password_hash},
+      name = ${name},
+      role = ${role},
+      phone = ${phone},
+      avatar_url = ${avatar_url},
+      is_active = ${is_active},
+      updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
   `;
