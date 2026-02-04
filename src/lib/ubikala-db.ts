@@ -1737,3 +1737,149 @@ export async function removePlanFromUser(userId: string): Promise<UbikalaUser | 
   `;
   return rows[0] as UbikalaUser || null;
 }
+
+// ==================== PUBLICATION LIMITS ====================
+
+// Default free plan limits for users without a plan
+export const DEFAULT_FREE_LIMITS = {
+  max_publications: 3,
+  publication_duration_days: 30,
+  max_team_members: 0,
+  max_leads_per_month: 10
+};
+
+// Check if user can publish a new property
+export interface PublicationCheckResult {
+  canPublish: boolean;
+  reason?: string;
+  currentCount: number;
+  limit: number | null;
+  isUnlimited: boolean;
+}
+
+export async function canUserPublish(userId: string): Promise<PublicationCheckResult> {
+  if (!ubikalaDb) {
+    return { canPublish: false, reason: 'Base de datos no configurada', currentCount: 0, limit: 0, isUnlimited: false };
+  }
+
+  const user = await getUserById(userId);
+  if (!user) {
+    return { canPublish: false, reason: 'Usuario no encontrado', currentCount: 0, limit: 0, isUnlimited: false };
+  }
+
+  // Admin can always publish
+  if (user.role === 'admin') {
+    return { canPublish: true, currentCount: 0, limit: null, isUnlimited: true };
+  }
+
+  // Get current publication count
+  const currentCount = await countPropertiesByUser(userId);
+
+  // Determine the publication limit
+  let limit: number | null = null;
+
+  if (user.parent_user_id) {
+    // Team member - check custom limit first
+    if (user.custom_publication_limit !== null) {
+      limit = user.custom_publication_limit === 0 ? null : user.custom_publication_limit;
+    } else {
+      // Team members without custom limit use a reasonable default
+      limit = DEFAULT_FREE_LIMITS.max_publications;
+    }
+  } else if (user.plan_id) {
+    // Has a plan - get limits from plan
+    const userWithPlan = await getUserWithPlan(userId);
+    if (userWithPlan?.plan) {
+      limit = userWithPlan.plan.max_publications === 0 ? null : userWithPlan.plan.max_publications;
+    }
+  } else {
+    // No plan - use default free limits
+    limit = DEFAULT_FREE_LIMITS.max_publications;
+  }
+
+  // null means unlimited
+  if (limit === null) {
+    return { canPublish: true, currentCount, limit: null, isUnlimited: true };
+  }
+
+  // Check if at or over limit
+  if (currentCount >= limit) {
+    return {
+      canPublish: false,
+      reason: `Has alcanzado el límite de ${limit} publicaciones. Actualiza tu plan para publicar más propiedades.`,
+      currentCount,
+      limit,
+      isUnlimited: false
+    };
+  }
+
+  return { canPublish: true, currentCount, limit, isUnlimited: false };
+}
+
+// Check if inmobiliaria can add a new team member
+export interface TeamMemberCheckResult {
+  canAdd: boolean;
+  reason?: string;
+  currentCount: number;
+  limit: number | null;
+  isUnlimited: boolean;
+}
+
+export async function canAddTeamMember(userId: string): Promise<TeamMemberCheckResult> {
+  if (!ubikalaDb) {
+    return { canAdd: false, reason: 'Base de datos no configurada', currentCount: 0, limit: 0, isUnlimited: false };
+  }
+
+  const user = await getUserById(userId);
+  if (!user) {
+    return { canAdd: false, reason: 'Usuario no encontrado', currentCount: 0, limit: 0, isUnlimited: false };
+  }
+
+  // Only inmobiliarias and admins can have team members
+  if (user.role !== 'inmobiliaria' && user.role !== 'admin') {
+    return { canAdd: false, reason: 'Solo las inmobiliarias pueden tener miembros de equipo', currentCount: 0, limit: 0, isUnlimited: false };
+  }
+
+  // Admin can always add team members
+  if (user.role === 'admin') {
+    return { canAdd: true, currentCount: 0, limit: null, isUnlimited: true };
+  }
+
+  // Get current team member count
+  const currentCount = await countTeamMembers(userId);
+
+  // Determine the team member limit
+  let limit: number | null = null;
+
+  if (user.plan_id) {
+    const userWithPlan = await getUserWithPlan(userId);
+    if (userWithPlan?.plan) {
+      limit = userWithPlan.plan.max_team_members === 0 || userWithPlan.plan.max_team_members === null
+        ? null
+        : userWithPlan.plan.max_team_members;
+    }
+  } else {
+    // No plan - use default (0 means no team members allowed)
+    limit = DEFAULT_FREE_LIMITS.max_team_members;
+  }
+
+  // null means unlimited
+  if (limit === null) {
+    return { canAdd: true, currentCount, limit: null, isUnlimited: true };
+  }
+
+  // Check if at or over limit
+  if (currentCount >= limit) {
+    return {
+      canAdd: false,
+      reason: limit === 0
+        ? 'Tu plan actual no incluye miembros de equipo. Actualiza tu plan para agregar colaboradores.'
+        : `Has alcanzado el límite de ${limit} miembros de equipo. Actualiza tu plan para agregar más.`,
+      currentCount,
+      limit,
+      isUnlimited: false
+    };
+  }
+
+  return { canAdd: true, currentCount, limit, isUnlimited: false };
+}

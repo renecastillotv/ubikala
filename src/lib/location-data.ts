@@ -46,6 +46,20 @@ export const locationData: LocationData = {
       name: "Santo Domingo",
       cities: [
         {
+          name: "Distrito Nacional",
+          sectors: [
+            "Piantini", "Naco", "Evaristo Morales", "Serralles", "Bella Vista",
+            "Gazcue", "Zona Colonial", "La Esperilla", "Paraiso", "El Vergel",
+            "Los Cacicazgos", "Mirador Norte", "Mirador Sur", "Arroyo Hondo",
+            "Los Prados", "Julieta Morales", "Renacimiento", "La Julia",
+            "Miraflores", "San Geronimo", "Los Restauradores", "Ensanche Ozama",
+            "Villa Consuelo", "Ciudad Nueva", "La Agustina", "Mejoramiento Social",
+            "Ensanche Quisqueya", "Ensanche Luperon", "Cristo Rey", "Gualey",
+            "Los Mameyes", "27 de Febrero", "Honduras", "San Carlos", "Villa Juana",
+            "Villa Francisca", "San Miguel", "San Juan Bosco"
+          ]
+        },
+        {
           name: "Santo Domingo Este",
           sectors: [
             "Los Mina", "Alma Rosa", "Villa Faro", "Isabelita", "Los Trinitarios",

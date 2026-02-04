@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getUbikalaProperties, createProperty, logActivity } from '../../../../lib/ubikala-db';
+import { getUbikalaProperties, createProperty, logActivity, canUserPublish } from '../../../../lib/ubikala-db';
 
 function generateSlug(titulo: string): string {
   return titulo
@@ -47,6 +47,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
+    // Check publication limits before proceeding
+    const publicationCheck = await canUserPublish(user.id);
+    if (!publicationCheck.canPublish) {
+      return new Response(JSON.stringify({
+        error: publicationCheck.reason || 'No puedes publicar más propiedades',
+        limit_reached: true,
+        current_count: publicationCheck.currentCount,
+        limit: publicationCheck.limit
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
 
     // Required fields validation

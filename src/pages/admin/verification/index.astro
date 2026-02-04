@@ -146,7 +146,7 @@ const isTeamMember = !!fullUser?.parent_user_id;
 
   <style>
     .verification-page {
-      max-width: 800px;
+      max-width: 100%;
     }
     .page-header {
       margin-bottom: 1.5rem;
@@ -289,10 +289,24 @@ const isTeamMember = !!fullUser?.parent_user_id;
     }
     .verification-form {
       display: grid;
+      grid-template-columns: 1fr 2fr;
       gap: 1.5rem;
     }
+    @media (max-width: 900px) {
+      .verification-form {
+        grid-template-columns: 1fr;
+      }
+    }
+    .upload-card form {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
     .upload-item {
-      margin-bottom: 1.25rem;
+      margin-bottom: 0;
+    }
+    .form-actions, .form-message {
+      grid-column: 1 / -1;
     }
     .upload-header {
       display: flex;

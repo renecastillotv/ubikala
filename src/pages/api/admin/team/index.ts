@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTeamMembers, createTeamMember, countTeamMembers, getUserWithPlan, logActivity, type UserRole } from '../../../../lib/ubikala-db';
+import { getTeamMembers, createTeamMember, canAddTeamMember, logActivity, type UserRole } from '../../../../lib/ubikala-db';
 import { hashPassword } from '../../../../lib/auth';
 
 // GET - List team members (inmobiliaria only)
@@ -57,15 +57,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Check team member limit based on plan
-    const userWithPlan = await getUserWithPlan(user.id);
-    const maxTeamMembers = userWithPlan?.plan?.max_team_members || 5; // Default 5 if no plan
-    const currentCount = await countTeamMembers(user.id);
-
-    if (currentCount >= maxTeamMembers) {
+    const teamCheck = await canAddTeamMember(user.id);
+    if (!teamCheck.canAdd) {
       return new Response(JSON.stringify({
-        error: `Has alcanzado el límite de ${maxTeamMembers} miembros de equipo`
+        error: teamCheck.reason || 'No puedes agregar más miembros al equipo',
+        limit_reached: true,
+        current_count: teamCheck.currentCount,
+        limit: teamCheck.limit
       }), {
-        status: 400,
+        status: 403,
         headers: { 'Content-Type': 'application/json' },
       });
     }
