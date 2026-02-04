@@ -1,8 +1,11 @@
 {
-  "name": "propiedadenrd",
+  "name": "ubikala",
   "type": "module",
   "version": "1.0.0",
-  "description": "Portal inmobiliario de República Dominicana - Venta y Alquiler de Propiedades",
+  "description": "Ubikala - Portal inmobiliario de República Dominicana",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -11,7 +14,6 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.1.0",
     "@astrojs/tailwind": "^5.1.0",
     "@astrojs/vercel": "^7.8.2",
     "@neondatabase/serverless": "^0.9.0",
