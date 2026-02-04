@@ -292,8 +292,8 @@ export async function getPropertyBySlug(slug: string) {
 }
 
 export async function getFeaturedProperties(limit = 6) {
-  // Dual-read: Get featured from both CLIC and Ubikala
-  const [clicRows, ubikalaRows] = await Promise.all([
+  // Dual-read: Get featured from both CLIC and Ubikala with error handling
+  const [clicResult, ubikalaResult] = await Promise.allSettled([
     sql`
       SELECT
         p.*,
@@ -326,8 +326,20 @@ export async function getFeaturedProperties(limit = 6) {
     )
   ]);
 
+  // Extract results with fallback to empty arrays
+  const clicRows = clicResult.status === 'fulfilled' ? (clicResult.value as Property[]) : [];
+  const ubikalaRows = ubikalaResult.status === 'fulfilled' ? ubikalaResult.value : [];
+
+  // Log errors for debugging
+  if (clicResult.status === 'rejected') {
+    console.error('CLIC DB error in getFeaturedProperties:', clicResult.reason);
+  }
+  if (ubikalaResult.status === 'rejected') {
+    console.error('Ubikala DB error in getFeaturedProperties:', ubikalaResult.reason);
+  }
+
   // Merge and sort by created_at
-  const merged = [...(clicRows as Property[]), ...ubikalaRows]
+  const merged = [...clicRows, ...ubikalaRows]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
 
@@ -335,8 +347,8 @@ export async function getFeaturedProperties(limit = 6) {
 }
 
 export async function getRecentProperties(limit = 12) {
-  // Dual-read: Get recent from both CLIC and Ubikala
-  const [clicRows, ubikalaRows] = await Promise.all([
+  // Dual-read: Get recent from both CLIC and Ubikala with error handling
+  const [clicResult, ubikalaResult] = await Promise.allSettled([
     sql`
       SELECT
         p.*,
@@ -368,8 +380,20 @@ export async function getRecentProperties(limit = 12) {
     )
   ]);
 
+  // Extract results with fallback to empty arrays
+  const clicRows = clicResult.status === 'fulfilled' ? (clicResult.value as Property[]) : [];
+  const ubikalaRows = ubikalaResult.status === 'fulfilled' ? ubikalaResult.value : [];
+
+  // Log errors for debugging
+  if (clicResult.status === 'rejected') {
+    console.error('CLIC DB error in getRecentProperties:', clicResult.reason);
+  }
+  if (ubikalaResult.status === 'rejected') {
+    console.error('Ubikala DB error in getRecentProperties:', ubikalaResult.reason);
+  }
+
   // Merge and sort by created_at
-  const merged = [...(clicRows as Property[]), ...ubikalaRows]
+  const merged = [...clicRows, ...ubikalaRows]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
 
