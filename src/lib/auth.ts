@@ -3,13 +3,15 @@ import { SignJWT, jwtVerify } from 'jose';
 import {
   getUserByEmail,
   getUserById,
+  createUser,
   createSession,
   getSessionByTokenHash,
   deleteSession,
   deleteUserSessions,
   updateUserLastLogin,
   logActivity,
-  type UbikalaUser
+  type UbikalaUser,
+  type UserRole
 } from './ubikala-db';
 
 const JWT_SECRET = import.meta.env.JWT_SECRET || process.env.JWT_SECRET;
@@ -194,12 +196,80 @@ export function createLogoutCookie(): string {
   return 'ubikala_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
 }
 
+// Register new user
+export async function registerUser(
+  data: {
+    email: string;
+    password: string;
+    name: string;
+    role: UserRole;
+    phone?: string;
+    company_name?: string;
+    license_number?: string;
+  },
+  ip_address?: string,
+  user_agent?: string
+): Promise<{ user: Omit<UbikalaUser, 'password_hash'>; token: string }> {
+  // Check if email already exists
+  const existingUser = await getUserByEmail(data.email);
+  if (existingUser) {
+    throw new Error('Este correo electrónico ya está registrado');
+  }
+
+  // Hash password
+  const password_hash = await hashPassword(data.password);
+
+  // Create user
+  const user = await createUser({
+    email: data.email,
+    password_hash,
+    name: data.name,
+    role: data.role,
+    phone: data.phone,
+    company_name: data.company_name,
+    license_number: data.license_number,
+  });
+
+  // Log activity
+  await logActivity({
+    user_id: user.id,
+    action: 'user_registered',
+    details: { role: data.role },
+    ip_address,
+  });
+
+  // Generate token and create session
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + TOKEN_EXPIRY_DAYS);
+
+  const tempHash = `temp_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+  const session = await createSession({
+    user_id: user.id,
+    token_hash: tempHash,
+    expires_at: expiresAt,
+    ip_address,
+    user_agent,
+  });
+
+  const token = await generateToken(user.id, session.id);
+
+  await updateUserLastLogin(user.id);
+
+  // Remove password_hash from user object
+  const { password_hash: _, ...safeUser } = user;
+
+  return { user: safeUser, token };
+}
+
 // Type for authenticated user in Astro context
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'agent';
+  role: UserRole;
   avatar_url: string | null;
   phone: string | null;
+  company_name?: string | null;
+  license_number?: string | null;
 }
