@@ -103,10 +103,10 @@ const languageUrls = getLanguageUrls(Astro.url.pathname);
           >0</span>
         </a>
 
-        <a href={localizedUrl('/publicar', lang)} class="hidden sm:inline-flex btn-primary text-sm">
+        <a href="/admin/properties/create" class="hidden sm:inline-flex btn-primary text-sm">
           {t.nav.publishProperty}
         </a>
-        <a href={localizedUrl('/login', lang)} class="text-gray-700 hover:text-primary-600 font-medium hidden md:block">
+        <a href="/admin/login" class="text-gray-700 hover:text-primary-600 font-medium hidden md:block">
           {t.nav.login}
         </a>
 
@@ -147,10 +147,10 @@ const languageUrls = getLanguageUrls(Astro.url.pathname);
           <span data-favorites-count class="ml-auto bg-primary-100 text-primary-700 text-xs font-medium px-2 py-0.5 rounded-full hidden">0</span>
         </a>
         <hr class="my-2 border-secondary-400" />
-        <a href={localizedUrl('/publicar', lang)} class="btn-primary text-center">
+        <a href="/admin/properties/create" class="btn-primary text-center">
           {t.nav.publishProperty}
         </a>
-        <a href={localizedUrl('/login', lang)} class="btn-outline text-center">
+        <a href="/admin/login" class="btn-outline text-center">
           {t.nav.login}
         </a>
       </div>

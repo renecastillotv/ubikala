@@ -127,13 +127,26 @@ const recentActivity = await getActivityLog({ limit: 10 });
   </div>
 
   <style>
+    /* Ubikala Colors */
+    :root {
+      --ubikala-olive: #5C6B3C;
+      --ubikala-olive-dark: #4A5730;
+      --ubikala-olive-light: #7A8B5A;
+      --ubikala-sand: #D4C4A8;
+      --ubikala-sand-light: #E8DFD0;
+      --ubikala-terracotta: #C96D3D;
+      --ubikala-terracotta-dark: #A85A30;
+      --ubikala-ivory: #FAF7F0;
+      --ubikala-warm-gray: #6B6660;
+      --ubikala-warm-gray-dark: #4A4642;
+    }
     .dashboard {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
     .welcome-card {
-      background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%);
+      background: linear-gradient(135deg, var(--ubikala-olive) 0%, var(--ubikala-olive-dark) 100%);
       color: white;
       padding: 1.5rem 2rem;
       border-radius: 1rem;
@@ -158,7 +171,8 @@ const recentActivity = await getActivityLog({ limit: 10 });
       display: flex;
       align-items: center;
       gap: 1rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--ubikala-sand);
     }
     .stat-icon {
       width: 48px;
@@ -172,9 +186,9 @@ const recentActivity = await getActivityLog({ limit: 10 });
       width: 24px;
       height: 24px;
     }
-    .stat-icon.blue { background: #dbeafe; color: #3b82f6; }
+    .stat-icon.blue { background: var(--ubikala-sand-light); color: var(--ubikala-olive); }
     .stat-icon.green { background: #dcfce7; color: #22c55e; }
-    .stat-icon.yellow { background: #fef3c7; color: #f59e0b; }
+    .stat-icon.yellow { background: #fff7ed; color: var(--ubikala-terracotta); }
     .stat-icon.purple { background: #f3e8ff; color: #a855f7; }
     .stat-info {
       display: flex;
@@ -183,22 +197,23 @@ const recentActivity = await getActivityLog({ limit: 10 });
     .stat-value {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #111827;
+      color: var(--ubikala-warm-gray-dark);
     }
     .stat-label {
       font-size: 0.8125rem;
-      color: #6b7280;
+      color: var(--ubikala-warm-gray);
     }
     .section {
       background: white;
       border-radius: 0.75rem;
       padding: 1.5rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border: 1px solid var(--ubikala-sand);
     }
     .section h4 {
       font-size: 1rem;
       font-weight: 600;
-      color: #111827;
+      color: var(--ubikala-warm-gray-dark);
       margin-bottom: 1rem;
     }
     .quick-actions {
@@ -211,7 +226,7 @@ const recentActivity = await getActivityLog({ limit: 10 });
       align-items: center;
       gap: 0.5rem;
       padding: 0.625rem 1rem;
-      background: #3b82f6;
+      background: var(--ubikala-olive);
       color: white;
       text-decoration: none;
       border-radius: 0.5rem;
@@ -220,14 +235,14 @@ const recentActivity = await getActivityLog({ limit: 10 });
       transition: background 0.2s;
     }
     .action-btn:hover {
-      background: #2563eb;
+      background: var(--ubikala-olive-dark);
     }
     .action-btn.secondary {
-      background: #f3f4f6;
-      color: #374151;
+      background: var(--ubikala-sand-light);
+      color: var(--ubikala-warm-gray-dark);
     }
     .action-btn.secondary:hover {
-      background: #e5e7eb;
+      background: var(--ubikala-sand);
     }
     .action-btn svg {
       width: 18px;
@@ -243,18 +258,18 @@ const recentActivity = await getActivityLog({ limit: 10 });
       align-items: center;
       gap: 0.75rem;
       padding: 0.75rem;
-      background: #f9fafb;
+      background: var(--ubikala-ivory);
       border-radius: 0.5rem;
     }
     .activity-icon {
       width: 36px;
       height: 36px;
-      background: #e5e7eb;
+      background: var(--ubikala-sand-light);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #6b7280;
+      color: var(--ubikala-olive);
     }
     .activity-icon svg {
       width: 18px;
@@ -267,20 +282,20 @@ const recentActivity = await getActivityLog({ limit: 10 });
     }
     .activity-action {
       font-weight: 500;
-      color: #111827;
+      color: var(--ubikala-warm-gray-dark);
       font-size: 0.875rem;
     }
     .activity-user {
       font-size: 0.75rem;
-      color: #6b7280;
+      color: var(--ubikala-warm-gray);
     }
     .activity-time {
       font-size: 0.75rem;
-      color: #9ca3af;
+      color: var(--ubikala-warm-gray-light, #8B8680);
     }
     .no-activity {
       text-align: center;
-      color: #6b7280;
+      color: var(--ubikala-warm-gray);
       padding: 2rem;
     }
   </style>

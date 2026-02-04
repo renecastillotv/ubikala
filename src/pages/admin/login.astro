@@ -20,6 +20,20 @@ if (token) {
     <title>Iniciar Sesión | Ubikala Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet" />
     <style>
+      /* Ubikala Color Palette */
+      :root {
+        --ubikala-olive: #5C6B3C;
+        --ubikala-olive-dark: #4A5730;
+        --ubikala-olive-light: #7A8B5A;
+        --ubikala-sand: #D4C4A8;
+        --ubikala-sand-light: #E8DFD0;
+        --ubikala-terracotta: #C96D3D;
+        --ubikala-terracotta-dark: #A85A30;
+        --ubikala-ivory: #FAF7F0;
+        --ubikala-ivory-pure: #FFFEF9;
+        --ubikala-warm-gray: #6B6660;
+        --ubikala-warm-gray-dark: #4A4642;
+      }
       * {
         margin: 0;
         padding: 0;
@@ -27,7 +41,7 @@ if (token) {
       }
       body {
         font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #1e3a5f 0%, #0d1f3c 100%);
+        background: linear-gradient(135deg, var(--ubikala-olive) 0%, var(--ubikala-olive-dark) 100%);
         min-height: 100vh;
         display: flex;
         align-items: center;
@@ -35,9 +49,9 @@ if (token) {
         padding: 1rem;
       }
       .login-container {
-        background: white;
+        background: var(--ubikala-ivory-pure);
         border-radius: 1rem;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 25px 50px -12px rgba(74, 87, 48, 0.35);
         width: 100%;
         max-width: 420px;
         padding: 2.5rem;
@@ -49,11 +63,12 @@ if (token) {
       .logo h1 {
         font-size: 2rem;
         font-weight: 700;
-        color: #1e3a5f;
+        color: var(--ubikala-olive);
         margin-bottom: 0.5rem;
+        letter-spacing: -0.03em;
       }
       .logo p {
-        color: #6b7280;
+        color: var(--ubikala-warm-gray);
         font-size: 0.875rem;
       }
       .form-group {
@@ -63,37 +78,39 @@ if (token) {
         display: block;
         font-size: 0.875rem;
         font-weight: 500;
-        color: #374151;
+        color: var(--ubikala-warm-gray-dark);
         margin-bottom: 0.5rem;
       }
       input {
         width: 100%;
         padding: 0.75rem 1rem;
-        border: 1px solid #d1d5db;
+        border: 1px solid var(--ubikala-sand);
         border-radius: 0.5rem;
         font-size: 1rem;
+        background: white;
         transition: border-color 0.2s, box-shadow 0.2s;
       }
       input:focus {
         outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        border-color: var(--ubikala-olive);
+        box-shadow: 0 0 0 3px rgba(92, 107, 60, 0.15);
       }
       .btn {
         width: 100%;
         padding: 0.875rem;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: var(--ubikala-olive);
         color: white;
         border: none;
         border-radius: 0.5rem;
         font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: all 0.2s;
       }
       .btn:hover {
+        background: var(--ubikala-olive-dark);
         transform: translateY(-1px);
-        box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
+        box-shadow: 0 10px 25px -5px rgba(92, 107, 60, 0.4);
       }
       .btn:disabled {
         opacity: 0.7;
@@ -114,12 +131,13 @@ if (token) {
         display: block;
         text-align: center;
         margin-top: 1.5rem;
-        color: #6b7280;
+        color: var(--ubikala-warm-gray);
         text-decoration: none;
         font-size: 0.875rem;
+        transition: color 0.2s;
       }
       .back-link:hover {
-        color: #374151;
+        color: var(--ubikala-olive);
       }
     </style>
   </head>
