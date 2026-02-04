@@ -1,0 +1,558 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getVerificationRequestById, getDocumentsByRequest, getVerificationDocuments, getUserById, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
+
+const user = Astro.locals.user;
+
+if (!user || user.role !== 'admin') {
+  return Astro.redirect('/admin/dashboard');
+}
+
+const { id } = Astro.params;
+const request = await getVerificationRequestById(id!);
+
+if (!request) {
+  return Astro.redirect('/admin/verifications');
+}
+
+const documents = await getDocumentsByRequest(id!);
+const requestUser = await getUserById(request.user_id);
+const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRole);
+---
+
+<AdminLayout title="Revisar Verificación">
+  <div class="verification-detail">
+    <div class="page-header">
+      <a href="/admin/verifications" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Volver a Verificaciones
+      </a>
+    </div>
+
+    <div class="detail-grid">
+      <!-- User Info -->
+      <div class="card user-card">
+        <h3>Información del Usuario</h3>
+        <div class="user-profile">
+          <div class="user-avatar">
+            {requestUser?.avatar_url ? (
+              <img src={requestUser.avatar_url} alt={requestUser.name} />
+            ) : (
+              <span>{requestUser?.name.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          <div class="user-details">
+            <h4>{requestUser?.name}</h4>
+            <p class="email">{requestUser?.email}</p>
+            <span class:list={['role-badge', `role-${requestUser?.role}`]}>
+              {getRoleLabel(requestUser?.role as UserRole)}
+            </span>
+          </div>
+        </div>
+        <div class="info-list">
+          {requestUser?.phone && (
+            <div class="info-item">
+              <span class="label">Teléfono</span>
+              <span class="value">{requestUser.phone}</span>
+            </div>
+          )}
+          {requestUser?.company_name && (
+            <div class="info-item">
+              <span class="label">Empresa</span>
+              <span class="value">{requestUser.company_name}</span>
+            </div>
+          )}
+          <div class="info-item">
+            <span class="label">Miembro desde</span>
+            <span class="value">{requestUser?.created_at ? new Date(requestUser.created_at).toLocaleDateString('es-DO') : 'N/A'}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request Status -->
+      <div class="card status-card">
+        <h3>Estado de la Solicitud</h3>
+        <div class="status-display">
+          <span class:list={['status-badge large', request.status]}>
+            {request.status === 'pending' && 'Pendiente'}
+            {request.status === 'under_review' && 'En Revisión'}
+            {request.status === 'approved' && 'Aprobado'}
+            {request.status === 'rejected' && 'Rechazado'}
+          </span>
+        </div>
+        <div class="info-list">
+          <div class="info-item">
+            <span class="label">Fecha de solicitud</span>
+            <span class="value">{new Date(request.submitted_at).toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          </div>
+          {request.reviewed_at && (
+            <div class="info-item">
+              <span class="label">Fecha de revisión</span>
+              <span class="value">{new Date(request.reviewed_at).toLocaleDateString('es-DO')}</span>
+            </div>
+          )}
+          {request.rejection_reason && (
+            <div class="info-item rejection">
+              <span class="label">Motivo de rechazo</span>
+              <span class="value">{request.rejection_reason}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="card documents-card">
+        <h3>Documentos Enviados</h3>
+        <div class="documents-list">
+          {requiredDocs.map(doc => {
+            const uploadedDoc = documents.find(d => d.document_type_id === doc.id);
+            return (
+              <div class:list={['document-item', { uploaded: !!uploadedDoc, required: doc.is_required }]}>
+                <div class="doc-info">
+                  <span class="doc-name">{doc.name}</span>
+                  {doc.description && <span class="doc-desc">{doc.description}</span>}
+                  {doc.is_required && !uploadedDoc && (
+                    <span class="required-tag">Requerido</span>
+                  )}
+                </div>
+                {uploadedDoc ? (
+                  <div class="doc-actions">
+                    <span class:list={['doc-status', uploadedDoc.status]}>
+                      {uploadedDoc.status === 'pending' && 'Pendiente'}
+                      {uploadedDoc.status === 'approved' && 'Aprobado'}
+                      {uploadedDoc.status === 'rejected' && 'Rechazado'}
+                    </span>
+                    <a href={uploadedDoc.file_url} target="_blank" class="btn-outline btn-sm">
+                      Ver Documento
+                    </a>
+                  </div>
+                ) : (
+                  <span class="not-uploaded">No enviado</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      {(request.status === 'pending' || request.status === 'under_review') && (
+        <div class="card actions-card">
+          <h3>Acciones</h3>
+
+          {request.status === 'pending' && (
+            <button class="btn-outline full-width mb-1" id="start-review-btn">
+              Marcar en Revisión
+            </button>
+          )}
+
+          <div class="action-buttons">
+            <button class="btn-success" id="approve-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Aprobar
+            </button>
+            <button class="btn-danger" id="reject-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              Rechazar
+            </button>
+          </div>
+
+          <div class="form-group mt-1">
+            <label for="admin-notes">Notas internas</label>
+            <textarea id="admin-notes" rows="2" placeholder="Notas para referencia interna...">{request.admin_notes || ''}</textarea>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- Reject Modal -->
+  <div id="reject-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Rechazar Solicitud</h3>
+        <button class="modal-close" id="close-modal">&times;</button>
+      </div>
+      <form id="reject-form">
+        <div class="form-group">
+          <label for="rejection-reason">Motivo del Rechazo *</label>
+          <textarea id="rejection-reason" rows="3" required placeholder="Explica por qué se rechaza la solicitud..."></textarea>
+          <span class="hint">Este mensaje será visible para el usuario</span>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-outline" id="cancel-reject">Cancelar</button>
+          <button type="submit" class="btn-danger">Confirmar Rechazo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .verification-detail {
+      max-width: 900px;
+    }
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+    .back-link:hover { color: #374151; }
+    .back-link svg { width: 18px; height: 18px; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 1rem 0;
+    }
+    .documents-card, .actions-card {
+      grid-column: 1 / -1;
+    }
+    .user-profile {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 1rem;
+    }
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: var(--ubikala-olive, #5C6B3C);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      overflow: hidden;
+    }
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .user-details h4 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+    .user-details .email {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .role-inmobiliaria { background: #dbeafe; color: #1e40af; }
+    .role-asesor_independiente { background: #dcfce7; color: #166534; }
+    .role-propietario { background: #f3e8ff; color: #7c3aed; }
+    .info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+    }
+    .info-item .label { font-size: 0.8125rem; color: #6b7280; }
+    .info-item .value { font-size: 0.8125rem; font-weight: 500; color: #111827; }
+    .info-item.rejection {
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 0.75rem;
+      background: #fef2f2;
+      border-radius: 0.5rem;
+    }
+    .info-item.rejection .value { color: #dc2626; }
+    .status-display {
+      text-align: center;
+      padding: 1rem 0;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-badge.large {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+    .status-badge.pending { background: #fef3c7; color: #92400e; }
+    .status-badge.under_review { background: #dbeafe; color: #1e40af; }
+    .status-badge.approved { background: #dcfce7; color: #166534; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+    .documents-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .document-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+    .document-item.uploaded { border-color: #86efac; background: #f0fdf4; }
+    .doc-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .doc-name { font-size: 0.875rem; font-weight: 500; color: #111827; }
+    .doc-desc { font-size: 0.75rem; color: #6b7280; }
+    .required-tag {
+      display: inline-block;
+      padding: 0.125rem 0.375rem;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 0.25rem;
+      font-size: 0.625rem;
+      font-weight: 500;
+    }
+    .doc-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .doc-status {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .doc-status.pending { color: #92400e; }
+    .doc-status.approved { color: #166534; }
+    .doc-status.rejected { color: #dc2626; }
+    .not-uploaded {
+      font-size: 0.8125rem;
+      color: #9ca3af;
+    }
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .btn-success, .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success svg, .btn-danger svg { width: 18px; height: 18px; }
+    .btn-outline {
+      padding: 0.5rem 1rem;
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-outline:hover { background: #f3f4f6; }
+    .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
+    .full-width { width: 100%; }
+    .mb-1 { margin-bottom: 1rem; }
+    .mt-1 { margin-top: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.375rem;
+    }
+    .form-group textarea {
+      width: 100%;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--ubikala-olive, #5C6B3C);
+    }
+    .hint {
+      display: block;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.hidden { display: none; }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      position: relative;
+      background: white;
+      border-radius: 0.75rem;
+      max-width: 450px;
+      width: 100%;
+      padding: 1.5rem;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .modal-header h3 { margin: 0; font-size: 1.125rem; }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #6b7280;
+      cursor: pointer;
+    }
+    .modal-footer {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+
+  <script define:vars={{ requestId: id }}>
+    const startReviewBtn = document.getElementById('start-review-btn');
+    const approveBtn = document.getElementById('approve-btn');
+    const rejectBtn = document.getElementById('reject-btn');
+    const rejectModal = document.getElementById('reject-modal');
+    const rejectForm = document.getElementById('reject-form') as HTMLFormElement;
+    const adminNotes = document.getElementById('admin-notes') as HTMLTextAreaElement;
+
+    // Start review
+    startReviewBtn?.addEventListener('click', async () => {
+      try {
+        const response = await fetch(`/api/admin/verifications/${requestId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'under_review',
+            admin_notes: adminNotes?.value || null,
+          }),
+        });
+        if (!response.ok) throw new Error('Error');
+        window.location.reload();
+      } catch (error) {
+        alert('Error al actualizar estado');
+      }
+    });
+
+    // Approve
+    approveBtn?.addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro de aprobar esta solicitud de verificación?')) return;
+      try {
+        const response = await fetch(`/api/admin/verifications/${requestId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'approved',
+            admin_notes: adminNotes?.value || null,
+          }),
+        });
+        if (!response.ok) throw new Error('Error');
+        window.location.href = '/admin/verifications';
+      } catch (error) {
+        alert('Error al aprobar solicitud');
+      }
+    });
+
+    // Reject - open modal
+    rejectBtn?.addEventListener('click', () => {
+      rejectModal?.classList.remove('hidden');
+    });
+
+    // Close modal
+    document.getElementById('close-modal')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
+    document.getElementById('cancel-reject')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
+    document.querySelector('.modal-backdrop')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
+
+    // Submit rejection
+    rejectForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const rejectionReason = (document.getElementById('rejection-reason') as HTMLTextAreaElement).value;
+
+      try {
+        const response = await fetch(`/api/admin/verifications/${requestId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'rejected',
+            rejection_reason: rejectionReason,
+            admin_notes: adminNotes?.value || null,
+          }),
+        });
+        if (!response.ok) throw new Error('Error');
+        window.location.href = '/admin/verifications';
+      } catch (error) {
+        alert('Error al rechazar solicitud');
+      }
+    });
+  </script>
+</AdminLayout>

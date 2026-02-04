@@ -1,0 +1,712 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getUserWithPlan, getUserConsumption, getPlansByRole, getRoleLabel, type UserRole, type UbikalaPlan } from '../../../lib/ubikala-db';
+
+const user = Astro.locals.user;
+
+if (!user) {
+  return Astro.redirect('/admin/login');
+}
+
+const fullUser = await getUserWithPlan(user.id);
+const consumption = await getUserConsumption(user.id);
+const availablePlans = fullUser ? await getPlansByRole(fullUser.role) : [];
+const currentPlan = fullUser?.plan;
+
+// Filter out current plan from available plans
+const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_active);
+---
+
+<AdminLayout title="Mi Cuenta">
+  <div class="account-page">
+    <div class="page-header">
+      <h2>Mi Cuenta</h2>
+      <p class="subtitle">Gestiona tu plan y suscripción</p>
+    </div>
+
+    <div class="account-grid">
+      <!-- Current Plan Card -->
+      <div class="card plan-card current">
+        <div class="plan-header">
+          <div class="plan-badge current">Plan Actual</div>
+          <h3>{currentPlan?.name || 'Sin Plan'}</h3>
+          {currentPlan && (
+            <div class="plan-price">
+              <span class="price">${currentPlan.price.toFixed(2)}</span>
+              <span class="period">/mes</span>
+            </div>
+          )}
+        </div>
+
+        {currentPlan ? (
+          <div class="plan-details">
+            <h4>Incluye:</h4>
+            <ul class="features-list">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {currentPlan.max_publications === 0 ? 'Publicaciones ilimitadas' : `${currentPlan.max_publications} publicaciones`}
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {currentPlan.publication_duration_days} días de duración por publicación
+              </li>
+              {currentPlan.max_team_members !== null && (
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {currentPlan.max_team_members === 0 ? 'Miembros de equipo ilimitados' : `${currentPlan.max_team_members} miembros de equipo`}
+                </li>
+              )}
+              {currentPlan.max_leads_per_month !== null && (
+                <li>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  {currentPlan.max_leads_per_month === 0 ? 'Leads ilimitados' : `${currentPlan.max_leads_per_month} leads/mes`}
+                </li>
+              )}
+            </ul>
+          </div>
+        ) : (
+          <div class="no-plan">
+            <p>No tienes un plan activo. Selecciona uno de los planes disponibles para comenzar.</p>
+          </div>
+        )}
+      </div>
+
+      <!-- Usage Stats -->
+      <div class="card stats-card">
+        <h3>Mi Consumo</h3>
+        <div class="stats-list">
+          <div class="stat-item">
+            <div class="stat-header">
+              <span class="stat-label">Publicaciones</span>
+              <span class="stat-value">
+                {consumption.publications_used} / {consumption.publications_limit === null ? '∞' : consumption.publications_limit}
+              </span>
+            </div>
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                style={`width: ${consumption.publications_limit ? Math.min((consumption.publications_used / consumption.publications_limit) * 100, 100) : 0}%`}
+              ></div>
+            </div>
+            {consumption.publications_limit && consumption.publications_used >= consumption.publications_limit && (
+              <p class="limit-warning">Has alcanzado el límite de publicaciones</p>
+            )}
+          </div>
+
+          {consumption.leads_limit !== null && (
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-label">Leads este mes</span>
+                <span class="stat-value">
+                  {consumption.leads_generated} / {consumption.leads_limit === null ? '∞' : consumption.leads_limit}
+                </span>
+              </div>
+              <div class="progress-bar purple">
+                <div
+                  class="progress-fill"
+                  style={`width: ${consumption.leads_limit ? Math.min((consumption.leads_generated / consumption.leads_limit) * 100, 100) : 0}%`}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {consumption.team_limit !== null && fullUser?.role === 'inmobiliaria' && (
+            <div class="stat-item">
+              <div class="stat-header">
+                <span class="stat-label">Miembros de equipo</span>
+                <span class="stat-value">
+                  {consumption.team_used || 0} / {consumption.team_limit === null ? '∞' : consumption.team_limit}
+                </span>
+              </div>
+              <div class="progress-bar green">
+                <div
+                  class="progress-fill"
+                  style={`width: ${consumption.team_limit ? Math.min(((consumption.team_used || 0) / consumption.team_limit) * 100, 100) : 0}%`}
+                ></div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <!-- Available Plans -->
+      {otherPlans.length > 0 && (
+        <div class="card plans-card">
+          <h3>Otros Planes Disponibles</h3>
+          <p class="section-subtitle">Actualiza tu plan para obtener más beneficios</p>
+
+          <div class="plans-grid">
+            {otherPlans.map(plan => (
+              <div class="plan-option">
+                <div class="plan-option-header">
+                  <h4>{plan.name}</h4>
+                  <div class="plan-option-price">
+                    <span class="price">${plan.price.toFixed(2)}</span>
+                    <span class="period">/mes</span>
+                  </div>
+                </div>
+                <ul class="plan-option-features">
+                  <li>{plan.max_publications === 0 ? 'Publicaciones ilimitadas' : `${plan.max_publications} publicaciones`}</li>
+                  <li>{plan.publication_duration_days} días por publicación</li>
+                  {plan.max_team_members !== null && (
+                    <li>{plan.max_team_members === 0 ? 'Equipo ilimitado' : `${plan.max_team_members} miembros`}</li>
+                  )}
+                  {plan.max_leads_per_month !== null && (
+                    <li>{plan.max_leads_per_month === 0 ? 'Leads ilimitados' : `${plan.max_leads_per_month} leads/mes`}</li>
+                  )}
+                </ul>
+                <button class="btn-outline select-plan-btn" data-plan-id={plan.id} data-plan-name={plan.name}>
+                  Seleccionar Plan
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Promo Code -->
+      <div class="card promo-card">
+        <h3>Código Promocional</h3>
+        <p class="section-subtitle">¿Tienes un código de descuento?</p>
+        <div class="promo-input-group">
+          <input type="text" id="promo-code" placeholder="Ingresa tu código" />
+          <button type="button" id="apply-promo-btn" class="btn-primary">Aplicar</button>
+        </div>
+        <div id="promo-message" class="promo-message hidden"></div>
+      </div>
+
+      <!-- Account Info -->
+      <div class="card account-info-card">
+        <h3>Información de Cuenta</h3>
+        <div class="account-info-list">
+          <div class="account-info-item">
+            <span class="info-label">Email</span>
+            <span class="info-value">{fullUser?.email}</span>
+          </div>
+          <div class="account-info-item">
+            <span class="info-label">Tipo de cuenta</span>
+            <span class="info-value">{getRoleLabel(fullUser?.role as UserRole)}</span>
+          </div>
+          <div class="account-info-item">
+            <span class="info-label">Estado de verificación</span>
+            <span class:list={['verification-status', fullUser?.is_verified ? 'verified' : 'unverified']}>
+              {fullUser?.is_verified ? 'Verificado' : 'No verificado'}
+            </span>
+          </div>
+          <div class="account-info-item">
+            <span class="info-label">Miembro desde</span>
+            <span class="info-value">{fullUser?.created_at ? new Date(fullUser.created_at).toLocaleDateString('es-DO', { year: 'numeric', month: 'long' }) : 'N/A'}</span>
+          </div>
+        </div>
+        {!fullUser?.is_verified && (
+          <a href="/admin/verification" class="btn-outline full-width mt-1">
+            Verificar mi cuenta
+          </a>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <!-- Plan Selection Modal -->
+  <div id="plan-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Cambiar Plan</h3>
+        <button class="modal-close" id="close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro que deseas cambiar a <strong id="selected-plan-name"></strong>?</p>
+        <p class="modal-note">El cambio se aplicará inmediatamente.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" id="cancel-plan-btn">Cancelar</button>
+        <button class="btn-primary" id="confirm-plan-btn">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .account-page {
+      max-width: 1100px;
+    }
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .page-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+    .subtitle, .section-subtitle {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0.25rem 0 0 0;
+    }
+    .account-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .card h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 0.25rem 0;
+    }
+    .plan-card.current {
+      border: 2px solid var(--ubikala-olive, #5C6B3C);
+    }
+    .plan-header {
+      text-align: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 1rem;
+    }
+    .plan-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    .plan-badge.current {
+      background: var(--ubikala-olive, #5C6B3C);
+      color: white;
+    }
+    .plan-header h3 {
+      font-size: 1.25rem;
+      margin: 0.5rem 0;
+    }
+    .plan-price {
+      margin-top: 0.5rem;
+    }
+    .plan-price .price {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--ubikala-olive, #5C6B3C);
+    }
+    .plan-price .period {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+    .plan-details h4 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 0.75rem 0;
+    }
+    .features-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+      color: #374151;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .features-list li:last-child {
+      border-bottom: none;
+    }
+    .features-list svg {
+      width: 18px;
+      height: 18px;
+      color: var(--ubikala-olive, #5C6B3C);
+      flex-shrink: 0;
+    }
+    .no-plan {
+      text-align: center;
+      padding: 1rem;
+      color: #6b7280;
+    }
+    .stats-card {
+      display: flex;
+      flex-direction: column;
+    }
+    .stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stat-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+    .stat-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--ubikala-olive, #5C6B3C);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+    .progress-bar.purple .progress-fill {
+      background: #8b5cf6;
+    }
+    .progress-bar.green .progress-fill {
+      background: #10b981;
+    }
+    .limit-warning {
+      font-size: 0.75rem;
+      color: #dc2626;
+      margin: 0;
+    }
+    .plans-card {
+      grid-column: 1 / -1;
+    }
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .plan-option {
+      border: 1px solid #e5e7eb;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .plan-option:hover {
+      border-color: var(--ubikala-olive, #5C6B3C);
+      box-shadow: 0 4px 12px rgba(92, 107, 60, 0.1);
+    }
+    .plan-option-header {
+      text-align: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 0.75rem;
+    }
+    .plan-option-header h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 0.5rem 0;
+    }
+    .plan-option-price .price {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ubikala-olive, #5C6B3C);
+    }
+    .plan-option-price .period {
+      color: #6b7280;
+      font-size: 0.8125rem;
+    }
+    .plan-option-features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1rem 0;
+    }
+    .plan-option-features li {
+      font-size: 0.8125rem;
+      color: #6b7280;
+      padding: 0.375rem 0;
+    }
+    .promo-card, .account-info-card {
+      grid-column: span 1;
+    }
+    .promo-input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .promo-input-group input {
+      flex: 1;
+      padding: 0.625rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+    .promo-input-group input:focus {
+      outline: none;
+      border-color: var(--ubikala-olive, #5C6B3C);
+    }
+    .promo-message {
+      margin-top: 0.75rem;
+      padding: 0.625rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+    }
+    .promo-message.hidden { display: none; }
+    .promo-message.success { background: #dcfce7; color: #166534; }
+    .promo-message.error { background: #fef2f2; color: #dc2626; }
+    .account-info-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .account-info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .account-info-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .info-label { font-size: 0.8125rem; color: #6b7280; }
+    .info-value { font-size: 0.8125rem; font-weight: 500; color: #111827; }
+    .verification-status {
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .verification-status.verified { background: #dcfce7; color: #166534; }
+    .verification-status.unverified { background: #fef3c7; color: #92400e; }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: var(--ubikala-olive, #5C6B3C);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary:hover { background: var(--ubikala-olive-dark, #4A5730); }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      width: 100%;
+    }
+    .btn-outline:hover {
+      background: #f3f4f6;
+      border-color: var(--ubikala-olive, #5C6B3C);
+    }
+    .full-width { width: 100%; }
+    .mt-1 { margin-top: 1rem; }
+    .hidden { display: none; }
+    /* Modal */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.hidden { display: none; }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      position: relative;
+      background: white;
+      border-radius: 0.75rem;
+      max-width: 400px;
+      width: 90%;
+      padding: 1.5rem;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .modal-header h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #6b7280;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-body {
+      margin-bottom: 1.5rem;
+    }
+    .modal-body p {
+      margin: 0 0 0.5rem 0;
+      color: #374151;
+    }
+    .modal-note {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .modal-footer {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+  </style>
+
+  <script>
+    const modal = document.getElementById('plan-modal');
+    const closeModalBtn = document.getElementById('close-modal');
+    const cancelPlanBtn = document.getElementById('cancel-plan-btn');
+    const confirmPlanBtn = document.getElementById('confirm-plan-btn');
+    const selectedPlanNameEl = document.getElementById('selected-plan-name');
+    const promoCodeInput = document.getElementById('promo-code') as HTMLInputElement;
+    const applyPromoBtn = document.getElementById('apply-promo-btn');
+    const promoMessage = document.getElementById('promo-message');
+
+    let selectedPlanId: string | null = null;
+
+    // Plan selection
+    document.querySelectorAll('.select-plan-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedPlanId = btn.getAttribute('data-plan-id');
+        const planName = btn.getAttribute('data-plan-name');
+        if (selectedPlanNameEl) selectedPlanNameEl.textContent = planName || '';
+        modal?.classList.remove('hidden');
+      });
+    });
+
+    // Close modal
+    [closeModalBtn, cancelPlanBtn].forEach(btn => {
+      btn?.addEventListener('click', () => {
+        modal?.classList.add('hidden');
+        selectedPlanId = null;
+      });
+    });
+
+    document.querySelector('.modal-backdrop')?.addEventListener('click', () => {
+      modal?.classList.add('hidden');
+      selectedPlanId = null;
+    });
+
+    // Confirm plan change
+    confirmPlanBtn?.addEventListener('click', async () => {
+      if (!selectedPlanId) return;
+
+      confirmPlanBtn.disabled = true;
+      confirmPlanBtn.textContent = 'Procesando...';
+
+      try {
+        const response = await fetch('/api/admin/account/plan', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan_id: selectedPlanId }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Error al cambiar plan');
+
+        window.location.reload();
+      } catch (error: any) {
+        alert(error.message);
+        confirmPlanBtn.disabled = false;
+        confirmPlanBtn.textContent = 'Confirmar Cambio';
+      }
+    });
+
+    // Apply promo code
+    applyPromoBtn?.addEventListener('click', async () => {
+      const code = promoCodeInput?.value.trim();
+      if (!code) {
+        promoMessage!.textContent = 'Por favor ingresa un código';
+        promoMessage!.className = 'promo-message error';
+        return;
+      }
+
+      applyPromoBtn.disabled = true;
+      applyPromoBtn.textContent = 'Validando...';
+
+      try {
+        const response = await fetch('/api/validate-promo-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          promoMessage!.textContent = result.error || 'Código inválido';
+          promoMessage!.className = 'promo-message error';
+        } else {
+          const promo = result.promoCode;
+          let discountText = '';
+          if (promo.discount_type === 'percentage') {
+            discountText = `${promo.discount_value}% de descuento`;
+          } else if (promo.discount_type === 'fixed') {
+            discountText = `$${promo.discount_value} de descuento`;
+          } else if (promo.discount_type === 'trial_days') {
+            discountText = `${promo.discount_value} días de prueba gratis`;
+          } else if (promo.discount_type === 'free_months') {
+            discountText = `${promo.discount_value} meses gratis`;
+          }
+          promoMessage!.textContent = `Código válido: ${discountText}`;
+          promoMessage!.className = 'promo-message success';
+        }
+      } catch (error: any) {
+        promoMessage!.textContent = 'Error al validar código';
+        promoMessage!.className = 'promo-message error';
+      } finally {
+        applyPromoBtn.disabled = false;
+        applyPromoBtn.textContent = 'Aplicar';
+      }
+    });
+  </script>
+</AdminLayout>

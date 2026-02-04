@@ -1,0 +1,421 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getVerificationRequests, getDocumentsByRequest, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
+
+const user = Astro.locals.user;
+
+if (!user || user.role !== 'admin') {
+  return Astro.redirect('/admin/dashboard');
+}
+
+const pendingRequests = await getVerificationRequests('pending');
+const underReviewRequests = await getVerificationRequests('under_review');
+const allRequests = await getVerificationRequests();
+---
+
+<AdminLayout title="Verificaciones">
+  <div class="verifications-page">
+    <div class="page-header">
+      <div>
+        <h2>Solicitudes de Verificación</h2>
+        <p class="subtitle">Revisa y aprueba las solicitudes de verificación de usuarios</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card pending">
+        <span class="stat-number">{pendingRequests.length}</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card review">
+        <span class="stat-number">{underReviewRequests.length}</span>
+        <span class="stat-label">En revisión</span>
+      </div>
+      <div class="stat-card total">
+        <span class="stat-number">{allRequests.length}</span>
+        <span class="stat-label">Total</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-container">
+      <button class="tab active" data-tab="pending">
+        Pendientes ({pendingRequests.length})
+      </button>
+      <button class="tab" data-tab="review">
+        En Revisión ({underReviewRequests.length})
+      </button>
+      <button class="tab" data-tab="all">
+        Todas ({allRequests.length})
+      </button>
+    </div>
+
+    <!-- Pending Tab -->
+    <div class="tab-content active" id="pending-tab">
+      {pendingRequests.length === 0 ? (
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3>No hay solicitudes pendientes</h3>
+          <p>Las nuevas solicitudes de verificación aparecerán aquí.</p>
+        </div>
+      ) : (
+        <div class="requests-list">
+          {pendingRequests.map(request => (
+            <div class="request-card" data-request-id={request.id}>
+              <div class="request-header">
+                <div class="user-info">
+                  <h4>{request.user_name}</h4>
+                  <span class="user-email">{request.user_email}</span>
+                </div>
+                <span class:list={['role-badge', `role-${request.user_role}`]}>
+                  {getRoleLabel(request.user_role as UserRole)}
+                </span>
+              </div>
+              <div class="request-meta">
+                <span class="meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {new Date(request.submitted_at).toLocaleDateString('es-DO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                <span class:list={['status-badge', request.status]}>
+                  {request.status === 'pending' && 'Pendiente'}
+                  {request.status === 'under_review' && 'En revisión'}
+                  {request.status === 'approved' && 'Aprobado'}
+                  {request.status === 'rejected' && 'Rechazado'}
+                </span>
+              </div>
+              <div class="request-actions">
+                <a href={`/admin/verifications/${request.id}`} class="btn-primary">
+                  Revisar Solicitud
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Under Review Tab -->
+    <div class="tab-content" id="review-tab">
+      {underReviewRequests.length === 0 ? (
+        <div class="empty-state">
+          <h3>No hay solicitudes en revisión</h3>
+        </div>
+      ) : (
+        <div class="requests-list">
+          {underReviewRequests.map(request => (
+            <div class="request-card">
+              <div class="request-header">
+                <div class="user-info">
+                  <h4>{request.user_name}</h4>
+                  <span class="user-email">{request.user_email}</span>
+                </div>
+                <span class:list={['role-badge', `role-${request.user_role}`]}>
+                  {getRoleLabel(request.user_role as UserRole)}
+                </span>
+              </div>
+              <div class="request-meta">
+                <span class:list={['status-badge', request.status]}>En revisión</span>
+              </div>
+              <div class="request-actions">
+                <a href={`/admin/verifications/${request.id}`} class="btn-primary">
+                  Continuar Revisión
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- All Tab -->
+    <div class="tab-content" id="all-tab">
+      {allRequests.length === 0 ? (
+        <div class="empty-state">
+          <h3>No hay solicitudes</h3>
+        </div>
+      ) : (
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {allRequests.map(request => (
+                <tr>
+                  <td>
+                    <div class="user-cell">
+                      <span class="user-name">{request.user_name}</span>
+                      <span class="user-email">{request.user_email}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class:list={['role-badge', `role-${request.user_role}`]}>
+                      {getRoleLabel(request.user_role as UserRole)}
+                    </span>
+                  </td>
+                  <td>{new Date(request.submitted_at).toLocaleDateString('es-DO')}</td>
+                  <td>
+                    <span class:list={['status-badge', request.status]}>
+                      {request.status === 'pending' && 'Pendiente'}
+                      {request.status === 'under_review' && 'En revisión'}
+                      {request.status === 'approved' && 'Aprobado'}
+                      {request.status === 'rejected' && 'Rechazado'}
+                    </span>
+                  </td>
+                  <td>
+                    <a href={`/admin/verifications/${request.id}`} class="btn-outline btn-sm">Ver</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <style>
+    .verifications-page {
+      max-width: 1000px;
+    }
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .page-header h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0;
+    }
+    .subtitle {
+      color: #6b7280;
+      font-size: 0.875rem;
+      margin: 0.25rem 0 0 0;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .stat-card.pending { border-left: 4px solid #f59e0b; }
+    .stat-card.review { border-left: 4px solid #3b82f6; }
+    .stat-card.total { border-left: 4px solid var(--ubikala-olive, #5C6B3C); }
+    .stat-number {
+      display: block;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .stat-label {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .tabs-container {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .tab {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      color: #6b7280;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab:hover { color: #374151; }
+    .tab.active {
+      color: var(--ubikala-olive, #5C6B3C);
+      border-bottom-color: var(--ubikala-olive, #5C6B3C);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .empty-state {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 3rem;
+      text-align: center;
+      color: #6b7280;
+    }
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    .empty-state h3 {
+      font-size: 1.125rem;
+      color: #374151;
+      margin: 0 0 0.5rem 0;
+    }
+    .requests-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .request-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .request-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+    .user-info h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #111827;
+      margin: 0 0 0.25rem 0;
+    }
+    .user-email {
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .role-inmobiliaria { background: #dbeafe; color: #1e40af; }
+    .role-asesor_independiente { background: #dcfce7; color: #166534; }
+    .role-propietario { background: #f3e8ff; color: #7c3aed; }
+    .request-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: #6b7280;
+    }
+    .meta-item svg {
+      width: 14px;
+      height: 14px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .status-badge.pending { background: #fef3c7; color: #92400e; }
+    .status-badge.under_review { background: #dbeafe; color: #1e40af; }
+    .status-badge.approved { background: #dcfce7; color: #166534; }
+    .status-badge.rejected { background: #fee2e2; color: #991b1b; }
+    .request-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--ubikala-olive, #5C6B3C);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--ubikala-olive-dark, #4A5730); }
+    .btn-outline {
+      padding: 0.375rem 0.75rem;
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-outline:hover { background: #f3f4f6; }
+    .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8125rem; }
+    .table-container {
+      background: white;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.875rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    th {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      background: #f9fafb;
+    }
+    td { font-size: 0.875rem; color: #374151; }
+    .user-cell {
+      display: flex;
+      flex-direction: column;
+    }
+    .user-cell .user-name { font-weight: 500; color: #111827; }
+    .user-cell .user-email { font-size: 0.75rem; color: #6b7280; }
+  </style>
+
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.getAttribute('data-tab');
+
+        tabs.forEach(t => t.classList.remove('active'));
+        tabContents.forEach(tc => tc.classList.remove('active'));
+
+        tab.classList.add('active');
+        document.getElementById(`${targetTab}-tab`)?.classList.add('active');
+      });
+    });
+  </script>
+</AdminLayout>

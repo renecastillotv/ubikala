@@ -1184,3 +1184,490 @@ export async function updateCompanyProfile(userId: string, data: {
   `;
   return rows[0] as UbikalaUser || null;
 }
+
+// ============================================
+// PROMO CODES
+// ============================================
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed' | 'trial_days' | 'free_months';
+  discount_value: number;
+  max_uses: number | null;
+  used_count: number;
+  valid_from: string;
+  valid_until: string | null;
+  applicable_roles: string[] | null;
+  applicable_plans: string[] | null;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAllPromoCodes(): Promise<PromoCode[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`SELECT * FROM ubikala_promo_codes ORDER BY created_at DESC`;
+  return rows as PromoCode[];
+}
+
+export async function getPromoCodeById(id: string): Promise<PromoCode | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`SELECT * FROM ubikala_promo_codes WHERE id = ${id}`;
+  return rows[0] as PromoCode || null;
+}
+
+export async function getPromoCodeByCode(code: string): Promise<PromoCode | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`SELECT * FROM ubikala_promo_codes WHERE UPPER(code) = UPPER(${code})`;
+  return rows[0] as PromoCode || null;
+}
+
+export async function validatePromoCode(code: string, userRole: UserRole, planId?: string): Promise<{
+  valid: boolean;
+  error?: string;
+  promoCode?: PromoCode;
+}> {
+  const promo = await getPromoCodeByCode(code);
+
+  if (!promo) {
+    return { valid: false, error: 'Código promocional no encontrado' };
+  }
+
+  if (!promo.is_active) {
+    return { valid: false, error: 'Este código promocional no está activo' };
+  }
+
+  const now = new Date();
+  if (promo.valid_from && new Date(promo.valid_from) > now) {
+    return { valid: false, error: 'Este código promocional aún no es válido' };
+  }
+
+  if (promo.valid_until && new Date(promo.valid_until) < now) {
+    return { valid: false, error: 'Este código promocional ha expirado' };
+  }
+
+  if (promo.max_uses !== null && promo.used_count >= promo.max_uses) {
+    return { valid: false, error: 'Este código promocional ha alcanzado su límite de uso' };
+  }
+
+  if (promo.applicable_roles && promo.applicable_roles.length > 0) {
+    if (!promo.applicable_roles.includes(userRole)) {
+      return { valid: false, error: 'Este código no aplica para tu tipo de cuenta' };
+    }
+  }
+
+  if (planId && promo.applicable_plans && promo.applicable_plans.length > 0) {
+    if (!promo.applicable_plans.includes(planId)) {
+      return { valid: false, error: 'Este código no aplica para el plan seleccionado' };
+    }
+  }
+
+  return { valid: true, promoCode: promo };
+}
+
+export async function createPromoCode(data: {
+  code: string;
+  description?: string;
+  discount_type: 'percentage' | 'fixed' | 'trial_days' | 'free_months';
+  discount_value: number;
+  max_uses?: number;
+  valid_from?: string;
+  valid_until?: string;
+  applicable_roles?: string[];
+  applicable_plans?: string[];
+  created_by?: string;
+}): Promise<PromoCode> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_promo_codes (
+      code, description, discount_type, discount_value, max_uses,
+      valid_from, valid_until, applicable_roles, applicable_plans, created_by
+    ) VALUES (
+      ${data.code.toUpperCase()},
+      ${data.description || null},
+      ${data.discount_type},
+      ${data.discount_value},
+      ${data.max_uses || null},
+      ${data.valid_from || new Date().toISOString()},
+      ${data.valid_until || null},
+      ${data.applicable_roles || null},
+      ${data.applicable_plans || null},
+      ${data.created_by || null}
+    )
+    RETURNING *
+  `;
+  return rows[0] as PromoCode;
+}
+
+export async function updatePromoCode(id: string, data: Partial<PromoCode>): Promise<PromoCode | null> {
+  if (!ubikalaDb) return null;
+
+  const current = await getPromoCodeById(id);
+  if (!current) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_promo_codes SET
+      code = ${data.code?.toUpperCase() || current.code},
+      description = ${data.description !== undefined ? data.description : current.description},
+      discount_type = ${data.discount_type || current.discount_type},
+      discount_value = ${data.discount_value !== undefined ? data.discount_value : current.discount_value},
+      max_uses = ${data.max_uses !== undefined ? data.max_uses : current.max_uses},
+      valid_from = ${data.valid_from || current.valid_from},
+      valid_until = ${data.valid_until !== undefined ? data.valid_until : current.valid_until},
+      applicable_roles = ${data.applicable_roles !== undefined ? data.applicable_roles : current.applicable_roles},
+      applicable_plans = ${data.applicable_plans !== undefined ? data.applicable_plans : current.applicable_plans},
+      is_active = ${data.is_active !== undefined ? data.is_active : current.is_active},
+      updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return rows[0] as PromoCode || null;
+}
+
+export async function deletePromoCode(id: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  await ubikalaDb`DELETE FROM ubikala_promo_codes WHERE id = ${id}`;
+  return true;
+}
+
+export async function usePromoCode(promoCodeId: string, userId: string, discountApplied: number): Promise<void> {
+  if (!ubikalaDb) return;
+
+  await ubikalaDb`
+    INSERT INTO ubikala_promo_code_usage (promo_code_id, user_id, discount_applied)
+    VALUES (${promoCodeId}, ${userId}, ${discountApplied})
+  `;
+
+  await ubikalaDb`
+    UPDATE ubikala_promo_codes SET used_count = used_count + 1 WHERE id = ${promoCodeId}
+  `;
+
+  await ubikalaDb`
+    UPDATE ubikala_users SET promo_code_used = ${promoCodeId} WHERE id = ${userId}
+  `;
+}
+
+// ============================================
+// VERIFICATION SYSTEM
+// ============================================
+
+export interface VerificationDocument {
+  id: string;
+  name: string;
+  description: string | null;
+  required_for_roles: string[];
+  is_required: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VerificationRequest {
+  id: string;
+  user_id: string;
+  status: 'pending' | 'under_review' | 'approved' | 'rejected';
+  submitted_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  rejection_reason: string | null;
+  admin_notes: string | null;
+  // Joined fields
+  user_name?: string;
+  user_email?: string;
+  user_role?: string;
+}
+
+export interface UserDocument {
+  id: string;
+  user_id: string;
+  verification_request_id: string;
+  document_type_id: string;
+  file_url: string;
+  file_name: string | null;
+  uploaded_at: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
+  // Joined fields
+  document_name?: string;
+}
+
+// Verification Documents Management
+export async function getVerificationDocuments(role?: UserRole): Promise<VerificationDocument[]> {
+  if (!ubikalaDb) return [];
+
+  if (role) {
+    const rows = await ubikalaDb`
+      SELECT * FROM ubikala_verification_documents
+      WHERE is_active = true AND ${role} = ANY(required_for_roles)
+      ORDER BY sort_order, name
+    `;
+    return rows as VerificationDocument[];
+  }
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_verification_documents
+    ORDER BY sort_order, name
+  `;
+  return rows as VerificationDocument[];
+}
+
+export async function getVerificationDocumentById(id: string): Promise<VerificationDocument | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`SELECT * FROM ubikala_verification_documents WHERE id = ${id}`;
+  return rows[0] as VerificationDocument || null;
+}
+
+export async function createVerificationDocument(data: {
+  name: string;
+  description?: string;
+  required_for_roles: string[];
+  is_required?: boolean;
+  sort_order?: number;
+}): Promise<VerificationDocument> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_verification_documents (name, description, required_for_roles, is_required, sort_order)
+    VALUES (${data.name}, ${data.description || null}, ${data.required_for_roles}, ${data.is_required !== false}, ${data.sort_order || 0})
+    RETURNING *
+  `;
+  return rows[0] as VerificationDocument;
+}
+
+export async function updateVerificationDocument(id: string, data: Partial<VerificationDocument>): Promise<VerificationDocument | null> {
+  if (!ubikalaDb) return null;
+
+  const current = await getVerificationDocumentById(id);
+  if (!current) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_verification_documents SET
+      name = ${data.name || current.name},
+      description = ${data.description !== undefined ? data.description : current.description},
+      required_for_roles = ${data.required_for_roles || current.required_for_roles},
+      is_required = ${data.is_required !== undefined ? data.is_required : current.is_required},
+      is_active = ${data.is_active !== undefined ? data.is_active : current.is_active},
+      sort_order = ${data.sort_order !== undefined ? data.sort_order : current.sort_order},
+      updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return rows[0] as VerificationDocument || null;
+}
+
+export async function deleteVerificationDocument(id: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  await ubikalaDb`DELETE FROM ubikala_verification_documents WHERE id = ${id}`;
+  return true;
+}
+
+// Verification Requests
+export async function getVerificationRequests(status?: string): Promise<VerificationRequest[]> {
+  if (!ubikalaDb) return [];
+
+  if (status) {
+    const rows = await ubikalaDb`
+      SELECT vr.*, u.name as user_name, u.email as user_email, u.role as user_role
+      FROM ubikala_verification_requests vr
+      JOIN ubikala_users u ON vr.user_id = u.id
+      WHERE vr.status = ${status}
+      ORDER BY vr.submitted_at DESC
+    `;
+    return rows as VerificationRequest[];
+  }
+
+  const rows = await ubikalaDb`
+    SELECT vr.*, u.name as user_name, u.email as user_email, u.role as user_role
+    FROM ubikala_verification_requests vr
+    JOIN ubikala_users u ON vr.user_id = u.id
+    ORDER BY vr.submitted_at DESC
+  `;
+  return rows as VerificationRequest[];
+}
+
+export async function getVerificationRequestById(id: string): Promise<VerificationRequest | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    SELECT vr.*, u.name as user_name, u.email as user_email, u.role as user_role
+    FROM ubikala_verification_requests vr
+    JOIN ubikala_users u ON vr.user_id = u.id
+    WHERE vr.id = ${id}
+  `;
+  return rows[0] as VerificationRequest || null;
+}
+
+export async function getVerificationRequestByUserId(userId: string): Promise<VerificationRequest | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_verification_requests WHERE user_id = ${userId}
+  `;
+  return rows[0] as VerificationRequest || null;
+}
+
+export async function createVerificationRequest(userId: string): Promise<VerificationRequest> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  // Check if user already has a request
+  const existing = await getVerificationRequestByUserId(userId);
+  if (existing) {
+    // If rejected, allow re-submission
+    if (existing.status === 'rejected') {
+      await ubikalaDb`DELETE FROM ubikala_verification_requests WHERE id = ${existing.id}`;
+    } else {
+      throw new Error('Ya tienes una solicitud de verificación en proceso');
+    }
+  }
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_verification_requests (user_id, status)
+    VALUES (${userId}, 'pending')
+    RETURNING *
+  `;
+  return rows[0] as VerificationRequest;
+}
+
+export async function updateVerificationRequestStatus(
+  requestId: string,
+  status: 'pending' | 'under_review' | 'approved' | 'rejected',
+  reviewedBy: string,
+  rejectionReason?: string,
+  adminNotes?: string
+): Promise<VerificationRequest | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_verification_requests SET
+      status = ${status},
+      reviewed_at = NOW(),
+      reviewed_by = ${reviewedBy},
+      rejection_reason = ${rejectionReason || null},
+      admin_notes = ${adminNotes || null}
+    WHERE id = ${requestId}
+    RETURNING *
+  `;
+
+  // If approved, update user's verified status
+  if (status === 'approved' && rows[0]) {
+    const request = rows[0] as VerificationRequest;
+    await ubikalaDb`
+      UPDATE ubikala_users SET
+        is_verified = true,
+        verified_at = NOW(),
+        verified_by = ${reviewedBy}
+      WHERE id = ${request.user_id}
+    `;
+
+    // If user is an inmobiliaria, verify all their team members
+    const user = await getUserById(request.user_id);
+    if (user?.role === 'inmobiliaria') {
+      await ubikalaDb`
+        UPDATE ubikala_users SET
+          is_verified = true,
+          verified_at = NOW(),
+          verified_by = ${reviewedBy}
+        WHERE parent_user_id = ${request.user_id}
+      `;
+    }
+  }
+
+  return rows[0] as VerificationRequest || null;
+}
+
+// User Documents
+export async function getUserDocuments(userId: string): Promise<UserDocument[]> {
+  if (!ubikalaDb) return [];
+
+  const rows = await ubikalaDb`
+    SELECT ud.*, vd.name as document_name
+    FROM ubikala_user_documents ud
+    JOIN ubikala_verification_documents vd ON ud.document_type_id = vd.id
+    WHERE ud.user_id = ${userId}
+    ORDER BY ud.uploaded_at DESC
+  `;
+  return rows as UserDocument[];
+}
+
+export async function getDocumentsByRequest(requestId: string): Promise<UserDocument[]> {
+  if (!ubikalaDb) return [];
+
+  const rows = await ubikalaDb`
+    SELECT ud.*, vd.name as document_name
+    FROM ubikala_user_documents ud
+    JOIN ubikala_verification_documents vd ON ud.document_type_id = vd.id
+    WHERE ud.verification_request_id = ${requestId}
+    ORDER BY ud.uploaded_at DESC
+  `;
+  return rows as UserDocument[];
+}
+
+export async function uploadUserDocument(data: {
+  user_id: string;
+  verification_request_id: string;
+  document_type_id: string;
+  file_url: string;
+  file_name?: string;
+}): Promise<UserDocument> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  // Delete existing document of same type if exists
+  await ubikalaDb`
+    DELETE FROM ubikala_user_documents
+    WHERE user_id = ${data.user_id} AND document_type_id = ${data.document_type_id}
+  `;
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_user_documents (user_id, verification_request_id, document_type_id, file_url, file_name)
+    VALUES (${data.user_id}, ${data.verification_request_id}, ${data.document_type_id}, ${data.file_url}, ${data.file_name || null})
+    RETURNING *
+  `;
+  return rows[0] as UserDocument;
+}
+
+export async function updateDocumentStatus(
+  documentId: string,
+  status: 'pending' | 'approved' | 'rejected',
+  rejectionReason?: string
+): Promise<UserDocument | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_user_documents SET
+      status = ${status},
+      rejection_reason = ${rejectionReason || null}
+    WHERE id = ${documentId}
+    RETURNING *
+  `;
+  return rows[0] as UserDocument || null;
+}
+
+// User plan assignment
+export async function assignPlanToUser(userId: string, planId: string): Promise<UbikalaUser | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_users SET
+      plan_id = ${planId},
+      updated_at = NOW()
+    WHERE id = ${userId}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser || null;
+}
+
+export async function removePlanFromUser(userId: string): Promise<UbikalaUser | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE ubikala_users SET
+      plan_id = NULL,
+      updated_at = NOW()
+    WHERE id = ${userId}
+    RETURNING *
+  `;
+  return rows[0] as UbikalaUser || null;
+}
