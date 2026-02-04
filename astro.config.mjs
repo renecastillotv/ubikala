@@ -1,13 +1,11 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-import vercel from '@astrojs/vercel/serverless';
+import vercel from '@astrojs/vercel';
 
 export default defineConfig({
   site: 'https://ubikala.com',
-  output: 'hybrid',
-  adapter: vercel({
-    runtime: 'nodejs20.x'
-  }),
+  output: 'static',
+  adapter: vercel(),
   integrations: [
     tailwind()
   ],
