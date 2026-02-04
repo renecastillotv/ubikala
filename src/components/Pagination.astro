@@ -1,0 +1,133 @@
+---
+interface Props {
+  currentPage: number;
+  totalPages: number;
+  baseUrl: string;
+  /** Query params to preserve when navigating */
+  preserveParams?: Record<string, string>;
+}
+
+const { currentPage, totalPages, baseUrl, preserveParams = {} } = Astro.props;
+
+// Build URL with page parameter
+function buildUrl(page: number): string {
+  const params = new URLSearchParams(preserveParams);
+  if (page > 1) {
+    params.set('page', String(page));
+  } else {
+    params.delete('page');
+  }
+  const queryString = params.toString();
+  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+}
+
+// Calculate which page numbers to show
+function getPageNumbers(): (number | 'ellipsis')[] {
+  const pages: (number | 'ellipsis')[] = [];
+  const maxVisible = 5;
+
+  if (totalPages <= maxVisible + 2) {
+    // Show all pages
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+  } else {
+    // Always show first page
+    pages.push(1);
+
+    if (currentPage > 3) {
+      pages.push('ellipsis');
+    }
+
+    // Show pages around current
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (currentPage < totalPages - 2) {
+      pages.push('ellipsis');
+    }
+
+    // Always show last page
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
+
+const pageNumbers = getPageNumbers();
+const hasPrevious = currentPage > 1;
+const hasNext = currentPage < totalPages;
+---
+
+{totalPages > 1 && (
+  <nav class="flex items-center justify-center gap-1 sm:gap-2" aria-label="Paginación">
+    <!-- Previous button -->
+    {hasPrevious ? (
+      <a
+        href={buildUrl(currentPage - 1)}
+        class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
+        aria-label="Página anterior"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="hidden sm:inline">Anterior</span>
+      </a>
+    ) : (
+      <span class="px-3 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        <span class="hidden sm:inline">Anterior</span>
+      </span>
+    )}
+
+    <!-- Page numbers -->
+    <div class="flex items-center gap-1">
+      {pageNumbers.map((page) => (
+        page === 'ellipsis' ? (
+          <span class="px-2 py-2 text-gray-400">...</span>
+        ) : page === currentPage ? (
+          <span
+            class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium"
+            aria-current="page"
+          >
+            {page}
+          </span>
+        ) : (
+          <a
+            href={buildUrl(page)}
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            {page}
+          </a>
+        )
+      ))}
+    </div>
+
+    <!-- Next button -->
+    {hasNext ? (
+      <a
+        href={buildUrl(currentPage + 1)}
+        class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
+        aria-label="Página siguiente"
+      >
+        <span class="hidden sm:inline">Siguiente</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    ) : (
+      <span class="px-3 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-1">
+        <span class="hidden sm:inline">Siguiente</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </span>
+    )}
+  </nav>
+)}

@@ -1,0 +1,229 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icons.astro';
+import { useTranslations, getAlternateUrls } from '../../i18n';
+
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls('/fr/a-propos');
+---
+
+<Layout
+  title="À Propos de PropiedadEnRD.com | Le Portail Immobilier de la République Dominicaine"
+  description="Découvrez PropiedadEnRD.com, le portail qui connecte acheteurs et locataires avec des agents immobiliers, agences et propriétaires dans toute la République Dominicaine."
+  keywords="portail immobilier dominicain, à propos propiedadenrd, qui sommes-nous, immobilier république dominicaine"
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{t.nav.about}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-16">
+    <div class="container-custom text-center">
+      <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
+        Le Portail Immobilier de la République Dominicaine
+      </h1>
+      <p class="text-xl text-primary-100 max-w-3xl mx-auto">
+        Nous connectons ceux qui recherchent des propriétés avec les professionnels qui les proposent.
+        Un espace pour les agents, agences immobilières et propriétaires.
+      </p>
+    </div>
+  </section>
+
+  <!-- Qu'est-ce que PropiedadEnRD -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
+            Qu'est-ce que PropiedadEnRD.com?
+          </span>
+          <h2 class="section-title mt-2 mb-6">
+            Un Portail Ouvert pour le Marché Immobilier
+          </h2>
+          <div class="prose prose-lg text-gray-600">
+            <p>
+              <strong>PropiedadEnRD.com</strong> est une plateforme où les agents immobiliers indépendants,
+              les agences établies et les propriétaires privés peuvent publier leurs propriétés pour
+              atteindre des milliers d'acheteurs et locataires potentiels.
+            </p>
+            <p>
+              Nous ne sommes pas une agence immobilière. Nous sommes le point de rencontre entre l'offre et la demande
+              du marché immobilier dominicain. Chaque propriété publiée appartient à un agent ou propriétaire
+              vérifié qui vous assistera directement.
+            </p>
+            <p>
+              Que vous cherchiez à acheter votre première maison, investir à Punta Cana, louer un
+              appartement à Saint-Domingue ou vendre votre propriété, vous trouverez ici les outils
+              et les professionnels appropriés.
+            </p>
+          </div>
+        </div>
+        <div>
+          <img
+            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&h=500&fit=crop"
+            alt="Portail immobilier"
+            class="rounded-2xl shadow-xl"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pour Qui -->
+  <section class="section bg-gray-50">
+    <div class="container-custom">
+      <div class="text-center mb-12">
+        <h2 class="section-title">À Qui s'Adresse Ce Portail?</h2>
+        <p class="section-subtitle mx-auto">
+          Conçu pour servir tous les acteurs du marché immobilier
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <!-- Acheteurs -->
+        <div class="card p-6 text-center">
+          <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Icon name="search" class="w-8 h-8 text-primary-600" />
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Acheteurs</h3>
+          <p class="text-gray-600 text-sm">
+            Explorez des milliers de propriétés et connectez directement avec l'agent ou le propriétaire.
+          </p>
+        </div>
+
+        <!-- Locataires -->
+        <div class="card p-6 text-center">
+          <div class="w-16 h-16 bg-secondary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Icon name="house" class="w-8 h-8 text-secondary-600" />
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Locataires</h3>
+          <p class="text-gray-600 text-sm">
+            Trouvez des appartements et maisons à louer dans tout le pays.
+          </p>
+        </div>
+
+        <!-- Agents -->
+        <div class="card p-6 text-center">
+          <div class="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Icon name="user" class="w-8 h-8 text-accent-600" />
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Agents</h3>
+          <p class="text-gray-600 text-sm">
+            Publiez vos propriétés et recevez des contacts de clients intéressés.
+          </p>
+        </div>
+
+        <!-- Agences -->
+        <div class="card p-6 text-center">
+          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Icon name="building" class="w-8 h-8 text-purple-600" />
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Agences</h3>
+          <p class="text-gray-600 text-sm">
+            Gérez votre inventaire et augmentez la visibilité de votre entreprise.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comment ça fonctionne -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="text-center mb-12">
+        <h2 class="section-title">Comment Ça Fonctionne?</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-3xl font-bold">
+            1
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Cherchez ou Publiez</h3>
+          <p class="text-gray-600">
+            Les acheteurs recherchent des propriétés. Les agents et propriétaires les publient avec photos et détails complets.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-3xl font-bold">
+            2
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Connectez</h3>
+          <p class="text-gray-600">
+            L'intéressé contacte directement l'agent ou le propriétaire par téléphone, WhatsApp ou formulaire.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-20 h-20 bg-secondary-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-3xl font-bold">
+            3
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Concluez l'Affaire</h3>
+          <p class="text-gray-600">
+            Visitez la propriété, négociez et concluez directement avec le vendeur. Nous facilitons la connexion.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chiffres -->
+  <section class="py-16 bg-primary-600">
+    <div class="container-custom">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">2,500+</div>
+          <div class="text-primary-200">Propriétés Actives</div>
+        </div>
+        <div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">150+</div>
+          <div class="text-primary-200">Agents Inscrits</div>
+        </div>
+        <div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">25+</div>
+          <div class="text-primary-200">Villes</div>
+        </div>
+        <div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">50K+</div>
+          <div class="text-primary-200">Visiteurs Mensuels</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="card p-8 text-center border-2 border-primary-100 hover:border-primary-500 transition-colors">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Vous Cherchez une Propriété?</h3>
+          <p class="text-gray-600 mb-6">
+            Explorez notre catalogue et trouvez votre prochaine maison ou investissement.
+          </p>
+          <a href="/fr/acheter" class="btn-primary">
+            Voir les Propriétés
+          </a>
+        </div>
+
+        <div class="card p-8 text-center border-2 border-secondary-100 hover:border-secondary-500 transition-colors">
+          <h3 class="text-2xl font-bold text-gray-900 mb-4">Vous Voulez Publier?</h3>
+          <p class="text-gray-600 mb-6">
+            Créez votre compte et commencez à recevoir des contacts de clients.
+          </p>
+          <a href="/fr/publier" class="btn-secondary">
+            Publier une Propriété
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

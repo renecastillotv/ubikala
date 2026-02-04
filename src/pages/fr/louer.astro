@@ -1,0 +1,128 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PropertyCard from '../../components/PropertyCard.astro';
+import SearchBox from '../../components/SearchBox.astro';
+import Pagination from '../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls } from '../../i18n';
+import { getProperties, getPropertiesCount } from '../../lib/db';
+import { transformProperties, type DBProperty } from '../../lib/transformers';
+import type { Property } from '../../data/types';
+
+// SSR pour pagination
+export const prerender = false;
+
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls('/fr/louer');
+
+// Config pagination
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+// Fetch rental properties from database with pagination
+let properties: Property[] = [];
+let totalCount = 0;
+try {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const [dbProperties, count] = await Promise.all([
+    getProperties({ operacion: 'alquiler', limit: ITEMS_PER_PAGE, offset }),
+    getPropertiesCount({ operacion: 'alquiler' })
+  ]);
+  properties = transformProperties(dbProperties as unknown as DBProperty[]);
+  totalCount = count;
+} catch (error) {
+  console.error('Error fetching rental properties:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect('/fr/louer');
+}
+---
+
+<Layout
+  title={t.pages.rent.title}
+  description={t.pages.rent.description}
+  keywords={t.meta.keywords}
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{t.nav.rent}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-secondary-600 to-secondary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        Propriétés à Louer en République Dominicaine
+      </h1>
+      <p class="text-green-100 text-lg max-w-3xl">
+        Trouvez des appartements meublés, maisons familiales, bureaux et locaux commerciaux disponibles à la location.
+      </p>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="py-8 bg-white shadow-sm sticky top-16 z-40">
+    <div class="container-custom">
+      <SearchBox variant="inline" />
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8">
+        <p class="text-gray-600">
+          <span class="font-semibold text-gray-900">{totalCount}</span> {t.filters.results}
+        </p>
+        <select class="select py-2 text-sm w-auto">
+          <option value="recent">Plus Récents</option>
+          <option value="price-asc">Prix: Croissant</option>
+          <option value="price-desc">Prix: Décroissant</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {properties.map((property) => (
+          <PropertyCard property={property} />
+        ))}
+      </div>
+
+      <!-- Pagination -->
+      {properties.length > 0 && (
+        <div class="mt-12">
+          <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl="/fr/louer" />
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- SEO Content -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <div class="prose prose-lg max-w-4xl mx-auto">
+        <h2>Louer une Propriété en République Dominicaine</h2>
+        <p>
+          Que vous cherchiez un appartement meublé pour un court séjour,
+          une maison pour votre famille, ou un local commercial pour votre entreprise,
+          nous avons les meilleures options de location dans tout le pays.
+        </p>
+
+        <h3>Types de Locations Disponibles</h3>
+        <ul>
+          <li><strong>Location Résidentielle:</strong> Appartements et maisons pour des séjours de longue durée.</li>
+          <li><strong>Location Vacances:</strong> Propriétés meublées pour des courts séjours dans les destinations touristiques.</li>
+          <li><strong>Location Commerciale:</strong> Bureaux, locaux et entrepôts industriels pour votre entreprise.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>

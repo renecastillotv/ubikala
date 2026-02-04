@@ -1,0 +1,16 @@
+{
+  "name": "propiedadenrd-analytics-api",
+  "version": "1.0.0",
+  "description": "Analytics API for PropiedadEnRD.com",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node migrations/run.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

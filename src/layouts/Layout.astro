@@ -1,0 +1,240 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { getLangFromUrl, useTranslations, type Lang } from '../i18n';
+import { getSiteConfig } from '../lib/config';
+
+interface Props {
+  title: string;
+  description: string;
+  keywords?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  canonicalUrl?: string;
+  noindex?: boolean;
+  alternateLanguages?: { lang: Lang; url: string }[];
+}
+
+// Fetch site config from API
+const config = await getSiteConfig();
+
+const {
+  title,
+  description,
+  keywords,
+  image = config.og_image,
+  type = 'website',
+  canonicalUrl,
+  noindex = false,
+  alternateLanguages = [],
+} = Astro.props;
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+
+const siteUrl = config.site_url;
+const fullCanonicalUrl = canonicalUrl || Astro.url.href;
+const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
+
+// Build social links array (only non-empty)
+const socialLinks = [
+  config.social_facebook,
+  config.social_instagram,
+  config.social_linkedin,
+  config.social_youtube,
+  config.social_twitter,
+  config.social_tiktok
+].filter(Boolean);
+
+// Schema.org structured data para SEO - Enhanced LocalBusiness + RealEstateAgent
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@type': ['RealEstateAgent', 'LocalBusiness'],
+  '@id': `${siteUrl}/#organization`,
+  name: config.company_name,
+  description: t.meta.siteDescription,
+  url: siteUrl,
+  logo: {
+    '@type': 'ImageObject',
+    url: `${siteUrl}${config.logo_url}`,
+    width: 200,
+    height: 60
+  },
+  image: `${siteUrl}${config.og_image}`,
+  telephone: config.phone,
+  email: config.email,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: config.address_street || '',
+    addressLocality: config.address_city,
+    addressCountry: config.address_country_code,
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: config.geo_latitude,
+    longitude: config.geo_longitude
+  },
+  areaServed: [
+    { '@type': 'Country', name: config.address_country },
+    { '@type': 'City', name: 'Santo Domingo' },
+    { '@type': 'City', name: 'Punta Cana' },
+    { '@type': 'City', name: 'Santiago' },
+    { '@type': 'City', name: 'La Romana' }
+  ],
+  priceRange: '$$$',
+  currenciesAccepted: 'USD, DOP',
+  paymentAccepted: 'Cash, Credit Card, Bank Transfer',
+  openingHoursSpecification: [
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      opens: '09:00',
+      closes: '18:00'
+    },
+    {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: 'Saturday',
+      opens: '09:00',
+      closes: '13:00'
+    }
+  ],
+  sameAs: socialLinks,
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: 'Propiedades en Republica Dominicana',
+    itemListElement: [
+      { '@type': 'OfferCatalog', name: 'Casas en Venta' },
+      { '@type': 'OfferCatalog', name: 'Apartamentos en Venta' },
+      { '@type': 'OfferCatalog', name: 'Terrenos en Venta' },
+      { '@type': 'OfferCatalog', name: 'Propiedades en Alquiler' }
+    ]
+  }
+};
+
+// Website Schema for sitelinks search box
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${siteUrl}/#website`,
+  url: siteUrl,
+  name: config.company_name,
+  description: t.meta.siteDescription,
+  publisher: { '@id': `${siteUrl}/#organization` },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${siteUrl}/buscar?q={search_term_string}`
+    },
+    'query-input': 'required name=search_term_string'
+  },
+  inLanguage: ['es-DO', 'en-US', 'fr-FR']
+};
+---
+
+<!DOCTYPE html>
+<html lang={lang} class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO Meta Tags -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={fullCanonicalUrl} />
+
+    <!-- Alternate Languages -->
+    {alternateLanguages.map(({ lang, url }) => (
+      <link rel="alternate" hreflang={lang} href={url} />
+    ))}
+    <link rel="alternate" hreflang="x-default" href={siteUrl} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={fullCanonicalUrl} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={fullImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content={config.company_name} />
+    <meta property="og:locale" content={lang === 'es' ? 'es_DO' : lang === 'en' ? 'en_US' : 'fr_FR'} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={fullCanonicalUrl} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={fullImageUrl} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- DNS Prefetch & Preconnect for Performance -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Preload Critical Resources -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+
+    <!-- Fonts with font-display:swap for better LCP -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    </noscript>
+
+    <!-- Schema.org - Organization -->
+    <script type="application/ld+json" set:html={JSON.stringify(schemaOrg)} />
+    <!-- Schema.org - Website with SearchAction -->
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+
+    <!-- Additional meta for Dominican Republic focus -->
+    <meta name="geo.region" content={config.address_country_code} />
+    <meta name="geo.placename" content={config.address_country} />
+    <meta name="geo.position" content={`${config.geo_latitude};${config.geo_longitude}`} />
+    <meta name="ICBM" content={`${config.geo_latitude}, ${config.geo_longitude}`} />
+
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <Header />
+    <main class="flex-grow">
+      <slot />
+    </main>
+    <Footer />
+
+    <!-- Property Actions (Favorites, Share, Analytics) -->
+    <script>
+      import '../scripts/property-actions';
+    </script>
+
+    <!-- Toast Styles -->
+    <style is:global>
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translate(-50%, 10px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+      }
+      @keyframes fadeOut {
+        from { opacity: 1; transform: translate(-50%, 0); }
+        to { opacity: 0; transform: translate(-50%, 10px); }
+      }
+      .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+      .animate-fade-out { animation: fadeOut 0.3s ease-out forwards; }
+
+      /* Favorite button active state - Ubikala terracotta */
+      [data-favorite-btn].is-favorite svg {
+        fill: currentColor;
+        color: #b86b3e;
+      }
+    </style>
+  </body>
+</html>
