@@ -28,11 +28,11 @@ try {
 
   <!-- Content -->
   <div class="container-custom relative z-10 py-20">
-    <div class="max-w-4xl mx-auto text-center mb-10" style="text-align: center;">
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fadeIn" style="text-align: center; opacity: 0;">
+    <div class="hero-text-container">
+      <h1 class="hero-title">
         {t.hero.title}
       </h1>
-      <p class="text-xl md:text-2xl text-primary-100 mb-8 animate-slideUp" style="text-align: center; opacity: 0;">
+      <p class="hero-subtitle">
         {t.hero.subtitle}
       </p>
     </div>
@@ -66,3 +66,48 @@ try {
     </svg>
   </div>
 </section>
+
+<style>
+  .hero-text-container {
+    max-width: 56rem; /* max-w-4xl */
+    margin: 0 auto 2.5rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  .hero-title {
+    font-size: 2.25rem; /* text-4xl */
+    font-weight: 700;
+    color: white;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+    text-align: center;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .hero-title {
+      font-size: 3rem; /* md:text-5xl */
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-title {
+      font-size: 3.75rem; /* lg:text-6xl */
+    }
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem; /* text-xl */
+    color: rgb(var(--color-primary-light, 122 139 90) / 1);
+    margin-bottom: 2rem;
+    text-align: center;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .hero-subtitle {
+      font-size: 1.5rem; /* md:text-2xl */
+    }
+  }
+</style>
