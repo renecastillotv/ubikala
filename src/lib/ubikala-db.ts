@@ -8,19 +8,58 @@ if (!UBIKALA_DATABASE_URL) {
 
 export const ubikalaDb = UBIKALA_DATABASE_URL ? neon(UBIKALA_DATABASE_URL) : null;
 
+// User role types - 4 roles for the platform
+export type UserRole = 'admin' | 'inmobiliaria' | 'asesor_independiente' | 'propietario';
+
 // User types
 export interface UbikalaUser {
   id: string;
   email: string;
   password_hash: string;
   name: string;
-  role: 'admin' | 'agent';
+  role: UserRole;
   avatar_url: string | null;
   phone: string | null;
+  company_name: string | null;  // For inmobiliarias
+  license_number: string | null; // Professional license for asesores
   is_active: boolean;
+  is_verified: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Role permissions helpers
+export function canViewAllProperties(role: UserRole): boolean {
+  return role === 'admin';
+}
+
+export function canManageUsers(role: UserRole): boolean {
+  return role === 'admin';
+}
+
+export function canManageTeam(role: UserRole): boolean {
+  return role === 'admin' || role === 'inmobiliaria';
+}
+
+export function getRoleLabel(role: UserRole): string {
+  const labels: Record<UserRole, string> = {
+    admin: 'Administrador',
+    inmobiliaria: 'Inmobiliaria',
+    asesor_independiente: 'Asesor Independiente',
+    propietario: 'Propietario'
+  };
+  return labels[role] || role;
+}
+
+export function getRoleIcon(role: UserRole): string {
+  const icons: Record<UserRole, string> = {
+    admin: 'shield',
+    inmobiliaria: 'building',
+    asesor_independiente: 'user',
+    propietario: 'home'
+  };
+  return icons[role] || 'user';
 }
 
 export interface UbikalaSession {
@@ -117,13 +156,15 @@ export async function createUser(data: {
   email: string;
   password_hash: string;
   name: string;
-  role: 'admin' | 'agent';
+  role: UserRole;
   phone?: string;
+  company_name?: string;
+  license_number?: string;
 }): Promise<UbikalaUser> {
   if (!ubikalaDb) throw new Error('Database not configured');
   const rows = await ubikalaDb`
-    INSERT INTO ubikala_users (email, password_hash, name, role, phone)
-    VALUES (${data.email}, ${data.password_hash}, ${data.name}, ${data.role}, ${data.phone || null})
+    INSERT INTO ubikala_users (email, password_hash, name, role, phone, company_name, license_number)
+    VALUES (${data.email}, ${data.password_hash}, ${data.name}, ${data.role}, ${data.phone || null}, ${data.company_name || null}, ${data.license_number || null})
     RETURNING *
   `;
   return rows[0] as UbikalaUser;
@@ -133,10 +174,13 @@ export async function updateUser(id: string, data: Partial<{
   email: string;
   password_hash: string;
   name: string;
-  role: 'admin' | 'agent';
+  role: UserRole;
   phone: string;
   avatar_url: string;
+  company_name: string;
+  license_number: string;
   is_active: boolean;
+  is_verified: boolean;
 }>): Promise<UbikalaUser | null> {
   if (!ubikalaDb) return null;
 
@@ -413,7 +457,7 @@ export async function getActivityLog(options: {
   return rows;
 }
 
-// Stats
+// Stats for admin dashboard
 export async function getAdminStats(): Promise<{
   total_users: number;
   total_properties: number;
@@ -435,4 +479,94 @@ export async function getAdminStats(): Promise<{
     active_properties: Number(active[0]?.count || 0),
     featured_properties: Number(featured[0]?.count || 0),
   };
+}
+
+// Stats for user dashboard (filtered by user)
+export async function getUserStats(userId: string): Promise<{
+  total_properties: number;
+  active_properties: number;
+  total_views: number;
+  total_leads: number;
+}> {
+  if (!ubikalaDb) return { total_properties: 0, active_properties: 0, total_views: 0, total_leads: 0 };
+
+  const [properties, active] = await Promise.all([
+    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_properties WHERE created_by = ${userId}`,
+    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_properties WHERE created_by = ${userId} AND activo = true`,
+  ]);
+
+  return {
+    total_properties: Number(properties[0]?.count || 0),
+    active_properties: Number(active[0]?.count || 0),
+    total_views: 0, // TODO: Implement views tracking
+    total_leads: 0, // TODO: Implement leads tracking
+  };
+}
+
+// Stats for publish page (public stats)
+export async function getPublishPageStats(): Promise<{
+  monthly_visits: number;
+  active_properties: number;
+  total_agents: number;
+  total_owners: number;
+  satisfaction_rate: number;
+}> {
+  if (!ubikalaDb) return { monthly_visits: 50000, active_properties: 0, total_agents: 0, total_owners: 0, satisfaction_rate: 95 };
+
+  const [properties, agents, owners] = await Promise.all([
+    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_properties WHERE activo = true`,
+    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_users WHERE is_active = true AND (role = 'asesor_independiente' OR role = 'inmobiliaria')`,
+    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_users WHERE is_active = true AND role = 'propietario'`,
+  ]);
+
+  return {
+    monthly_visits: 50000, // This would come from analytics in a real implementation
+    active_properties: Number(properties[0]?.count || 0),
+    total_agents: Number(agents[0]?.count || 0),
+    total_owners: Number(owners[0]?.count || 0),
+    satisfaction_rate: 95,
+  };
+}
+
+// Get properties by user ID (for non-admin users to see only their own)
+export async function getPropertiesByUser(userId: string, options: {
+  limit?: number;
+  offset?: number;
+  activo?: boolean;
+}): Promise<UbikalaProperty[]> {
+  if (!ubikalaDb) return [];
+
+  const { limit = 20, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_properties
+    WHERE created_by = ${userId}
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return (rows as UbikalaProperty[]).map(p => ({ ...p, source: 'ubikala' as const }));
+}
+
+// Count properties by user
+export async function countPropertiesByUser(userId: string): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as count FROM ubikala_properties WHERE created_by = ${userId}
+  `;
+
+  return Number(rows[0]?.count || 0);
+}
+
+// Get users by role
+export async function getUsersByRole(role: UserRole): Promise<UbikalaUser[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT id, email, name, role, avatar_url, phone, company_name, license_number, is_active, is_verified, last_login_at, created_at, updated_at
+    FROM ubikala_users
+    WHERE role = ${role} AND is_active = true
+    ORDER BY created_at DESC
+  `;
+  return rows as UbikalaUser[];
 }

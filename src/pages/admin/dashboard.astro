@@ -1,10 +1,17 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { getAdminStats, getActivityLog } from '../../lib/ubikala-db';
+import { getAdminStats, getUserStats, getActivityLog, canViewAllProperties, getRoleLabel, type UserRole } from '../../lib/ubikala-db';
 
 const user = Astro.locals.user;
-const stats = await getAdminStats();
-const recentActivity = await getActivityLog({ limit: 10 });
+const isAdmin = user?.role ? canViewAllProperties(user.role as UserRole) : false;
+
+// Get appropriate stats based on role
+const adminStats = isAdmin ? await getAdminStats() : null;
+const userStats = !isAdmin && user?.id ? await getUserStats(user.id) : null;
+
+const recentActivity = isAdmin
+  ? await getActivityLog({ limit: 10 })
+  : await getActivityLog({ limit: 10, user_id: user?.id });
 ---
 
 <AdminLayout title="Dashboard">
@@ -12,62 +19,128 @@ const recentActivity = await getActivityLog({ limit: 10 });
     <!-- Welcome -->
     <div class="welcome-card">
       <h3>Bienvenido, {user?.name}</h3>
-      <p>Panel de administración de Ubikala. Desde aquí puedes gestionar propiedades, usuarios y más.</p>
+      <p>
+        {isAdmin
+          ? 'Panel de administración de Ubikala. Desde aquí puedes gestionar propiedades, usuarios y más.'
+          : `Panel de ${getRoleLabel(user?.role as UserRole)}. Gestiona tus propiedades y revisa tu actividad.`
+        }
+      </p>
+      {!isAdmin && user?.role && (
+        <span class="role-badge">{getRoleLabel(user.role as UserRole)}</span>
+      )}
     </div>
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon blue">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 21h18 M9 8h1 M9 12h1 M9 16h1 M14 8h1 M14 12h1 M14 16h1 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{stats.total_properties}</span>
-          <span class="stat-label">Total Propiedades</span>
-        </div>
-      </div>
+      {isAdmin ? (
+        <!-- Admin Stats -->
+        <>
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 21h18 M9 8h1 M9 12h1 M9 16h1 M14 8h1 M14 12h1 M14 16h1 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{adminStats?.total_properties || 0}</span>
+              <span class="stat-label">Total Propiedades</span>
+            </div>
+          </div>
 
-      <div class="stat-card">
-        <div class="stat-icon green">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{stats.active_properties}</span>
-          <span class="stat-label">Propiedades Activas</span>
-        </div>
-      </div>
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{adminStats?.active_properties || 0}</span>
+              <span class="stat-label">Propiedades Activas</span>
+            </div>
+          </div>
 
-      <div class="stat-card">
-        <div class="stat-icon yellow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{stats.featured_properties}</span>
-          <span class="stat-label">Destacadas</span>
-        </div>
-      </div>
+          <div class="stat-card">
+            <div class="stat-icon yellow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{adminStats?.featured_properties || 0}</span>
+              <span class="stat-label">Destacadas</span>
+            </div>
+          </div>
 
-      <div class="stat-card">
-        <div class="stat-icon purple">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        </div>
-        <div class="stat-info">
-          <span class="stat-value">{stats.total_users}</span>
-          <span class="stat-label">Usuarios</span>
-        </div>
-      </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{adminStats?.total_users || 0}</span>
+              <span class="stat-label">Usuarios</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <!-- User Stats -->
+        <>
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 21h18 M9 8h1 M9 12h1 M9 16h1 M14 8h1 M14 12h1 M14 16h1 M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{userStats?.total_properties || 0}</span>
+              <span class="stat-label">Mis Propiedades</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{userStats?.active_properties || 0}</span>
+              <span class="stat-label">Activas</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon yellow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{userStats?.total_views || 0}</span>
+              <span class="stat-label">Visitas</span>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value">{userStats?.total_leads || 0}</span>
+              <span class="stat-label">Contactos</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
 
     <!-- Quick Actions -->
@@ -158,6 +231,15 @@ const recentActivity = await getActivityLog({ limit: 10 });
     .welcome-card p {
       opacity: 0.9;
       font-size: 0.9375rem;
+    }
+    .role-badge {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
     }
     .stats-grid {
       display: grid;

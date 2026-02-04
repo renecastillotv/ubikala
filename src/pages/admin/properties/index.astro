@@ -1,9 +1,14 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getUbikalaProperties } from '../../../lib/ubikala-db';
+import { getUbikalaProperties, getPropertiesByUser, canViewAllProperties, type UserRole } from '../../../lib/ubikala-db';
 
 const user = Astro.locals.user;
-const properties = await getUbikalaProperties({ limit: 50, activo: undefined });
+
+// Admin sees all properties, other users see only their own
+const isAdmin = user?.role ? canViewAllProperties(user.role as UserRole) : false;
+const properties = isAdmin
+  ? await getUbikalaProperties({ limit: 50, activo: undefined })
+  : await getPropertiesByUser(user?.id || '', { limit: 50 });
 
 const tipoLabels: Record<string, string> = {
   casa: 'Casa',
@@ -23,7 +28,12 @@ const operacionLabels: Record<string, string> = {
 <AdminLayout title="Propiedades">
   <div class="properties-page">
     <div class="page-header">
-      <h3>Gestión de Propiedades</h3>
+      <div>
+        <h3>Gestión de Propiedades</h3>
+        {!isAdmin && (
+          <p class="role-notice">Mostrando solo tus propiedades</p>
+        )}
+      </div>
       <a href="/admin/properties/create" class="btn-primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="12" y1="5" x2="12" y2="19" />
@@ -146,6 +156,11 @@ const operacionLabels: Record<string, string> = {
       font-size: 1.25rem;
       font-weight: 600;
       color: #111827;
+    }
+    .role-notice {
+      font-size: 0.8125rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
     }
     .btn-primary {
       display: inline-flex;
