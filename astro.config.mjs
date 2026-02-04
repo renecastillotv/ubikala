@@ -4,21 +4,12 @@ import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel/serverless';
 
 export default defineConfig({
-  site: 'https://propiedadenrd.com',
-  output: 'hybrid', // SSG por defecto, SSR para API routes
+  site: 'https://ubikala.com',
+  output: 'hybrid',
   adapter: vercel(),
   integrations: [
     tailwind(),
-    sitemap({
-      i18n: {
-        defaultLocale: 'es',
-        locales: {
-          es: 'es-DO',
-          en: 'en-US',
-          fr: 'fr-FR'
-        }
-      }
-    })
+    sitemap()
   ],
   i18n: {
     defaultLocale: 'es',
