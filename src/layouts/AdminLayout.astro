@@ -67,6 +67,16 @@ const navItems = [
         border-bottom: 1px solid rgba(255,255,255,0.15);
         margin-bottom: 1rem;
       }
+      .logo-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .logo-isotipo {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+      }
       .logo h1 {
         font-size: 1.5rem;
         font-weight: 700;
@@ -211,7 +221,10 @@ const navItems = [
     <aside class="sidebar">
       <div class="sidebar-content">
         <div class="logo">
-          <h1>Ubikala</h1>
+          <div class="logo-brand">
+            <img src="/images/ubikala-isotipo.png" alt="Ubikala" class="logo-isotipo" />
+            <h1>Ubikala</h1>
+          </div>
           <span>Panel de Administración</span>
         </div>
         <nav>

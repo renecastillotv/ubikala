@@ -60,11 +60,22 @@ if (token) {
         text-align: center;
         margin-bottom: 2rem;
       }
+      .logo-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .logo-isotipo {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+      }
       .logo h1 {
         font-size: 2rem;
         font-weight: 700;
         color: var(--ubikala-olive);
-        margin-bottom: 0.5rem;
         letter-spacing: -0.03em;
       }
       .logo p {
@@ -144,7 +155,10 @@ if (token) {
   <body>
     <div class="login-container">
       <div class="logo">
-        <h1>Ubikala</h1>
+        <div class="logo-brand">
+          <img src="/images/ubikala-isotipo.png" alt="Ubikala" class="logo-isotipo" />
+          <h1>Ubikala</h1>
+        </div>
         <p>Panel de Administración</p>
       </div>
 

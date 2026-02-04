@@ -59,12 +59,13 @@ const isLoggedIn = !!user;
     <div class="flex items-center justify-between h-16 lg:h-20">
       <!-- Logo - Ubikala -->
       <a href={localizedUrl('/', lang)} class="flex items-center gap-2">
-        <div class="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
-          <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
-        </div>
+        <img
+          src="/images/ubikala-isotipo.png"
+          alt="Ubikala"
+          class="w-10 h-10 object-contain"
+          width="40"
+          height="40"
+        />
         <div class="hidden sm:block">
           <span class="text-2xl font-bold text-primary-700 tracking-tight">Ubikala</span>
           <span class="text-xs text-gray-500 block -mt-1">.com</span>
