@@ -30,44 +30,56 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return next();
   }
 
-  // Get token from request
-  const token = getTokenFromRequest(context.request);
+  try {
+    // Get token from request
+    const token = getTokenFromRequest(context.request);
 
-  if (!token) {
-    // Redirect to login for page requests
+    if (!token) {
+      // Redirect to login for page requests
+      if (!pathname.startsWith('/api/')) {
+        return context.redirect('/admin/login');
+      }
+      // Return 401 for API requests
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verify token and get user
+    const user = await getCurrentUser(token);
+
+    if (!user) {
+      // Invalid token - redirect to login
+      if (!pathname.startsWith('/api/')) {
+        return context.redirect('/admin/login');
+      }
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Store user in locals for use in pages/endpoints
+    context.locals.user = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      avatar_url: user.avatar_url,
+      phone: user.phone,
+    } as AuthUser;
+
+    return next();
+  } catch (error) {
+    console.error('Middleware error:', error);
+    // On error, redirect to login for pages or return 500 for API
     if (!pathname.startsWith('/api/')) {
       return context.redirect('/admin/login');
     }
-    // Return 401 for API requests
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
+    return new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
-  // Verify token and get user
-  const user = await getCurrentUser(token);
-
-  if (!user) {
-    // Invalid token - redirect to login
-    if (!pathname.startsWith('/api/')) {
-      return context.redirect('/admin/login');
-    }
-    return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Store user in locals for use in pages/endpoints
-  context.locals.user = {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    avatar_url: user.avatar_url,
-    phone: user.phone,
-  } as AuthUser;
-
-  return next();
 });
