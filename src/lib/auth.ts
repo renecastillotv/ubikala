@@ -12,8 +12,17 @@ import {
   type UbikalaUser
 } from './ubikala-db';
 
-const JWT_SECRET = import.meta.env.JWT_SECRET || process.env.JWT_SECRET || 'fallback-secret-change-me';
+const JWT_SECRET = import.meta.env.JWT_SECRET || process.env.JWT_SECRET;
 const TOKEN_EXPIRY_DAYS = 7;
+const IS_PRODUCTION = import.meta.env.PROD || process.env.NODE_ENV === 'production';
+
+// Validate JWT_SECRET is configured
+if (!JWT_SECRET) {
+  console.error('[AUTH] CRITICAL: JWT_SECRET is not configured!');
+  if (IS_PRODUCTION) {
+    throw new Error('JWT_SECRET must be configured in production');
+  }
+}
 
 // Create a secret key for JWT
 function getSecretKey() {

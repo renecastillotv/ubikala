@@ -4,12 +4,64 @@
 
 @layer base {
   :root {
-    /* Ubikala Color Palette */
-    --color-primary: 91 110 60;       /* Olive green #5B6E3C */
-    --color-secondary: 232 222 200;   /* Sand #E8DEC8 */
-    --color-accent: 184 107 62;       /* Terracotta #B86B3E */
-    --color-ivory: 250 249 246;       /* Ivory #FAF9F6 */
-    --color-text: 63 63 63;           /* Warm gray #3F3F3F */
+    /* ============================================
+       UBIKALA COLOR PALETTE (Reference/Current)
+       Earthy Palette: Verde oliva, Arena, Terracota, Marfil, Gris cálido
+       ============================================ */
+
+    /* Primary - Olive Green */
+    --color-primary: 92 107 60;         /* Olive #5C6B3C */
+    --color-primary-dark: 74 87 48;     /* Olive dark #4A5730 */
+    --color-primary-light: 122 139 90;  /* Olive light #7A8B5A */
+
+    /* Secondary - Sand/Arena */
+    --color-secondary: 212 196 168;     /* Sand #D4C4A8 */
+    --color-secondary-light: 232 223 208; /* Sand light #E8DFD0 */
+    --color-secondary-dark: 181 166 138;  /* Sand dark #B5A68A */
+
+    /* Accent - Terracotta */
+    --color-accent: 201 109 61;         /* Terracotta #C96D3D */
+    --color-accent-dark: 168 90 48;     /* Terracotta dark #A85A30 */
+
+    /* Ivory backgrounds */
+    --color-ivory: 250 247 240;         /* Ivory #FAF7F0 */
+    --color-ivory-pure: 255 254 249;    /* Ivory pure #FFFEF9 */
+
+    /* Warm grays for text */
+    --color-text: 74 70 66;             /* Warm gray dark #4A4642 */
+    --color-text-secondary: 107 102 96; /* Warm gray #6B6660 */
+    --color-text-light: 139 134 128;    /* Warm gray light #8B8680 */
+
+    /* CSS Custom Properties for direct use */
+    --ubikala-olive: #5C6B3C;
+    --ubikala-olive-dark: #4A5730;
+    --ubikala-olive-light: #7A8B5A;
+    --ubikala-sand: #D4C4A8;
+    --ubikala-sand-light: #E8DFD0;
+    --ubikala-sand-dark: #B5A68A;
+    --ubikala-terracotta: #C96D3D;
+    --ubikala-terracotta-dark: #A85A30;
+    --ubikala-ivory: #FAF7F0;
+    --ubikala-ivory-pure: #FFFEF9;
+    --ubikala-warm-gray: #6B6660;
+    --ubikala-warm-gray-light: #8B8680;
+    --ubikala-warm-gray-dark: #4A4642;
+
+    /* ============================================
+       LEGACY COLORS (Previous palette - for rollback)
+       To revert, swap legacy values with main values above
+       ============================================ */
+    --legacy-primary: 91 110 60;        /* #5B6E3C */
+    --legacy-primary-dark: 85 107 47;   /* #556B2F */
+    --legacy-primary-light: 107 127 62; /* #6B7F3E */
+    --legacy-secondary: 232 222 200;    /* #E8DEC8 */
+    --legacy-secondary-light: 243 236 220; /* #F3ECDC */
+    --legacy-accent: 184 107 62;        /* #B86B3E */
+    --legacy-accent-dark: 166 90 42;    /* #A65A2A */
+    --legacy-ivory: 250 249 246;        /* #FAF9F6 */
+    --legacy-ivory-light: 253 252 249;  /* #FDFCF9 */
+    --legacy-text: 63 63 63;            /* #3F3F3F */
+    --legacy-text-secondary: 125 120 112; /* #7D7870 */
   }
 
   html {
@@ -129,8 +181,13 @@
     @apply bg-white rounded-2xl shadow-xl p-6 md:p-8;
   }
 
-  /* Hero - Ubikala olive gradient */
+  /* Hero - Ubikala olive gradient (reference colors) */
   .hero-gradient {
+    background: linear-gradient(135deg, rgba(92, 107, 60, 0.95) 0%, rgba(74, 87, 48, 0.9) 50%, rgba(122, 139, 90, 0.85) 100%);
+  }
+
+  /* Legacy hero gradient (for rollback) */
+  .hero-gradient-legacy {
     background: linear-gradient(135deg, rgba(85, 107, 47, 0.95) 0%, rgba(91, 110, 60, 0.9) 50%, rgba(107, 127, 62, 0.85) 100%);
   }
 
@@ -173,10 +230,19 @@
   }
 
   .bg-ivory {
-    background-color: #faf9f6;
+    background-color: #FAF7F0;  /* Reference ivory */
   }
 
   .bg-sand {
+    background-color: #E8DFD0;  /* Reference sand light */
+  }
+
+  /* Legacy utility classes (for rollback) */
+  .bg-ivory-legacy {
+    background-color: #faf9f6;
+  }
+
+  .bg-sand-legacy {
     background-color: #f3ecdc;
   }
 }
