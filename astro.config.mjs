@@ -5,7 +5,9 @@ import vercel from '@astrojs/vercel/serverless';
 export default defineConfig({
   site: 'https://ubikala.com',
   output: 'hybrid',
-  adapter: vercel(),
+  adapter: vercel({
+    runtime: 'nodejs20.x'
+  }),
   integrations: [
     tailwind()
   ],
