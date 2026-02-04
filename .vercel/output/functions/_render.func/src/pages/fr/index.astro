@@ -1,0 +1,107 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Hero from '../../components/Hero.astro';
+import FeaturedProperties from '../../components/FeaturedProperties.astro';
+import LocationsGrid from '../../components/LocationsGrid.astro';
+import CTASection from '../../components/CTASection.astro';
+import { useTranslations } from '../../i18n';
+
+const t = useTranslations('fr');
+---
+
+<Layout
+  title={t.pages.home.title}
+  description={t.pages.home.description}
+  keywords={t.meta.keywords}
+  alternateLanguages={[
+    { lang: 'es', url: 'https://propiedadenrd.com/' },
+    { lang: 'en', url: 'https://propiedadenrd.com/en/' }
+  ]}
+>
+  <Hero />
+  <FeaturedProperties />
+  <LocationsGrid />
+
+  <!-- Pourquoi Nous Choisir -->
+  <section class="section bg-gray-50">
+    <div class="container-custom">
+      <div class="text-center mb-12">
+        <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
+          Pourquoi Nous Choisir?
+        </span>
+        <h2 class="section-title mt-2">
+          Le Portail Immobilier #1 en République Dominicaine
+        </h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Recherche Intelligente</h3>
+          <p class="text-gray-600">
+            Trouvez exactement ce que vous cherchez avec nos filtres avancés et recherche par emplacement, prix, type de propriété et plus.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-20 h-20 bg-secondary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Propriétés Vérifiées</h3>
+          <p class="text-gray-600">
+            Toutes les propriétés sont vérifiées par notre équipe pour garantir des informations précises et fiables.
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-20 h-20 bg-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-3">Agents Experts</h3>
+          <p class="text-gray-600">
+            Connectez-vous avec des agents immobiliers professionnels qui connaissent parfaitement le marché dominicain.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenu SEO pour Français -->
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <div class="prose prose-lg max-w-4xl mx-auto">
+        <h2>Immobilier en République Dominicaine</h2>
+        <p>
+          Bienvenue sur PropiedadEnRD.com, le portail immobilier de référence pour les propriétés en République Dominicaine.
+          Que vous recherchiez une villa face à la mer à Punta Cana, un appartement moderne à Saint-Domingue,
+          ou un terrain d'investissement à Santiago, nous avons des milliers d'annonces vérifiées qui vous attendent.
+        </p>
+
+        <h3>Pourquoi Investir dans l'Immobilier Dominicain?</h3>
+        <ul>
+          <li><strong>Aucune restriction pour les étrangers:</strong> Achetez une propriété avec les mêmes droits que les locaux</li>
+          <li><strong>Marché touristique en croissance:</strong> Excellent potentiel de revenus locatifs</li>
+          <li><strong>Prix abordables:</strong> Comparé à d'autres destinations des Caraïbes</li>
+          <li><strong>Soleil toute l'année:</strong> Climat parfait pour les résidences secondaires</li>
+        </ul>
+
+        <h3>Zones Populaires pour l'Investissement Immobilier</h3>
+        <p>
+          De la capitale animée de Saint-Domingue aux plages mondialement célèbres de Punta Cana,
+          la République Dominicaine offre des opportunités diversifiées pour l'investissement immobilier.
+          Nos agents vérifiés peuvent vous aider à naviguer sur le marché et trouver votre propriété idéale.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <CTASection />
+</Layout>

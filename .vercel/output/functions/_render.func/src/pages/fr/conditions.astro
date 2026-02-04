@@ -1,0 +1,136 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { useTranslations, getAlternateUrls } from '../../i18n';
+
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls('/fr/conditions');
+---
+
+<Layout
+  title="Termes et Conditions | PropiedadEnRD.com"
+  description="Termes d'utilisation de PropiedadEnRD.com. Lisez les conditions régissant l'utilisation de notre portail immobilier."
+  keywords="termes utilisation, conditions, propiedadenrd"
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{t.footer.terms}</span>
+      </nav>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container-custom">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="text-4xl font-bold text-gray-900 mb-8">Termes et Conditions</h1>
+
+        <div class="prose prose-lg max-w-none">
+          <p class="lead">
+            Bienvenue sur PropiedadEnRD.com. En utilisant notre site web, vous acceptez ces termes et conditions
+            dans leur intégralité. Veuillez les lire attentivement avant d'utiliser le portail.
+          </p>
+
+          <h2>1. Définitions</h2>
+          <ul>
+            <li><strong>"Portail":</strong> désigne le site web PropiedadEnRD.com</li>
+            <li><strong>"Utilisateur":</strong> toute personne qui accède ou utilise le Portail</li>
+            <li><strong>"Agent":</strong> professionnel immobilier inscrit sur le Portail</li>
+            <li><strong>"Propriétaire":</strong> propriétaire de bien qui publie sur le Portail</li>
+            <li><strong>"Contenu":</strong> toutes les informations, images et matériels publiés</li>
+          </ul>
+
+          <h2>2. Description du Service</h2>
+          <p>
+            PropiedadEnRD.com est une plateforme qui facilite la connexion entre chercheurs de propriétés
+            et agents/propriétaires qui les proposent. Le Portail ne participe pas aux transactions
+            entre parties, ni ne garantit l'exactitude des informations publiées.
+          </p>
+
+          <h2>3. Inscription de Compte</h2>
+          <p>
+            Pour publier des propriétés, vous devez créer un compte. Vous acceptez de:
+          </p>
+          <ul>
+            <li>Fournir des informations exactes et à jour</li>
+            <li>Maintenir la sécurité de vos identifiants</li>
+            <li>Notifier immédiatement tout accès non autorisé</li>
+            <li>Être responsable de toutes les activités sous votre compte</li>
+          </ul>
+
+          <h2>4. Contenu Publié</h2>
+          <p>Les utilisateurs qui publient des propriétés acceptent que:</p>
+          <ul>
+            <li>Ils ont le droit de publier la propriété offerte</li>
+            <li>Les informations et photos sont réelles et actuelles</li>
+            <li>Ils ne publieront pas de contenu trompeur, frauduleux ou illégal</li>
+            <li>Les prix et conditions reflètent la réalité</li>
+          </ul>
+
+          <h2>5. Usages Interdits</h2>
+          <p>Vous ne pouvez pas utiliser le Portail pour:</p>
+          <ul>
+            <li>Publier des propriétés fausses, trompeuses ou frauduleuses</li>
+            <li>Envoyer du spam ou de la publicité non sollicitée</li>
+            <li>Extraire des données sans autorisation</li>
+            <li>Interférer avec le fonctionnement du Portail</li>
+            <li>Violer les droits de tiers</li>
+          </ul>
+
+          <h2>6. Tarifs et Paiements</h2>
+          <p>
+            PropiedadEnRD.com propose des services gratuits et payants. Les plans payants seront clairement indiqués
+            avec leurs prix avant la souscription. Nous ne facturons pas de commissions sur les transactions
+            entre utilisateurs.
+          </p>
+
+          <h2>7. Limitation de Responsabilité</h2>
+          <p>
+            Le Portail agit uniquement comme intermédiaire facilitant le contact. Nous ne sommes pas responsables de:
+          </p>
+          <ul>
+            <li>La qualité, légalité ou disponibilité réelle des propriétés</li>
+            <li>Les transactions ou accords entre utilisateurs</li>
+            <li>Les pertes découlant de l'utilisation du Portail</li>
+            <li>Les interruptions de service ou pannes techniques</li>
+          </ul>
+
+          <h2>8. Propriété Intellectuelle</h2>
+          <p>
+            Tout le contenu du Portail, y compris le design, logos et code, est la propriété de PropiedadEnRD.com
+            ou de ses concédants. La reproduction ou l'utilisation sans autorisation est interdite.
+          </p>
+
+          <h2>9. Modifications</h2>
+          <p>
+            Nous nous réservons le droit de modifier ces termes à tout moment. Les changements seront publiés sur le
+            Portail et prendront effet immédiatement. L'utilisation continue du Portail constitue
+            l'acceptation des modifications.
+          </p>
+
+          <h2>10. Droit Applicable</h2>
+          <p>
+            Ces termes sont régis par les lois de la République Dominicaine. Tout litige sera
+            résolu devant les tribunaux de Saint-Domingue.
+          </p>
+
+          <h2>11. Contact</h2>
+          <p>
+            Pour des questions sur ces termes:
+          </p>
+          <ul>
+            <li>Email: legal@propiedadenrd.com</li>
+            <li>Adresse: Saint-Domingue, République Dominicaine</li>
+          </ul>
+
+          <p class="text-sm text-gray-500 mt-12">
+            Dernière mise à jour: Janvier 2026
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

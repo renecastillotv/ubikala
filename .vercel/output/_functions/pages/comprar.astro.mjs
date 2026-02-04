@@ -1,0 +1,96 @@
+/* empty css                                 */
+import { e as createAstro, f as createComponent, k as renderComponent, r as renderTemplate, u as unescapeHTML, m as maybeRenderHead } from '../chunks/astro/server_CULxlDpc.mjs';
+import 'piccolore';
+import { $ as $$Layout, u as useTranslations } from '../chunks/Layout_DaFjIure.mjs';
+import { $ as $$PropertyCard } from '../chunks/PropertyCard_CtVM9QFK.mjs';
+import { $ as $$SearchBox } from '../chunks/SearchBox_DSNT-g5D.mjs';
+import { $ as $$Pagination } from '../chunks/Pagination_D1WDScHk.mjs';
+import { g as getProperties, a as getPropertiesCount } from '../chunks/db_DCp7snH9.mjs';
+import { t as transformProperties } from '../chunks/transformers_DypiJEfR.mjs';
+export { renderers } from '../renderers.mjs';
+
+var __freeze = Object.freeze;
+var __defProp = Object.defineProperty;
+var __template = (cooked, raw) => __freeze(__defProp(cooked, "raw", { value: __freeze(cooked.slice()) }));
+var _a;
+const $$Astro = createAstro("https://ubikala.com");
+const prerender = false;
+const $$Index = createComponent(async ($$result, $$props, $$slots) => {
+  const Astro2 = $$result.createAstro($$Astro, $$props, $$slots);
+  Astro2.self = $$Index;
+  const t = useTranslations("es");
+  const ITEMS_PER_PAGE = 24;
+  const currentPage = Math.max(1, parseInt(Astro2.url.searchParams.get("page") || "1"));
+  let properties = [];
+  let totalCount = 0;
+  try {
+    const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+    const [dbProperties, count] = await Promise.all([
+      getProperties({ operacion: "venta", limit: ITEMS_PER_PAGE, offset }),
+      getPropertiesCount({ operacion: "venta" })
+    ]);
+    properties = transformProperties(dbProperties);
+    totalCount = count;
+  } catch (error) {
+    console.error("Error fetching properties:", error);
+  }
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  if (currentPage > totalPages && totalPages > 0) {
+    return Astro2.redirect("/comprar");
+  }
+  const pageTitle = t.pages.buy.title;
+  const pageDescription = t.pages.buy.description;
+  const listingSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Propiedades en Venta en Rep\xFAblica Dominicana",
+    description: pageDescription,
+    numberOfItems: totalCount,
+    itemListElement: properties.slice(0, 10).map((property, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
+        "@type": "RealEstateListing",
+        name: property.title,
+        description: property.description.substring(0, 160),
+        url: `https://propiedadenrd.com/propiedad/${property.slug}`,
+        image: property.images[0]?.url,
+        offers: {
+          "@type": "Offer",
+          price: property.price,
+          priceCurrency: property.currency
+        }
+      }
+    }))
+  };
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": pageTitle, "description": pageDescription, "keywords": "comprar casa republica dominicana, propiedades en venta rd, apartamentos venta santo domingo, casas venta punta cana" }, { "default": async ($$result2) => renderTemplate`   ${maybeRenderHead()}<div class="bg-gray-100 py-4"> <div class="container-custom"> <nav class="flex text-sm text-gray-600"> <a href="/" class="hover:text-primary-600">Inicio</a> <span class="mx-2">/</span> <span class="text-gray-900 font-medium">Comprar</span> </nav> </div> </div>  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12"> <div class="container-custom"> <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+Propiedades en Venta en República Dominicana
+</h1> <p class="text-primary-100 text-lg max-w-3xl">
+Explora nuestra selección de casas, apartamentos, villas, terrenos y locales comerciales disponibles para compra en todo el país.
+</p> </div> </section>  <section class="py-6 bg-white border-b"> <div class="container-custom"> ${renderComponent($$result2, "SearchBox", $$SearchBox, { "variant": "inline" })} </div> </section>  <section class="section"> <div class="container-custom"> <div class="flex items-center justify-between mb-8"> <div> <p class="text-gray-600"> <span class="font-semibold text-gray-900">${totalCount}</span> propiedades encontradas
+</p> </div> <div class="flex items-center gap-4"> <label for="sort" class="text-sm text-gray-600">Ordenar por:</label> <select id="sort" class="select py-2 text-sm w-auto"> <option value="recent">Más recientes</option> <option value="price-asc">Precio: menor a mayor</option> <option value="price-desc">Precio: mayor a menor</option> <option value="area-asc">Área: menor a mayor</option> <option value="area-desc">Área: mayor a menor</option> </select> </div> </div> <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"> ${properties.map((property) => renderTemplate`${renderComponent($$result2, "PropertyCard", $$PropertyCard, { "property": property })}`)} </div> <!-- Pagination --> <div class="mt-12"> ${renderComponent($$result2, "Pagination", $$Pagination, { "currentPage": currentPage, "totalPages": totalPages, "baseUrl": "/comprar" })} </div> </div> </section>  <section class="py-12 bg-gray-50"> <div class="container-custom"> <div class="prose prose-lg max-w-4xl mx-auto"> <h2>Comprar Propiedades en República Dominicana</h2> <p>
+República Dominicana ofrece una de las mejores oportunidades de inversión inmobiliaria en el Caribe.
+          Ya sea que busques una casa familiar en Santo Domingo, un apartamento de inversión en Punta Cana,
+          una villa de lujo frente al mar en Las Terrenas, o un terreno para desarrollo en Santiago,
+          nuestro portal te conecta con las mejores opciones del mercado.
+</p> <h3>Zonas Más Populares para Comprar</h3> <ul> <li><strong>Santo Domingo:</strong> La capital ofrece desde apartamentos modernos en Piantini y Naco hasta casas amplias en Arroyo Hondo.</li> <li><strong>Punta Cana:</strong> El destino turístico #1 del Caribe con excelente retorno de inversión por alquileres vacacionales.</li> <li><strong>Santiago:</strong> Precios más accesibles y excelente calidad de vida en el Cibao.</li> <li><strong>Las Terrenas:</strong> Paraíso bohemio con propiedades únicas frente al mar.</li> </ul> <h3>Proceso de Compra para Extranjeros</h3> <p>
+Los extranjeros pueden comprar propiedades en República Dominicana sin restricciones.
+          El proceso es sencillo y nuestros asesores verificados están capacitados para guiarte
+          en cada paso, desde la búsqueda hasta el cierre de la transacción.
+</p> </div> </div> </section> `, "head": async ($$result2) => renderTemplate(_a || (_a = __template(['<script type="application/ld+json">', "<\/script>"])), unescapeHTML(JSON.stringify(listingSchema))) })}`;
+}, "D:/portal PropiedadEnRD.com/src/pages/comprar/index.astro", void 0);
+
+const $$file = "D:/portal PropiedadEnRD.com/src/pages/comprar/index.astro";
+const $$url = "/comprar";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: $$Index,
+  file: $$file,
+  prerender,
+  url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };

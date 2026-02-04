@@ -1,0 +1,58 @@
+/* empty css                                 */
+import { f as createComponent, k as renderComponent, r as renderTemplate, m as maybeRenderHead } from '../chunks/astro/server_CULxlDpc.mjs';
+import 'piccolore';
+import { $ as $$Layout } from '../chunks/Layout_DaFjIure.mjs';
+export { renderers } from '../renderers.mjs';
+
+const $$Terminos = createComponent(($$result, $$props, $$slots) => {
+  return renderTemplate`${renderComponent($$result, "Layout", $$Layout, { "title": "T\xE9rminos y Condiciones | PropiedadEnRD.com", "description": "T\xE9rminos y condiciones de uso de PropiedadEnRD.com. Conoce las reglas para usar nuestro portal inmobiliario." }, { "default": ($$result2) => renderTemplate`  ${maybeRenderHead()}<div class="bg-gray-100 py-4"> <div class="container-custom"> <nav class="flex text-sm text-gray-600"> <a href="/" class="hover:text-primary-600">Inicio</a> <span class="mx-2">/</span> <span class="text-gray-900 font-medium">Términos y Condiciones</span> </nav> </div> </div> <section class="section"> <div class="container-custom"> <div class="max-w-4xl mx-auto"> <h1 class="text-4xl font-bold text-gray-900 mb-8">Términos y Condiciones</h1> <div class="prose prose-lg"> <p class="text-gray-600 mb-8">
+Última actualización: Febrero 2025
+</p> <h2>1. Aceptación de los Términos</h2> <p>
+Al acceder y utilizar PropiedadEnRD.com, usted acepta estar sujeto a estos
+            términos y condiciones. Si no está de acuerdo con alguna parte de estos términos,
+            no debe usar nuestro portal.
+</p> <h2>2. Descripción del Servicio</h2> <p>
+PropiedadEnRD.com es un portal que permite a asesores inmobiliarios, agencias
+            y propietarios publicar propiedades para venta o alquiler, y a compradores e
+            inquilinos buscar y contactar a los publicadores.
+</p> <p> <strong>PropiedadEnRD.com no es una inmobiliaria.</strong> No participamos en
+            transacciones, no verificamos la exactitud de los listados más allá de una
+            revisión básica, y no somos responsables de las negociaciones entre partes.
+</p> <h2>3. Cuentas de Usuario</h2> <p>Para publicar propiedades, debe crear una cuenta y proporcionar información veraz. Usted es responsable de:</p> <ul> <li>Mantener la confidencialidad de su cuenta</li> <li>Todas las actividades realizadas bajo su cuenta</li> <li>Notificarnos inmediatamente de cualquier uso no autorizado</li> </ul> <h2>4. Publicación de Propiedades</h2> <p>Al publicar una propiedad, usted garantiza que:</p> <ul> <li>Tiene derecho legal a publicar la propiedad (es propietario o está autorizado)</li> <li>La información proporcionada es veraz y precisa</li> <li>Las fotos son reales y corresponden a la propiedad</li> <li>El precio y condiciones son reales</li> </ul> <p>
+Nos reservamos el derecho de eliminar publicaciones que incumplan estas condiciones
+            o nuestras políticas sin previo aviso.
+</p> <h2>5. Conducta Prohibida</h2> <p>Está prohibido:</p> <ul> <li>Publicar información falsa o engañosa</li> <li>Publicar propiedades que no existen o ya no están disponibles</li> <li>Usar el portal para actividades ilegales</li> <li>Acosar o enviar spam a otros usuarios</li> <li>Intentar acceder a cuentas de otros usuarios</li> <li>Extraer datos del portal de forma automatizada</li> </ul> <h2>6. Limitación de Responsabilidad</h2> <p>
+PropiedadEnRD.com actúa únicamente como intermediario de información.
+            No somos responsables de:
+</p> <ul> <li>La exactitud de la información publicada por terceros</li> <li>La calidad o estado de las propiedades</li> <li>Disputas entre compradores/inquilinos y vendedores/arrendadores</li> <li>Pérdidas derivadas del uso del portal</li> <li>Transacciones realizadas fuera del portal</li> </ul> <h2>7. Propiedad Intelectual</h2> <p>
+El contenido del portal (diseño, logos, textos) es propiedad de PropiedadEnRD.com.
+            Las fotos y descripciones de propiedades son propiedad de sus respectivos publicadores.
+</p> <h2>8. Pagos y Suscripciones</h2> <p>
+Algunos servicios requieren pago. Los precios y condiciones de suscripción se
+            muestran antes de la compra. Los pagos no son reembolsables excepto donde la
+            ley lo requiera.
+</p> <h2>9. Modificaciones</h2> <p>
+Podemos modificar estos términos en cualquier momento. Los cambios entran en
+            vigencia al ser publicados. El uso continuado del portal constituye aceptación
+            de los nuevos términos.
+</p> <h2>10. Ley Aplicable</h2> <p>
+Estos términos se rigen por las leyes de la República Dominicana. Cualquier
+            disputa será resuelta en los tribunales de Santo Domingo.
+</p> <h2>11. Contacto</h2> <p>
+Para preguntas sobre estos términos:
+</p> <ul> <li>Email: legal@propiedadenrd.com</li> <li>Teléfono: +1 809-555-0000</li> </ul> </div> </div> </div> </section> ` })}`;
+}, "D:/portal PropiedadEnRD.com/src/pages/terminos.astro", void 0);
+
+const $$file = "D:/portal PropiedadEnRD.com/src/pages/terminos.astro";
+const $$url = "/terminos";
+
+const _page = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: $$Terminos,
+  file: $$file,
+  url: $$url
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const page = () => _page;
+
+export { page };
