@@ -1125,6 +1125,50 @@ export async function countNewLeads(): Promise<number> {
   return Number(rows[0]?.count || 0);
 }
 
+// Get lead statistics by time period (for admin dashboard)
+export interface LeadStats {
+  today: number;
+  this_week: number;
+  this_month: number;
+  this_year: number;
+  total: number;
+  by_status: { status: string; count: number }[];
+  by_source: { source: string; count: number }[];
+}
+
+export async function getLeadStats(): Promise<LeadStats> {
+  if (!ubikalaDb) return { today: 0, this_week: 0, this_month: 0, this_year: 0, total: 0, by_status: [], by_source: [] };
+
+  const [timeRows, statusRows, sourceRows] = await Promise.all([
+    ubikalaDb`
+      SELECT
+        COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) as today,
+        COUNT(*) FILTER (WHERE created_at >= date_trunc('week', CURRENT_DATE)) as this_week,
+        COUNT(*) FILTER (WHERE created_at >= date_trunc('month', CURRENT_DATE)) as this_month,
+        COUNT(*) FILTER (WHERE created_at >= date_trunc('year', CURRENT_DATE)) as this_year,
+        COUNT(*) as total
+      FROM leads
+    `,
+    ubikalaDb`
+      SELECT status, COUNT(*) as count FROM leads GROUP BY status ORDER BY count DESC
+    `,
+    ubikalaDb`
+      SELECT source, COUNT(*) as count FROM leads GROUP BY source ORDER BY count DESC
+    `,
+  ]);
+
+  const t = timeRows[0] || {};
+  return {
+    today: Number(t.today || 0),
+    this_week: Number(t.this_week || 0),
+    this_month: Number(t.this_month || 0),
+    this_year: Number(t.this_year || 0),
+    total: Number(t.total || 0),
+    by_status: statusRows as { status: string; count: number }[],
+    by_source: sourceRows as { source: string; count: number }[],
+  };
+}
+
 // ==================== PLANS ====================
 
 // Get all plans
