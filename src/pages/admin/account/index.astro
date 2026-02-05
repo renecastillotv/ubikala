@@ -41,8 +41,14 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
           <h3>{currentPlan?.name || 'Sin Plan'}</h3>
           {currentPlan && !isTeamMember && (
             <div class="plan-price">
-              <span class="price">${Number(currentPlan.price).toFixed(2)}</span>
-              <span class="period">/mes</span>
+              {Number(currentPlan.price) > 0 ? (
+                <>
+                  <span class="price">${Number(currentPlan.price).toFixed(2)}</span>
+                  <span class="period">/mes</span>
+                </>
+              ) : (
+                <span class="price free">Gratuito</span>
+              )}
             </div>
           )}
         </div>
@@ -164,8 +170,14 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
                 <div class="plan-option-header">
                   <h4>{plan.name}</h4>
                   <div class="plan-option-price">
-                    <span class="price">${Number(plan.price).toFixed(2)}</span>
-                    <span class="period">/mes</span>
+                    {Number(plan.price) > 0 ? (
+                      <>
+                        <span class="price">${Number(plan.price).toFixed(2)}</span>
+                        <span class="period">/mes</span>
+                      </>
+                    ) : (
+                      <span class="price free">Gratuito</span>
+                    )}
                   </div>
                 </div>
                 <ul class="plan-option-features">
@@ -321,6 +333,9 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
       font-size: 2rem;
       font-weight: 700;
       color: var(--ubikala-olive, #5C6B3C);
+    }
+    .plan-price .price.free {
+      font-size: 1.5rem;
     }
     .plan-price .period {
       color: #6b7280;

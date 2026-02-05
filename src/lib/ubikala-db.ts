@@ -1385,7 +1385,7 @@ export async function updateUserProfile(userId: string, data: {
 export async function getUserWithPlan(userId: string): Promise<(UbikalaUser & { plan?: UbikalaPlan }) | null> {
   if (!ubikalaDb) return null;
   const rows = await ubikalaDb`
-    SELECT u.*, p.name as plan_name, p.max_publications, p.publication_duration_days, p.max_team_members, p.max_leads_per_month
+    SELECT u.*, p.name as plan_name, p.price as plan_price, p.max_publications, p.publication_duration_days, p.max_team_members, p.max_leads_per_month
     FROM ubikala_users u
     LEFT JOIN ubikala_plans p ON u.plan_id = p.id
     WHERE u.id = ${userId}
@@ -1396,6 +1396,7 @@ export async function getUserWithPlan(userId: string): Promise<(UbikalaUser & { 
     user.plan = {
       id: user.plan_id,
       name: user.plan_name,
+      price: user.plan_price,
       max_publications: user.max_publications,
       publication_duration_days: user.publication_duration_days,
       max_team_members: user.max_team_members,

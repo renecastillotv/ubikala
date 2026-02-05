@@ -124,9 +124,9 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
                       {uploadedDoc.status === 'approved' && 'Aprobado'}
                       {uploadedDoc.status === 'rejected' && 'Rechazado'}
                     </span>
-                    <a href={uploadedDoc.file_url} target="_blank" class="btn-outline btn-sm">
+                    <button class="btn-outline btn-sm view-doc-btn" data-url={uploadedDoc.file_url} data-name={doc.name}>
                       Ver Documento
-                    </a>
+                    </button>
                   </div>
                 ) : (
                   <span class="not-uploaded">No enviado</span>
@@ -192,6 +192,18 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
           <button type="submit" class="btn-danger">Confirmar Rechazo</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Document Preview Modal -->
+  <div id="doc-modal" class="modal hidden">
+    <div class="modal-backdrop" id="doc-modal-backdrop"></div>
+    <div class="modal-content modal-content-doc">
+      <div class="modal-header">
+        <h3 id="doc-modal-title">Documento</h3>
+        <button class="modal-close" id="close-doc-modal">&times;</button>
+      </div>
+      <div id="doc-preview" class="doc-preview"></div>
     </div>
   </div>
 
@@ -476,9 +488,35 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
       padding-top: 1rem;
       border-top: 1px solid #e5e7eb;
     }
+    .modal-content-doc {
+      max-width: 800px;
+      max-height: 90vh;
+      overflow: auto;
+    }
+    .doc-preview {
+      text-align: center;
+    }
+    .doc-preview img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+    .doc-preview iframe {
+      width: 100%;
+      height: 70vh;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.5rem;
+    }
+    .doc-preview .unsupported {
+      padding: 2rem;
+      color: #6b7280;
+    }
   </style>
 
-  <script define:vars={{ requestId: id }}>
+  <div id="request-data" data-id={id} hidden></div>
+  <script>
+    const requestId = document.getElementById('request-data')!.getAttribute('data-id')!;
     const startReviewBtn = document.getElementById('start-review-btn');
     const approveBtn = document.getElementById('approve-btn');
     const rejectBtn = document.getElementById('reject-btn');
@@ -528,10 +566,9 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
       rejectModal?.classList.remove('hidden');
     });
 
-    // Close modal
+    // Close reject modal
     document.getElementById('close-modal')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
     document.getElementById('cancel-reject')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
-    document.querySelector('.modal-backdrop')?.addEventListener('click', () => rejectModal?.classList.add('hidden'));
 
     // Submit rejection
     rejectForm?.addEventListener('submit', async (e) => {
@@ -553,6 +590,41 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
       } catch (error) {
         alert('Error al rechazar solicitud');
       }
+    });
+
+    // Document preview
+    const docModal = document.getElementById('doc-modal');
+    const docPreview = document.getElementById('doc-preview');
+    const docModalTitle = document.getElementById('doc-modal-title');
+
+    document.querySelectorAll('.view-doc-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-url') || '';
+        const name = btn.getAttribute('data-name') || 'Documento';
+
+        if (docModalTitle) docModalTitle.textContent = name;
+
+        if (docPreview) {
+          if (url.startsWith('data:image/')) {
+            docPreview.innerHTML = `<img src="${url}" alt="${name}" />`;
+          } else if (url.startsWith('data:application/pdf')) {
+            docPreview.innerHTML = `<iframe src="${url}" title="${name}"></iframe>`;
+          } else {
+            docPreview.innerHTML = `<div class="unsupported"><p>No se puede previsualizar este tipo de documento.</p></div>`;
+          }
+        }
+
+        docModal?.classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('close-doc-modal')?.addEventListener('click', () => {
+      docModal?.classList.add('hidden');
+      if (docPreview) docPreview.innerHTML = '';
+    });
+    document.getElementById('doc-modal-backdrop')?.addEventListener('click', () => {
+      docModal?.classList.add('hidden');
+      if (docPreview) docPreview.innerHTML = '';
     });
   </script>
 </AdminLayout>
