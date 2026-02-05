@@ -58,6 +58,8 @@ export interface Agent {
     linkedin?: string;
   };
   isUbikalaUser?: boolean;
+  parentCompany?: string;   // Parent inmobiliaria company name (for affiliated agents)
+  parentUserId?: string;    // Parent inmobiliaria user ID
 }
 
 export interface Property {

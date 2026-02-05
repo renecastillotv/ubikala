@@ -429,7 +429,18 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                 )}
                 <div>
                   <h3 class="font-semibold text-gray-900">{agent?.name}</h3>
-                  <p class="text-sm text-gray-500">{agent?.company || t.agent.title}</p>
+                  <p class="text-sm text-gray-500">
+                    {agent?.isUbikalaUser
+                      ? agent?.parentCompany
+                        ? `Asesor Inmobiliario de ${agent.parentCompany}`
+                        : agent?.userType === 'agent'
+                          ? agent?.company || 'Inmobiliaria'
+                          : agent?.userType === 'independent'
+                            ? 'Asesor Independiente'
+                            : 'Propietario'
+                      : agent?.company || t.agent.title
+                    }
+                  </p>
                   {agent?.verified && (
                     <span class="inline-flex items-center gap-1 text-xs text-primary-600">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

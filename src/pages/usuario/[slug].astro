@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import Icon from '../../components/Icons.astro';
 import { useTranslations } from '../../i18n';
-import { getUserBySlug, getPropertiesByUser, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../lib/ubikala-db';
+import { getUserBySlug, getPropertiesByUser, getParentCompanyInfo, getTeamMembers, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../lib/ubikala-db';
 import { ubikalaToProperty } from '../../lib/db';
 import { transformProperty, type DBProperty } from '../../lib/transformers';
 import type { Agent, Property } from '../../data/types';
@@ -13,6 +13,18 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('es');
+
+// Helper to generate slug from name
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
 
 // Fetch Ubikala user by slug
 let user: (UbikalaUser & { properties_count: number }) | null = null;
@@ -37,6 +49,64 @@ if (!user) {
   return Astro.redirect('/404');
 }
 
+// Fetch hierarchy data
+let parentCompanyInfo: Awaited<ReturnType<typeof getParentCompanyInfo>> = null;
+let teamMembers: UbikalaUser[] = [];
+let teamProperties: Property[] = [];
+
+try {
+  // For affiliated agents: get parent company info
+  if (user.parent_user_id) {
+    parentCompanyInfo = await getParentCompanyInfo(user.id);
+  }
+
+  // For inmobiliarias: get team members and their properties
+  if (user.role === 'inmobiliaria') {
+    teamMembers = await getTeamMembers(user.id);
+    for (const member of teamMembers) {
+      const memberProps = await getPropertiesByUser(member.id, { limit: 50, activo: true });
+      const transformed = memberProps.map(p => {
+        const legacyProp = ubikalaToProperty(p as UbikalaProperty);
+        return transformProperty(legacyProp as unknown as DBProperty);
+      });
+      teamProperties.push(...transformed);
+    }
+  }
+} catch (error) {
+  console.error('Error fetching hierarchy data:', error);
+}
+
+// Calculate total properties (own + team for inmobiliarias)
+const totalProperties = user.role === 'inmobiliaria'
+  ? userProperties.length + teamProperties.length
+  : userProperties.length;
+
+// All properties combined for inmobiliarias
+const allProperties = user.role === 'inmobiliaria'
+  ? [...userProperties, ...teamProperties]
+  : userProperties;
+
+// Generate display label based on role and hierarchy
+function getDisplayLabel(): string {
+  if (user!.parent_user_id && parentCompanyInfo?.company_name) {
+    return `Asesor Inmobiliario de ${parentCompanyInfo.company_name}`;
+  }
+  if (user!.role === 'inmobiliaria') {
+    return user!.company_name || 'Inmobiliaria';
+  }
+  if (user!.role === 'asesor_independiente') {
+    return 'Asesor Independiente';
+  }
+  return 'Propietario';
+}
+
+const displayLabel = getDisplayLabel();
+
+// Generate parent slug for link
+const parentSlug = parentCompanyInfo && user.parent_user_id
+  ? `ubk-${slugify(parentCompanyInfo.parent_name || 'inmobiliaria')}-${user.parent_user_id.substring(0, 8)}`
+  : null;
+
 // Convert to agent-like format for display
 const agent: Partial<Agent> = {
   id: user.id,
@@ -50,7 +120,7 @@ const agent: Partial<Agent> = {
   userType: user.role === 'inmobiliaria' ? 'agent' : user.role === 'asesor_independiente' ? 'independent' : 'owner',
   verified: user.is_verified,
   bio: user.bio || '',
-  propertiesCount: user.properties_count,
+  propertiesCount: totalProperties,
   responseTime: 'menos de 1 hora',
   rating: 5,
   reviewCount: 0,
@@ -69,16 +139,19 @@ const userInitials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('');
 // Schema for SEO
 const userSchema = {
   '@context': 'https://schema.org',
-  '@type': ['Person', 'RealEstateAgent'],
+  '@type': user.role === 'inmobiliaria' ? 'RealEstateAgent' : ['Person', 'RealEstateAgent'],
   '@id': `https://ubikala.com/usuario/${slug}#user`,
   name: user.name,
   url: `https://ubikala.com/usuario/${slug}`,
   image: hasValidPhoto ? user.avatar_url : undefined,
-  description: user.bio || `${getRoleLabel(user.role)} en Ubikala`,
+  description: user.bio || `${displayLabel} en Ubikala`,
   telephone: user.phone,
   email: user.email,
-  jobTitle: getRoleLabel(user.role),
-  worksFor: user.company_name ? {
+  jobTitle: displayLabel,
+  worksFor: parentCompanyInfo?.company_name ? {
+    '@type': 'Organization',
+    name: parentCompanyInfo.company_name,
+  } : user.company_name ? {
     '@type': 'Organization',
     name: user.company_name,
   } : undefined,
@@ -96,10 +169,10 @@ const breadcrumbSchema = {
   ]
 };
 
-const pageTitle = `${user.name} - ${user.company_name || getRoleLabel(user.role)} | Ubikala`;
+const pageTitle = `${user.name} - ${displayLabel} | Ubikala`;
 const pageDescription = user.bio
   ? `${user.bio.substring(0, 150)}... Contacta a ${user.name} para propiedades en Republica Dominicana.`
-  : `${user.name} - ${getRoleLabel(user.role)}. ${user.properties_count} propiedades activas. Contacta ahora.`;
+  : `${user.name} - ${displayLabel}. ${totalProperties} propiedades activas. Contacta ahora.`;
 ---
 
 <Layout
@@ -148,7 +221,7 @@ const pageDescription = user.bio
                 )}
               </div>
               <h1 class="text-2xl font-bold text-gray-900 mt-4">{user.name}</h1>
-              <p class="text-gray-600">{user.company_name || getRoleLabel(user.role)}</p>
+              <p class="text-gray-600">{displayLabel}</p>
               {user.is_verified && (
                 <span class="inline-flex items-center gap-1 text-sm text-primary-600 mt-2">
                   <Icon name="verified" class="w-4 h-4" />
@@ -160,18 +233,50 @@ const pageDescription = user.bio
             <!-- Stats -->
             <div class="grid grid-cols-1 gap-4 mb-6">
               <div class="text-center p-3 bg-gray-50 rounded-lg">
-                <div class="text-2xl font-bold text-gray-900">{user.properties_count}</div>
+                <div class="text-2xl font-bold text-gray-900">{totalProperties}</div>
                 <div class="text-sm text-gray-600">Propiedades Activas</div>
               </div>
+              {user.role === 'inmobiliaria' && teamMembers.length > 0 && (
+                <div class="text-center p-3 bg-gray-50 rounded-lg">
+                  <div class="text-2xl font-bold text-gray-900">{teamMembers.length}</div>
+                  <div class="text-sm text-gray-600">Miembros del Equipo</div>
+                </div>
+              )}
             </div>
 
             <!-- Role badge -->
             <div class="mb-6">
               <span class="inline-flex items-center gap-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
-                <Icon name="user" class="w-4 h-4" />
-                {getRoleLabel(user.role)}
+                <Icon name={user.role === 'inmobiliaria' ? 'building' : 'user'} class="w-4 h-4" />
+                {displayLabel}
               </span>
             </div>
+
+            <!-- Parent company info for affiliated agents -->
+            {parentCompanyInfo && parentSlug && (
+              <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Afiliado a</p>
+                <a href={`/usuario/${parentSlug}`} class="flex items-center gap-3 group">
+                  {parentCompanyInfo.company_logo ? (
+                    <img
+                      src={parentCompanyInfo.company_logo}
+                      alt={parentCompanyInfo.company_name || ''}
+                      class="w-10 h-10 object-contain rounded"
+                    />
+                  ) : (
+                    <div class="w-10 h-10 rounded bg-primary-100 flex items-center justify-center">
+                      <Icon name="building" class="w-5 h-5 text-primary-600" />
+                    </div>
+                  )}
+                  <div>
+                    <p class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                      {parentCompanyInfo.company_name || parentCompanyInfo.parent_name}
+                    </p>
+                    <p class="text-xs text-gray-500">Ver perfil de la inmobiliaria</p>
+                  </div>
+                </a>
+              </div>
+            )}
 
             <!-- Contact buttons -->
             <div class="space-y-3">
@@ -240,16 +345,83 @@ const pageDescription = user.bio
             </div>
           )}
 
+          <!-- Team section for inmobiliarias -->
+          {user.role === 'inmobiliaria' && teamMembers.length > 0 && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">
+                Equipo
+                <span class="text-gray-500 font-normal">({teamMembers.length})</span>
+              </h2>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {teamMembers.map(member => {
+                  const memberSlug = `ubk-${slugify(member.name)}-${member.id.substring(0, 8)}`;
+                  const memberHasPhoto = member.avatar_url &&
+                    member.avatar_url !== '/images/agent-placeholder.svg' &&
+                    !member.avatar_url.includes('placeholder');
+                  const memberInitials = member.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+                  return (
+                    <a href={`/usuario/${memberSlug}`} class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                      {memberHasPhoto ? (
+                        <img
+                          src={member.avatar_url}
+                          alt={member.name}
+                          class="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                          <span class="text-white text-sm font-bold">{memberInitials}</span>
+                        </div>
+                      )}
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate group-hover:text-primary-600">{member.name}</p>
+                        <p class="text-xs text-gray-500">{getRoleLabel(member.role)}</p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <!-- Parent company info card for affiliated agents -->
+          {parentCompanyInfo && parentSlug && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Inmobiliaria</h2>
+              <a href={`/usuario/${parentSlug}`} class="flex items-start gap-4 group">
+                {parentCompanyInfo.company_logo ? (
+                  <img
+                    src={parentCompanyInfo.company_logo}
+                    alt={parentCompanyInfo.company_name || ''}
+                    class="w-16 h-16 object-contain rounded"
+                  />
+                ) : (
+                  <div class="w-16 h-16 rounded bg-primary-100 flex items-center justify-center flex-shrink-0">
+                    <Icon name="building" class="w-8 h-8 text-primary-600" />
+                  </div>
+                )}
+                <div>
+                  <h3 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                    {parentCompanyInfo.company_name || parentCompanyInfo.parent_name}
+                  </h3>
+                  {parentCompanyInfo.company_description && (
+                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">{parentCompanyInfo.company_description}</p>
+                  )}
+                  <p class="text-primary-600 text-sm mt-2">Ver perfil completo</p>
+                </div>
+              </a>
+            </div>
+          )}
+
           <!-- User's Properties -->
           <div>
             <h2 class="text-xl font-semibold text-gray-900 mb-6">
-              Propiedades de {user.name}
-              <span class="text-gray-500 font-normal">({userProperties.length})</span>
+              {user.role === 'inmobiliaria' ? `Propiedades de ${user.company_name || user.name}` : `Propiedades de ${user.name}`}
+              <span class="text-gray-500 font-normal">({allProperties.length})</span>
             </h2>
 
-            {userProperties.length > 0 ? (
+            {allProperties.length > 0 ? (
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {userProperties.map((property) => (
+                {allProperties.map((property) => (
                   <PropertyCard property={property} />
                 ))}
               </div>

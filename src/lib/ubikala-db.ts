@@ -160,6 +160,11 @@ export interface UbikalaProperty {
   owner_company_name?: string;
   owner_bio?: string;
   owner_properties_count?: number;
+  // Parent (inmobiliaria) info from second JOIN
+  owner_parent_user_id?: string;
+  owner_parent_company_name?: string;
+  owner_parent_name?: string;
+  owner_parent_id?: string;
 }
 
 // User queries
@@ -377,9 +382,14 @@ export async function getUbikalaProperties(options: {
           u.role as owner_role,
           u.company_name as owner_company_name,
           u.bio as owner_bio,
-          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+          u.parent_user_id as owner_parent_user_id,
+          parent.company_name as owner_parent_company_name,
+          parent.name as owner_parent_name,
+          parent.id as owner_parent_id
         FROM ubikala_properties p
         LEFT JOIN ubikala_users u ON p.created_by = u.id
+        LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
         WHERE p.activo = ${activoValue}
         ORDER BY p.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
@@ -396,9 +406,14 @@ export async function getUbikalaProperties(options: {
           u.role as owner_role,
           u.company_name as owner_company_name,
           u.bio as owner_bio,
-          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+          u.parent_user_id as owner_parent_user_id,
+          parent.company_name as owner_parent_company_name,
+          parent.name as owner_parent_name,
+          parent.id as owner_parent_id
         FROM ubikala_properties p
         LEFT JOIN ubikala_users u ON p.created_by = u.id
+        LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
         ORDER BY p.created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
@@ -420,9 +435,14 @@ export async function getUbikalaPropertyBySlug(slug: string): Promise<UbikalaPro
       u.role as owner_role,
       u.company_name as owner_company_name,
       u.bio as owner_bio,
-      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+      u.parent_user_id as owner_parent_user_id,
+      parent.company_name as owner_parent_company_name,
+      parent.name as owner_parent_name,
+      parent.id as owner_parent_id
     FROM ubikala_properties p
     LEFT JOIN ubikala_users u ON p.created_by = u.id
+    LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
     WHERE p.slug = ${slug}
   `;
   return rows[0] ? { ...rows[0], source: 'ubikala' } as UbikalaProperty : null;
@@ -442,9 +462,14 @@ export async function getUbikalaPropertyById(id: string): Promise<UbikalaPropert
       u.role as owner_role,
       u.company_name as owner_company_name,
       u.bio as owner_bio,
-      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+      u.parent_user_id as owner_parent_user_id,
+      parent.company_name as owner_parent_company_name,
+      parent.name as owner_parent_name,
+      parent.id as owner_parent_id
     FROM ubikala_properties p
     LEFT JOIN ubikala_users u ON p.created_by = u.id
+    LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
     WHERE p.id = ${id}
   `;
   return rows[0] ? { ...rows[0], source: 'ubikala' } as UbikalaProperty : null;
@@ -711,9 +736,14 @@ export async function getPropertiesByUser(userId: string, options: {
         u.role as owner_role,
         u.company_name as owner_company_name,
         u.bio as owner_bio,
-        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+        u.parent_user_id as owner_parent_user_id,
+        parent.company_name as owner_parent_company_name,
+        parent.name as owner_parent_name,
+        parent.id as owner_parent_id
       FROM ubikala_properties p
       LEFT JOIN ubikala_users u ON p.created_by = u.id
+      LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
       WHERE p.created_by = ${userId} AND p.activo = ${activo}
       ORDER BY p.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
@@ -730,9 +760,14 @@ export async function getPropertiesByUser(userId: string, options: {
         u.role as owner_role,
         u.company_name as owner_company_name,
         u.bio as owner_bio,
-        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count,
+        u.parent_user_id as owner_parent_user_id,
+        parent.company_name as owner_parent_company_name,
+        parent.name as owner_parent_name,
+        parent.id as owner_parent_id
       FROM ubikala_properties p
       LEFT JOIN ubikala_users u ON p.created_by = u.id
+      LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
       WHERE p.created_by = ${userId}
       ORDER BY p.created_at DESC
       LIMIT ${limit} OFFSET ${offset}

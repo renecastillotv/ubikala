@@ -62,6 +62,9 @@ export interface DBProperty {
       role?: string;
       propertiesCount?: number;
       isUbikalaUser?: boolean;
+      parentCompany?: string;
+      parentUserId?: string;
+      parentUserName?: string;
     }>;
     [key: string]: any;
   };
@@ -312,6 +315,9 @@ export function transformProperty(dbProp: DBProperty, forceRental: boolean = fal
       locations: [],
       // Flag for Ubikala users to use different URL pattern
       isUbikalaUser: legacyAgent.isUbikalaUser || false,
+      // Parent company info for affiliated agents
+      parentCompany: legacyAgent.parentCompany || undefined,
+      parentUserId: legacyAgent.parentUserId || undefined,
     } : {
       // Default fallback
       id: '0',

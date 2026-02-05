@@ -154,6 +154,9 @@ export function ubikalaToProperty(up: UbikalaProperty): Property {
     bio: up.owner_bio || '',
     propertiesCount: Number(up.owner_properties_count) || 0,
     isUbikalaUser: true, // Flag to identify Ubikala users
+    parentCompany: up.owner_parent_company_name || undefined,
+    parentUserId: up.owner_parent_user_id || undefined,
+    parentUserName: up.owner_parent_name || undefined,
   }] : [];
 
   return {
