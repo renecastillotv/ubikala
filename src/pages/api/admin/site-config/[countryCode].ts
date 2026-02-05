@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getSiteConfigByCountry, upsertSiteConfig } from '../../../../lib/ubikala-db';
+import { invalidateConfigCache } from '../../../../lib/config';
 
 // GET - Get site config for a specific country
 export const GET: APIRoute = async ({ params, locals }) => {
@@ -46,6 +47,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       ...body,
       country_code: countryCode,
     });
+
+    // Invalidate the config cache so changes are reflected immediately
+    invalidateConfigCache(countryCode);
 
     return new Response(JSON.stringify({ config }), {
       status: 200,

@@ -1,5 +1,5 @@
-// Site configuration fetched from API
-// Cached for performance during SSR
+// Site configuration - reads from ubikala_site_config DB table
+// Falls back to defaults if no DB record exists
 
 export interface SiteConfig {
   // Company
@@ -78,69 +78,86 @@ const defaultConfig: SiteConfig = {
   lead_source: 'ubikala'
 };
 
-// Cache for config (5 minute TTL)
-let cachedConfig: SiteConfig | null = null;
-let cacheTimestamp: number = 0;
+// Cache for config per country (5 minute TTL)
+const configCache: Record<string, { config: SiteConfig; timestamp: number }> = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-const API_BASE = import.meta.env.PUBLIC_ANALYTICS_API || 'http://5.161.98.140:3002';
-
 /**
- * Fetch site configuration from API with caching
- * TEMPORARILY: Using local defaults for Ubikala rebranding
+ * Get site configuration for a country.
+ * Reads from ubikala_site_config DB table, falls back to defaults.
+ * @param countryCode - ISO country code (default: 'DO')
  */
-export async function getSiteConfig(): Promise<SiteConfig> {
-  // TEMPORARY: Always use local Ubikala config until API is updated
-  return defaultConfig;
-
-  /*
-  const now = Date.now();
+export async function getSiteConfig(countryCode: string = 'DO'): Promise<SiteConfig> {
+  const cc = countryCode.toUpperCase();
 
   // Return cached config if still valid
-  if (cachedConfig && (now - cacheTimestamp) < CACHE_TTL) {
-    return cachedConfig;
+  const cached = configCache[cc];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.config;
   }
 
   try {
-    const response = await fetch(`${API_BASE}/api/config`, {
-      headers: { 'Accept': 'application/json' },
-      // Short timeout to not slow down SSR
-      signal: AbortSignal.timeout(3000)
-    });
+    const { getSiteConfigByCountry } = await import('./ubikala-db');
+    const dbConfig = await getSiteConfigByCountry(cc);
 
-    if (!response.ok) {
-      throw new Error(`Config API returned ${response.status}`);
+    if (dbConfig) {
+      // Merge DB values with defaults (DB values override)
+      const merged: SiteConfig = {
+        ...defaultConfig,
+        company_name: dbConfig.company_name || defaultConfig.company_name,
+        company_slogan: dbConfig.company_slogan || defaultConfig.company_slogan,
+        logo_url: dbConfig.logo_url || defaultConfig.logo_url,
+        favicon_url: dbConfig.favicon_url || defaultConfig.favicon_url,
+        email: dbConfig.email || defaultConfig.email,
+        phone: dbConfig.phone || defaultConfig.phone,
+        phone_display: dbConfig.phone_display || defaultConfig.phone_display,
+        whatsapp: dbConfig.whatsapp || defaultConfig.whatsapp,
+        business_hours: dbConfig.business_hours || defaultConfig.business_hours,
+        address_street: dbConfig.address_street || defaultConfig.address_street,
+        address_city: dbConfig.address_city || defaultConfig.address_city,
+        address_country: dbConfig.address_country || defaultConfig.address_country,
+        address_country_code: cc,
+        geo_latitude: dbConfig.geo_latitude || defaultConfig.geo_latitude,
+        geo_longitude: dbConfig.geo_longitude || defaultConfig.geo_longitude,
+        social_facebook: dbConfig.social_facebook || defaultConfig.social_facebook,
+        social_instagram: dbConfig.social_instagram || defaultConfig.social_instagram,
+        social_linkedin: dbConfig.social_linkedin || defaultConfig.social_linkedin,
+        social_youtube: dbConfig.social_youtube || defaultConfig.social_youtube,
+        social_twitter: dbConfig.social_twitter || defaultConfig.social_twitter,
+        social_tiktok: dbConfig.social_tiktok || defaultConfig.social_tiktok,
+        site_url: dbConfig.domain ? `https://${dbConfig.domain}` : defaultConfig.site_url,
+        og_image: dbConfig.og_image || defaultConfig.og_image,
+        meta_title: dbConfig.meta_title || defaultConfig.meta_title,
+        meta_description: dbConfig.meta_description || defaultConfig.meta_description,
+      };
+
+      configCache[cc] = { config: merged, timestamp: Date.now() };
+      return merged;
     }
-
-    const data = await response.json();
-
-    // Merge with defaults to ensure all keys exist
-    cachedConfig = { ...defaultConfig, ...data.config };
-    cacheTimestamp = now;
-
-    return cachedConfig;
   } catch (error) {
-    console.warn('Failed to fetch site config, using defaults:', error);
-    // Return defaults if API fails
-    return defaultConfig;
+    console.warn('[getSiteConfig] Failed to read from DB, using defaults:', error);
   }
-  */
+
+  return defaultConfig;
 }
 
 /**
  * Get config synchronously (uses cache or defaults)
- * Use this when you need config immediately without async
  */
-export function getSiteConfigSync(): SiteConfig {
-  return cachedConfig || defaultConfig;
+export function getSiteConfigSync(countryCode: string = 'DO'): SiteConfig {
+  const cached = configCache[countryCode.toUpperCase()];
+  return cached?.config || defaultConfig;
 }
 
 /**
  * Invalidate the config cache (call after updates)
  */
-export function invalidateConfigCache(): void {
-  cachedConfig = null;
-  cacheTimestamp = 0;
+export function invalidateConfigCache(countryCode?: string): void {
+  if (countryCode) {
+    delete configCache[countryCode.toUpperCase()];
+  } else {
+    Object.keys(configCache).forEach(k => delete configCache[k]);
+  }
 }
 
 /**

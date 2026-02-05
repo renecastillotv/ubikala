@@ -2471,3 +2471,161 @@ export async function upsertSiteConfig(config: Partial<SiteConfigRecord> & { cou
   `;
   return rows[0] as SiteConfigRecord;
 }
+
+// ============================================
+// COUNTRIES (ubikala_paises)
+// ============================================
+
+export interface CountryRecord {
+  id?: string;
+  code: string;           // ISO 3166-1 alpha-2 (DO, PA, MX, etc.)
+  name: string;           // Full name in Spanish
+  currency: string;       // Currency code (DOP, USD, etc.)
+  currency_symbol: string; // RD$, $, etc.
+  phone_prefix: string;   // +1-809, +507, etc.
+  phone_placeholder: string;
+  subdomain: string;      // '' for default, 'pa', 'mx', etc.
+  flag: string;           // Emoji flag
+  timezone: string;
+  lat: number;
+  lng: number;
+  domain: string;         // ubikala.com, pa.ubikala.com, etc.
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+let countriesTableEnsured = false;
+
+export async function ensureCountriesTable(): Promise<void> {
+  if (!ubikalaDb || countriesTableEnsured) return;
+
+  await ubikalaDb`
+    CREATE TABLE IF NOT EXISTS ubikala_paises (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      code VARCHAR(5) NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+      currency_symbol VARCHAR(10) NOT NULL DEFAULT '$',
+      phone_prefix VARCHAR(20) NOT NULL DEFAULT '+1',
+      phone_placeholder VARCHAR(30) NOT NULL DEFAULT '000-000-0000',
+      subdomain VARCHAR(20) NOT NULL DEFAULT '',
+      flag VARCHAR(10) NOT NULL DEFAULT '',
+      timezone VARCHAR(50) NOT NULL DEFAULT 'America/Santo_Domingo',
+      lat DECIMAL(10,6) NOT NULL DEFAULT 0,
+      lng DECIMAL(10,6) NOT NULL DEFAULT 0,
+      domain VARCHAR(255) NOT NULL DEFAULT 'ubikala.com',
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(code)
+    )
+  `;
+  countriesTableEnsured = true;
+}
+
+// Seed default countries if table is empty
+export async function seedDefaultCountries(): Promise<void> {
+  if (!ubikalaDb) return;
+  await ensureCountriesTable();
+
+  const existing = await ubikalaDb`SELECT COUNT(*) as count FROM ubikala_paises`;
+  if (Number(existing[0]?.count) > 0) return;
+
+  const defaults = [
+    { code: 'DO', name: 'República Dominicana', currency: 'DOP', currency_symbol: 'RD$', phone_prefix: '+1-809', phone_placeholder: '809-555-1234', subdomain: '', flag: '🇩🇴', timezone: 'America/Santo_Domingo', lat: 18.7357, lng: -70.1627, domain: 'ubikala.com' },
+    { code: 'PA', name: 'Panamá', currency: 'USD', currency_symbol: '$', phone_prefix: '+507', phone_placeholder: '6000-0000', subdomain: 'pa', flag: '🇵🇦', timezone: 'America/Panama', lat: 8.9824, lng: -79.5199, domain: 'pa.ubikala.com' },
+    { code: 'MX', name: 'México', currency: 'MXN', currency_symbol: '$', phone_prefix: '+52', phone_placeholder: '55-1234-5678', subdomain: 'mx', flag: '🇲🇽', timezone: 'America/Mexico_City', lat: 19.4326, lng: -99.1332, domain: 'mx.ubikala.com' },
+    { code: 'CO', name: 'Colombia', currency: 'COP', currency_symbol: '$', phone_prefix: '+57', phone_placeholder: '300-123-4567', subdomain: 'co', flag: '🇨🇴', timezone: 'America/Bogota', lat: 4.7110, lng: -74.0721, domain: 'co.ubikala.com' },
+    { code: 'CR', name: 'Costa Rica', currency: 'CRC', currency_symbol: '₡', phone_prefix: '+506', phone_placeholder: '8000-0000', subdomain: 'cr', flag: '🇨🇷', timezone: 'America/Costa_Rica', lat: 9.9281, lng: -84.0907, domain: 'cr.ubikala.com' },
+    { code: 'PR', name: 'Puerto Rico', currency: 'USD', currency_symbol: '$', phone_prefix: '+1-787', phone_placeholder: '787-555-1234', subdomain: 'pr', flag: '🇵🇷', timezone: 'America/Puerto_Rico', lat: 18.4655, lng: -66.1057, domain: 'pr.ubikala.com' },
+  ];
+
+  for (const c of defaults) {
+    await ubikalaDb`
+      INSERT INTO ubikala_paises (code, name, currency, currency_symbol, phone_prefix, phone_placeholder, subdomain, flag, timezone, lat, lng, domain)
+      VALUES (${c.code}, ${c.name}, ${c.currency}, ${c.currency_symbol}, ${c.phone_prefix}, ${c.phone_placeholder}, ${c.subdomain}, ${c.flag}, ${c.timezone}, ${c.lat}, ${c.lng}, ${c.domain})
+      ON CONFLICT (code) DO NOTHING
+    `;
+  }
+}
+
+export async function getAllCountries(): Promise<CountryRecord[]> {
+  if (!ubikalaDb) return [];
+  await ensureCountriesTable();
+  await seedDefaultCountries();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_paises WHERE is_active = true ORDER BY name
+  `;
+  return rows as CountryRecord[];
+}
+
+export async function getCountryByCode(code: string): Promise<CountryRecord | null> {
+  if (!ubikalaDb) return null;
+  await ensureCountriesTable();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_paises WHERE code = ${code.toUpperCase()}
+  `;
+  return rows[0] as CountryRecord || null;
+}
+
+export async function getCountryBySubdomain(subdomain: string): Promise<CountryRecord | null> {
+  if (!ubikalaDb) return null;
+  await ensureCountriesTable();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_paises WHERE subdomain = ${subdomain.toLowerCase()} AND is_active = true
+  `;
+  return rows[0] as CountryRecord || null;
+}
+
+export async function upsertCountry(country: Partial<CountryRecord> & { code: string; name: string }): Promise<CountryRecord> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  await ensureCountriesTable();
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_paises (
+      code, name, currency, currency_symbol, phone_prefix, phone_placeholder,
+      subdomain, flag, timezone, lat, lng, domain, is_active
+    ) VALUES (
+      ${country.code.toUpperCase()},
+      ${country.name},
+      ${country.currency || 'USD'},
+      ${country.currency_symbol || '$'},
+      ${country.phone_prefix || '+1'},
+      ${country.phone_placeholder || '000-000-0000'},
+      ${country.subdomain || country.code.toLowerCase()},
+      ${country.flag || ''},
+      ${country.timezone || 'UTC'},
+      ${country.lat || 0},
+      ${country.lng || 0},
+      ${country.domain || country.code.toLowerCase() + '.ubikala.com'},
+      ${country.is_active !== false}
+    )
+    ON CONFLICT (code) DO UPDATE SET
+      name = EXCLUDED.name,
+      currency = EXCLUDED.currency,
+      currency_symbol = EXCLUDED.currency_symbol,
+      phone_prefix = EXCLUDED.phone_prefix,
+      phone_placeholder = EXCLUDED.phone_placeholder,
+      subdomain = EXCLUDED.subdomain,
+      flag = EXCLUDED.flag,
+      timezone = EXCLUDED.timezone,
+      lat = EXCLUDED.lat,
+      lng = EXCLUDED.lng,
+      domain = EXCLUDED.domain,
+      is_active = EXCLUDED.is_active,
+      updated_at = NOW()
+    RETURNING *
+  `;
+  return rows[0] as CountryRecord;
+}
+
+export async function deleteCountry(code: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  await ensureCountriesTable();
+  await ubikalaDb`UPDATE ubikala_paises SET is_active = false, updated_at = NOW() WHERE code = ${code.toUpperCase()}`;
+  return true;
+}

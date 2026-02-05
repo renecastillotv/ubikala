@@ -1,6 +1,7 @@
 // Multi-country configuration via subdomain detection
-// Subdomains: pa.ubikala.com → Panama, mx.ubikala.com → Mexico, etc.
-// Default (ubikala.com / no subdomain) → Dominican Republic
+// Reads from ubikala_paises table, falls back to hardcoded defaults
+
+import type { CountryRecord } from './ubikala-db';
 
 export interface CountryConfig {
   code: string;           // ISO 3166-1 alpha-2 (DO, PA, MX, CO, etc.)
@@ -13,131 +14,142 @@ export interface CountryConfig {
   flag: string;           // Emoji flag
   timezone: string;
   coordinates: { lat: number; lng: number }; // Default map center
+  domain?: string;        // Full domain for this country
 }
 
-// Supported countries mapped by subdomain
-const countries: Record<string, CountryConfig> = {
-  '': {
-    code: 'DO',
-    name: 'República Dominicana',
-    currency: 'DOP',
-    currencySymbol: 'RD$',
-    phonePrefix: '+1-809',
-    phonePlaceholder: '809-555-1234',
-    subdomain: '',
-    flag: '🇩🇴',
-    timezone: 'America/Santo_Domingo',
-    coordinates: { lat: 18.7357, lng: -70.1627 },
-  },
-  pa: {
-    code: 'PA',
-    name: 'Panamá',
-    currency: 'USD',
-    currencySymbol: '$',
-    phonePrefix: '+507',
-    phonePlaceholder: '6000-0000',
-    subdomain: 'pa',
-    flag: '🇵🇦',
-    timezone: 'America/Panama',
-    coordinates: { lat: 8.9824, lng: -79.5199 },
-  },
-  mx: {
-    code: 'MX',
-    name: 'México',
-    currency: 'MXN',
-    currencySymbol: '$',
-    phonePrefix: '+52',
-    phonePlaceholder: '55-1234-5678',
-    subdomain: 'mx',
-    flag: '🇲🇽',
-    timezone: 'America/Mexico_City',
-    coordinates: { lat: 19.4326, lng: -99.1332 },
-  },
-  co: {
-    code: 'CO',
-    name: 'Colombia',
-    currency: 'COP',
-    currencySymbol: '$',
-    phonePrefix: '+57',
-    phonePlaceholder: '300-123-4567',
-    subdomain: 'co',
-    flag: '🇨🇴',
-    timezone: 'America/Bogota',
-    coordinates: { lat: 4.7110, lng: -74.0721 },
-  },
-  cr: {
-    code: 'CR',
-    name: 'Costa Rica',
-    currency: 'CRC',
-    currencySymbol: '₡',
-    phonePrefix: '+506',
-    phonePlaceholder: '8000-0000',
-    subdomain: 'cr',
-    flag: '🇨🇷',
-    timezone: 'America/Costa_Rica',
-    coordinates: { lat: 9.9281, lng: -84.0907 },
-  },
-  pr: {
-    code: 'PR',
-    name: 'Puerto Rico',
-    currency: 'USD',
-    currencySymbol: '$',
-    phonePrefix: '+1-787',
-    phonePlaceholder: '787-555-1234',
-    subdomain: 'pr',
-    flag: '🇵🇷',
-    timezone: 'America/Puerto_Rico',
-    coordinates: { lat: 18.4655, lng: -66.1057 },
-  },
+// Hardcoded fallback (only used when DB is unavailable)
+const FALLBACK_COUNTRY: CountryConfig = {
+  code: 'DO',
+  name: 'República Dominicana',
+  currency: 'DOP',
+  currencySymbol: 'RD$',
+  phonePrefix: '+1-809',
+  phonePlaceholder: '809-555-1234',
+  subdomain: '',
+  flag: '🇩🇴',
+  timezone: 'America/Santo_Domingo',
+  coordinates: { lat: 18.7357, lng: -70.1627 },
+  domain: 'ubikala.com',
 };
 
+// Cache for countries from DB (5 minute TTL)
+let countriesCache: CountryConfig[] | null = null;
+let countriesCacheTimestamp = 0;
+const COUNTRIES_CACHE_TTL = 5 * 60 * 1000;
+
+/** Convert a DB CountryRecord to the CountryConfig interface */
+function recordToConfig(r: CountryRecord): CountryConfig {
+  return {
+    code: r.code,
+    name: r.name,
+    currency: r.currency,
+    currencySymbol: r.currency_symbol,
+    phonePrefix: r.phone_prefix,
+    phonePlaceholder: r.phone_placeholder,
+    subdomain: r.subdomain,
+    flag: r.flag,
+    timezone: r.timezone,
+    coordinates: { lat: Number(r.lat), lng: Number(r.lng) },
+    domain: r.domain,
+  };
+}
+
+/** Load countries from DB, cache for 5 min, fallback to hardcoded */
+async function loadCountriesFromDb(): Promise<CountryConfig[]> {
+  if (countriesCache && Date.now() - countriesCacheTimestamp < COUNTRIES_CACHE_TTL) {
+    return countriesCache;
+  }
+
+  try {
+    // Dynamic import to avoid circular dependency
+    const { getAllCountries } = await import('./ubikala-db');
+    const dbCountries = await getAllCountries();
+
+    if (dbCountries.length > 0) {
+      countriesCache = dbCountries.map(recordToConfig);
+      countriesCacheTimestamp = Date.now();
+      return countriesCache;
+    }
+  } catch (error) {
+    console.warn('[country-config] Failed to load from DB, using fallback:', error);
+  }
+
+  // Return fallback
+  return [FALLBACK_COUNTRY];
+}
+
 // Default country (Dominican Republic)
-export const DEFAULT_COUNTRY = countries[''];
+export const DEFAULT_COUNTRY = FALLBACK_COUNTRY;
 
 /**
  * Detect country from hostname subdomain.
- * Examples:
- *   pa.ubikala.com → PA (Panama)
- *   mx.ubikala.com → MX (Mexico)
- *   ubikala.com    → DO (Dominican Republic)
- *   localhost:4321  → DO (default)
+ * Tries DB countries first, falls back to default.
  */
-export function detectCountryFromHostname(hostname: string): CountryConfig {
-  // Remove port if present
+export async function detectCountryFromHostnameAsync(hostname: string): Promise<CountryConfig> {
   const host = hostname.split(':')[0];
-
-  // Check for subdomain pattern: {cc}.ubikala.com
   const parts = host.split('.');
 
-  // Need at least 3 parts for a subdomain (e.g., pa.ubikala.com)
   if (parts.length >= 3) {
     const subdomain = parts[0].toLowerCase();
-    if (countries[subdomain]) {
-      return countries[subdomain];
-    }
+    const countries = await loadCountriesFromDb();
+    const match = countries.find(c => c.subdomain === subdomain);
+    if (match) return match;
   }
 
-  // Default to DR
   return DEFAULT_COUNTRY;
 }
 
 /**
- * Get country config by ISO code (for DB queries, etc.)
+ * Synchronous detection (uses cache or fallback).
+ * Used in middleware where async is already handled.
  */
-export function getCountryByCode(code: string): CountryConfig | undefined {
-  return Object.values(countries).find(c => c.code === code.toUpperCase());
+export function detectCountryFromHostname(hostname: string): CountryConfig {
+  const host = hostname.split(':')[0];
+  const parts = host.split('.');
+
+  if (parts.length >= 3 && countriesCache) {
+    const subdomain = parts[0].toLowerCase();
+    const match = countriesCache.find(c => c.subdomain === subdomain);
+    if (match) return match;
+  }
+
+  return DEFAULT_COUNTRY;
 }
 
 /**
- * Get all supported countries
+ * Get country config by ISO code
  */
-export function getSupportedCountries(): CountryConfig[] {
-  return Object.values(countries);
+export async function getCountryByCodeConfig(code: string): Promise<CountryConfig | undefined> {
+  const countries = await loadCountriesFromDb();
+  return countries.find(c => c.code === code.toUpperCase());
+}
+
+/**
+ * Get all supported countries (from DB)
+ */
+export async function getSupportedCountries(): Promise<CountryConfig[]> {
+  return loadCountriesFromDb();
+}
+
+/**
+ * Synchronous version for when cache is already warm
+ */
+export function getSupportedCountriesSync(): CountryConfig[] {
+  return countriesCache || [FALLBACK_COUNTRY];
 }
 
 /**
  * Check if a country code is supported
  */
-export function isCountrySupported(code: string): boolean {
-  return Object.values(countries).some(c => c.code === code.toUpperCase());
+export async function isCountrySupported(code: string): Promise<boolean> {
+  const countries = await loadCountriesFromDb();
+  return countries.some(c => c.code === code.toUpperCase());
+}
+
+/**
+ * Invalidate the countries cache (call after updates)
+ */
+export function invalidateCountriesCache(): void {
+  countriesCache = null;
+  countriesCacheTimestamp = 0;
 }

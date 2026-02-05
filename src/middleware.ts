@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { getCurrentUser, getTokenFromRequest, type AuthUser } from './lib/auth';
-import { detectCountryFromHostname } from './lib/country-config';
+import { detectCountryFromHostnameAsync } from './lib/country-config';
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = [
@@ -24,7 +24,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Detect country from subdomain (pa.ubikala.com → PA, mx.ubikala.com → MX, etc.)
   const hostname = context.url.hostname;
-  context.locals.country = detectCountryFromHostname(hostname);
+  context.locals.country = await detectCountryFromHostnameAsync(hostname);
 
   // Try to get user from token for ALL routes (so public pages can show user info)
   try {
