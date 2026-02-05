@@ -682,19 +682,13 @@ export async function getAgentBySlug(slug: string) {
       u.avatar_url,
       -- Get company name from tenant
       t.nombre as company_name,
-      -- Calculate real property count (by captador_id OR legacy caracteristicas.agents)
+      -- Calculate real property count (by captador_id)
       (
         SELECT COUNT(*)
         FROM propiedades p
         WHERE p.activo = true
         AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-        AND (
-          p.captador_id = pa.usuario_id
-          OR EXISTS (
-            SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-            WHERE agent->>'slug' = pa.slug
-          )
-        )
+        AND p.captador_id = pa.usuario_id
       ) as real_property_count,
       -- Build stats with real count
       jsonb_build_object(
@@ -703,13 +697,7 @@ export async function getAgentBySlug(slug: string) {
           FROM propiedades p
           WHERE p.activo = true
           AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-          AND (
-            p.captador_id = pa.usuario_id
-            OR EXISTS (
-              SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-              WHERE agent->>'slug' = pa.slug
-            )
-          )
+          AND p.captador_id = pa.usuario_id
         ),
         'propiedades_vendidas', COALESCE((pa.stats->>'propiedades_vendidas')::int, 0),
         'calificacion_promedio', COALESCE((pa.stats->>'calificacion_promedio')::numeric, 5),
@@ -1081,22 +1069,17 @@ export async function getPortalStats(): Promise<{
       WHERE activo = true
       AND (portales @> '{"ubikala": true}'::jsonb OR portales @> '{"propiedadenrd": true}'::jsonb OR portales IS NULL OR portales = '{}'::jsonb)
     `,
-    // Total de agentes con propiedades
+    // Total de agentes con propiedades (by captador_id)
     sql`
       SELECT COUNT(DISTINCT pa.id) as total
       FROM perfiles_asesor pa
       JOIN usuarios u ON pa.usuario_id = u.id
       WHERE pa.activo = true
-      AND pa.visible_en_web = true
       AND EXISTS (
         SELECT 1 FROM propiedades p
         WHERE p.activo = true
         AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-        AND EXISTS (
-          SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-          WHERE agent->>'slug' = pa.slug
-          OR agent->>'email' = u.email
-        )
+        AND p.captador_id = u.id
       )
     `,
     // Total de ciudades con propiedades
@@ -1115,6 +1098,47 @@ export async function getPortalStats(): Promise<{
     agents: parseInt(agentsResult[0]?.total || '0'),
     cities: parseInt(citiesResult[0]?.total || '0')
   };
+}
+
+// ==================== INMOBILIARIAS (CLIC TENANTS) ====================
+
+export async function getClicInmobiliarias(options: { limit?: number; offset?: number } = {}): Promise<any[]> {
+  if (!sql) return [];
+  const { limit = 100, offset = 0 } = options;
+
+  const rows = await sql`
+    SELECT
+      t.id,
+      t.nombre as name,
+      t.slug,
+      COUNT(DISTINCT p.id) as properties_count,
+      COUNT(DISTINCT pa.id) as agents_count
+    FROM tenants t
+    JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
+    JOIN usuarios u ON pa.usuario_id = u.id
+    JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
+      AND (${sql.unsafe(PORTAL_FILTER)})
+    GROUP BY t.id, t.nombre, t.slug
+    ORDER BY COUNT(DISTINCT p.id) DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows;
+}
+
+export async function getClicInmobiliariasCount(): Promise<number> {
+  if (!sql) return 0;
+
+  const rows = await sql`
+    SELECT COUNT(DISTINCT t.id) as total
+    FROM tenants t
+    JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
+    JOIN usuarios u ON pa.usuario_id = u.id
+    JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
+      AND (${sql.unsafe(PORTAL_FILTER)})
+  `;
+
+  return parseInt(rows[0]?.total || '0');
 }
 
 export { sql };

@@ -10,11 +10,20 @@ if (!user) {
 
 const fullUser = await getUserWithPlan(user.id);
 const consumption = await getUserConsumption(user.id);
-const availablePlans = fullUser ? await getPlansByRole(fullUser.role) : [];
-const currentPlan = fullUser?.plan;
 
-// Filter out current plan from available plans
-const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_active);
+// Detect team member (child of inmobiliaria)
+const isTeamMember = fullUser?.parent_user_id !== null && fullUser?.parent_user_id !== undefined;
+let parentPlan: UbikalaPlan | null = null;
+if (isTeamMember && fullUser?.parent_user_id) {
+  const parent = await getUserWithPlan(fullUser.parent_user_id);
+  parentPlan = parent?.plan || null;
+}
+
+const availablePlans = fullUser ? await getPlansByRole(fullUser.role) : [];
+const currentPlan = isTeamMember ? parentPlan : fullUser?.plan;
+
+// Filter out current plan from available plans (not shown for team members)
+const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== currentPlan?.id && p.is_active);
 ---
 
 <AdminLayout title="Mi Cuenta">
@@ -28,15 +37,21 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
       <!-- Current Plan Card -->
       <div class="card plan-card current">
         <div class="plan-header">
-          <div class="plan-badge current">Plan Actual</div>
+          <div class="plan-badge current">{isTeamMember ? 'Miembro de Inmobiliaria' : 'Plan Actual'}</div>
           <h3>{currentPlan?.name || 'Sin Plan'}</h3>
-          {currentPlan && (
+          {currentPlan && !isTeamMember && (
             <div class="plan-price">
               <span class="price">${Number(currentPlan.price).toFixed(2)}</span>
               <span class="period">/mes</span>
             </div>
           )}
         </div>
+
+        {isTeamMember && (
+          <div class="team-member-notice">
+            <p>Tu plan es gestionado por tu inmobiliaria. Los beneficios del plan aplican a tu cuenta automáticamente.</p>
+          </div>
+        )}
 
         {currentPlan ? (
           <div class="plan-details">
@@ -54,7 +69,7 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
                 </svg>
                 {currentPlan.publication_duration_days} días de duración por publicación
               </li>
-              {currentPlan.max_team_members !== null && (
+              {currentPlan.max_team_members !== null && !isTeamMember && (
                 <li>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="20 6 9 17 4 12" />
@@ -74,7 +89,7 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
           </div>
         ) : (
           <div class="no-plan">
-            <p>No tienes un plan activo. Selecciona uno de los planes disponibles para comenzar.</p>
+            <p>{isTeamMember ? 'Tu inmobiliaria no tiene un plan activo actualmente.' : 'No tienes un plan activo. Selecciona uno de los planes disponibles para comenzar.'}</p>
           </div>
         )}
       </div>
@@ -137,8 +152,8 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
         </div>
       </div>
 
-      <!-- Available Plans -->
-      {otherPlans.length > 0 && (
+      <!-- Available Plans (hidden for team members) -->
+      {!isTeamMember && otherPlans.length > 0 && (
         <div class="card plans-card">
           <h3>Otros Planes Disponibles</h3>
           <p class="section-subtitle">Actualiza tu plan para obtener más beneficios</p>
@@ -172,8 +187,8 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
         </div>
       )}
 
-      <!-- Promo Code -->
-      <div class="card promo-card">
+      <!-- Promo Code (hidden for team members) -->
+      {!isTeamMember && <div class="card promo-card">
         <h3>Código Promocional</h3>
         <p class="section-subtitle">¿Tienes un código de descuento?</p>
         <div class="promo-input-group">
@@ -181,7 +196,7 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
           <button type="button" id="apply-promo-btn" class="btn-primary">Aplicar</button>
         </div>
         <div id="promo-message" class="promo-message hidden"></div>
-      </div>
+      </div>}
 
       <!-- Account Info -->
       <div class="card account-info-card">
@@ -344,6 +359,18 @@ const otherPlans = availablePlans.filter(p => p.id !== currentPlan?.id && p.is_a
       text-align: center;
       padding: 1rem;
       color: #6b7280;
+    }
+    .team-member-notice {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+    .team-member-notice p {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #166534;
     }
     .stats-card {
       display: flex;

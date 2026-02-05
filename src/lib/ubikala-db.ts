@@ -872,6 +872,63 @@ export async function getUbikalaAgentsCount(): Promise<number> {
   return parseInt(rows[0]?.total || '0');
 }
 
+// ==================== INMOBILIARIAS ====================
+
+export async function getUbikalaInmobiliarias(options: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<UbikalaAgentRow[]> {
+  if (!ubikalaDb) return [];
+
+  const { limit = 100, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.phone,
+      u.avatar_url,
+      u.role,
+      u.company_name,
+      u.bio,
+      u.is_verified,
+      u.created_at,
+      u.parent_user_id,
+      NULL as parent_company_name,
+      NULL as parent_name,
+      (
+        SELECT COUNT(*) FROM ubikala_properties
+        WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+        AND activo = true
+      ) as properties_count
+    FROM ubikala_users u
+    WHERE u.is_active = true
+    AND u.role = 'inmobiliaria'
+    ORDER BY u.is_verified DESC, (
+      SELECT COUNT(*) FROM ubikala_properties
+      WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+      AND activo = true
+    ) DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows as UbikalaAgentRow[];
+}
+
+export async function getUbikalaInmobiliariasCount(): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as total
+    FROM ubikala_users u
+    WHERE u.is_active = true
+    AND u.role = 'inmobiliaria'
+  `;
+
+  return parseInt(rows[0]?.total || '0');
+}
+
 // Lead/Contact types - matches existing 'leads' table
 export interface Lead {
   id: number;

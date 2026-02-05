@@ -527,3 +527,34 @@ export function transformUbikalaAgent(row: UbikalaAgentRow): Agent {
 export function transformUbikalaAgents(rows: UbikalaAgentRow[]): Agent[] {
   return rows.map(transformUbikalaAgent);
 }
+
+// Transformar tenant CLIC a Agent (para listado de inmobiliarias)
+export function transformClicInmobiliaria(row: any): Agent {
+  return {
+    id: String(row.id),
+    slug: row.slug || `inmobiliaria-${row.id}`,
+    name: row.name || 'Inmobiliaria',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    photo: '/images/agent-placeholder.svg',
+    company: row.name,
+    userType: 'agent' as UserType,
+    verified: true,
+    rating: 5,
+    reviewCount: 0,
+    experienceYears: 1,
+    languages: ['Español'],
+    bio: '',
+    propertiesCount: Number(row.properties_count) || 0,
+    responseTime: 'menos de 1 hora',
+    specializations: [],
+    locations: [],
+    isClicInmobiliaria: true,
+  };
+}
+
+// Transformar array de tenants CLIC a Agent
+export function transformClicInmobiliarias(rows: any[]): Agent[] {
+  return rows.map(transformClicInmobiliaria);
+}

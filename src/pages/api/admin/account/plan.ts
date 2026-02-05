@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { assignPlanToUser, removePlanFromUser, getPlanById, logActivity } from '../../../../lib/ubikala-db';
+import { assignPlanToUser, removePlanFromUser, getPlanById, logActivity, getUserWithPlan } from '../../../../lib/ubikala-db';
 
 // PUT - Change user's plan
 export const PUT: APIRoute = async ({ request, locals }) => {
@@ -13,6 +13,15 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   }
 
   try {
+    // Block team members from changing plans
+    const fullUser = await getUserWithPlan(user.id);
+    if (fullUser?.parent_user_id) {
+      return new Response(JSON.stringify({ error: 'Los miembros de equipo no pueden cambiar de plan' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const body = await request.json();
     const { plan_id } = body;
 

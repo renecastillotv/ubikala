@@ -58,6 +58,7 @@ export interface Agent {
     linkedin?: string;
   };
   isUbikalaUser?: boolean;
+  isClicInmobiliaria?: boolean;  // CLIC tenant (inmobiliaria from legacy system)
   parentCompany?: string;   // Parent inmobiliaria company name (for affiliated agents)
   parentUserId?: string;    // Parent inmobiliaria user ID
 }
