@@ -15,6 +15,7 @@ export const fr: Translations = {
     rent: 'Louer',
     sell: 'Vendre',
     agents: 'Agents',
+    realEstate: 'Immobilières',
     about: 'À Propos',
     contact: 'Contact',
     login: 'Connexion',

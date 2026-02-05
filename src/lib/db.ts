@@ -1106,7 +1106,7 @@ export async function getClicInmobiliarias(options: { limit?: number; offset?: n
   if (!sql) return [];
   const { limit = 100, offset = 0 } = options;
 
-  const rows = await sql`
+  const query = `
     SELECT
       t.id,
       t.nombre as name,
@@ -1117,27 +1117,28 @@ export async function getClicInmobiliarias(options: { limit?: number; offset?: n
     JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
     JOIN usuarios u ON pa.usuario_id = u.id
     JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
-      AND (${sql.unsafe(PORTAL_FILTER)})
+      AND ${PORTAL_FILTER}
     GROUP BY t.id, t.nombre, t.slug
     ORDER BY COUNT(DISTINCT p.id) DESC
-    LIMIT ${limit} OFFSET ${offset}
+    LIMIT $1 OFFSET $2
   `;
 
-  return rows;
+  return await sql(query, [limit, offset]);
 }
 
 export async function getClicInmobiliariasCount(): Promise<number> {
   if (!sql) return 0;
 
-  const rows = await sql`
+  const query = `
     SELECT COUNT(DISTINCT t.id) as total
     FROM tenants t
     JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
     JOIN usuarios u ON pa.usuario_id = u.id
     JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
-      AND (${sql.unsafe(PORTAL_FILTER)})
+      AND ${PORTAL_FILTER}
   `;
 
+  const rows = await sql(query);
   return parseInt(rows[0]?.total || '0');
 }
 

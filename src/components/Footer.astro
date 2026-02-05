@@ -32,6 +32,7 @@ const urls = {
   rent: getTranslatedUrl('alquilar', lang),
   publish: getTranslatedUrl('publicar', lang),
   agents: getTranslatedUrl('asesores', lang),
+  realEstate: getTranslatedUrl('inmobiliarias', lang),
   about: getTranslatedUrl('nosotros', lang),
   contact: getTranslatedUrl('contacto', lang),
   privacy: getTranslatedUrl('privacidad', lang),
@@ -108,6 +109,9 @@ const urls = {
           </li>
           <li>
             <a href={urls.agents} class="hover:text-primary-300 transition-colors">{t.nav.agents}</a>
+          </li>
+          <li>
+            <a href={urls.realEstate} class="hover:text-primary-300 transition-colors">{t.nav.realEstate}</a>
           </li>
           <li>
             <a href={urls.about} class="hover:text-primary-300 transition-colors">{t.nav.about}</a>

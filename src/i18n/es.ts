@@ -13,6 +13,7 @@ export const es = {
     rent: 'Alquilar',
     sell: 'Vender',
     agents: 'Asesores',
+    realEstate: 'Inmobiliarias',
     about: 'Nosotros',
     contact: 'Contacto',
     login: 'Iniciar Sesión',

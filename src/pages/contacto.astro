@@ -103,7 +103,7 @@ const config = await getSiteConfig();
             <div class="card p-8">
               <h2 class="text-2xl font-semibold text-gray-900 mb-6">Envíanos un Mensaje</h2>
 
-              <form class="space-y-6">
+              <form id="contact-form" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
@@ -188,10 +188,59 @@ const config = await getSiteConfig();
                   </label>
                 </div>
 
-                <button type="submit" class="btn-primary w-full justify-center">
+                <button type="submit" id="contact-submit" class="btn-primary w-full justify-center">
                   Enviar Mensaje
                 </button>
+
+                <div id="contact-success" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                  Tu mensaje ha sido enviado correctamente. Te responderemos pronto.
+                </div>
+                <div id="contact-error" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  Error al enviar el mensaje. Intenta de nuevo.
+                </div>
               </form>
+
+              <script>
+                const contactForm = document.querySelector('#contact-form') as HTMLFormElement;
+                const submitBtn = document.getElementById('contact-submit') as HTMLButtonElement;
+                const successMsg = document.getElementById('contact-success');
+                const errorMsg = document.getElementById('contact-error');
+
+                contactForm?.addEventListener('submit', async (e) => {
+                  e.preventDefault();
+
+                  const name = (document.getElementById('name') as HTMLInputElement).value.trim();
+                  const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+                  const phone = (document.getElementById('phone') as HTMLInputElement).value.trim();
+                  const subject = (document.getElementById('subject') as HTMLSelectElement).value;
+                  const message = (document.getElementById('message') as HTMLTextAreaElement).value.trim();
+
+                  if (!name || !email || !subject || !message) return;
+
+                  submitBtn.disabled = true;
+                  submitBtn.textContent = 'Enviando...';
+                  successMsg?.classList.add('hidden');
+                  errorMsg?.classList.add('hidden');
+
+                  try {
+                    const response = await fetch('/api/contact', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name, email, phone, subject, message }),
+                    });
+
+                    if (!response.ok) throw new Error('Error');
+
+                    successMsg?.classList.remove('hidden');
+                    contactForm.reset();
+                  } catch {
+                    errorMsg?.classList.remove('hidden');
+                  } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Enviar Mensaje';
+                  }
+                });
+              </script>
             </div>
           </div>
         </div>

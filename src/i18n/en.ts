@@ -15,6 +15,7 @@ export const en: Translations = {
     rent: 'Rent',
     sell: 'Sell',
     agents: 'Agents',
+    realEstate: 'Real Estate',
     about: 'About Us',
     contact: 'Contact',
     login: 'Sign In',

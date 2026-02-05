@@ -1,0 +1,334 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getAllContactMessages, countNewContactMessages, canViewAllProperties, type UserRole, type ContactMessage } from '../../../lib/ubikala-db';
+
+const user = Astro.locals.user;
+
+if (!user || user.role !== 'admin') {
+  return Astro.redirect('/admin/dashboard');
+}
+
+const messages = await getAllContactMessages({ limit: 100 });
+const newCount = await countNewContactMessages();
+
+const subjectLabels: Record<string, string> = {
+  general: 'Consulta General',
+  publicar: 'Quiero Publicar',
+  soporte: 'Soporte Técnico',
+  propiedad: 'Pregunta Propiedad',
+  otro: 'Otro',
+};
+
+const statusLabels: Record<string, string> = {
+  new: 'Nuevo',
+  read: 'Leído',
+  replied: 'Respondido',
+};
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('es-DO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+---
+
+<AdminLayout title="Mensajes">
+  <div class="messages-page">
+    <div class="page-header">
+      <div>
+        <h3>Mensajes de Contacto</h3>
+        <p class="subtitle">Mensajes recibidos desde la página de contacto</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat">
+          <span class="stat-value">{messages.length}</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">{newCount}</span>
+          <span class="stat-label">Nuevos</span>
+        </div>
+      </div>
+    </div>
+
+    {messages.length === 0 ? (
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+        <h4>No hay mensajes</h4>
+        <p>Cuando alguien envíe un mensaje desde la página de contacto, aparecerá aquí</p>
+      </div>
+    ) : (
+      <div class="messages-table-container">
+        <table class="messages-table">
+          <thead>
+            <tr>
+              <th>Remitente</th>
+              <th>Asunto</th>
+              <th>Mensaje</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {messages.map((msg: ContactMessage) => (
+              <tr class:list={['msg-row', { 'is-new': msg.status === 'new' }]}>
+                <td class="msg-contact">
+                  <div class="contact-name">{msg.name}</div>
+                  <div class="contact-details">
+                    <a href={`mailto:${msg.email}`} class="contact-email">{msg.email}</a>
+                    {msg.phone && (
+                      <a href={`tel:${msg.phone}`} class="contact-phone">{msg.phone}</a>
+                    )}
+                  </div>
+                </td>
+                <td>
+                  <span class:list={['badge', `badge-${msg.subject}`]}>
+                    {subjectLabels[msg.subject] || msg.subject}
+                  </span>
+                </td>
+                <td class="msg-message">
+                  <div class="message-text">{msg.message}</div>
+                </td>
+                <td>
+                  <select
+                    class="status-select"
+                    data-msg-id={msg.id}
+                    data-current-status={msg.status}
+                  >
+                    {Object.entries(statusLabels).map(([value, label]) => (
+                      <option value={value} selected={value === msg.status}>{label}</option>
+                    ))}
+                  </select>
+                </td>
+                <td class="msg-date">
+                  {formatDate(msg.created_at)}
+                </td>
+                <td class="msg-actions">
+                  <a href={`mailto:${msg.email}?subject=Re: ${subjectLabels[msg.subject] || msg.subject}`} class="btn-action" title="Responder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="9 17 4 12 9 7" />
+                      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                    </svg>
+                  </a>
+                  {msg.phone && (
+                    <a href={`https://wa.me/${msg.phone.replace(/[^0-9]/g, '')}`} target="_blank" class="btn-action btn-whatsapp" title="WhatsApp">
+                      <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+
+  <style>
+    .messages-page {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .page-header h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #111827;
+    }
+    .subtitle {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+    .header-stats {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-value {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #5C6B3C;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .messages-table-container {
+      background: white;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .messages-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .messages-table th {
+      text-align: left;
+      padding: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .messages-table td {
+      padding: 1rem;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    .msg-row.is-new {
+      background: #fefce8;
+    }
+    .msg-contact {
+      min-width: 180px;
+    }
+    .contact-name {
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.25rem;
+    }
+    .contact-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+    }
+    .contact-email,
+    .contact-phone {
+      font-size: 0.8125rem;
+      color: #5C6B3C;
+      text-decoration: none;
+    }
+    .contact-email:hover,
+    .contact-phone:hover {
+      text-decoration: underline;
+    }
+    .msg-message {
+      max-width: 300px;
+    }
+    .message-text {
+      font-size: 0.8125rem;
+      color: #4b5563;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-general { background: #dbeafe; color: #1e40af; }
+    .badge-publicar { background: #dcfce7; color: #166534; }
+    .badge-soporte { background: #fef3c7; color: #92400e; }
+    .badge-propiedad { background: #f3e8ff; color: #7c3aed; }
+    .badge-otro { background: #f3f4f6; color: #374151; }
+    .status-select {
+      padding: 0.375rem 0.5rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+      background: white;
+      cursor: pointer;
+      min-width: 110px;
+    }
+    .status-select:focus {
+      outline: none;
+      border-color: #5C6B3C;
+    }
+    .msg-date {
+      font-size: 0.8125rem;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .msg-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-action {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 0.375rem;
+      background: #f3f4f6;
+      color: #374151;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-action:hover { background: #e5e7eb; }
+    .btn-action svg { width: 16px; height: 16px; }
+    .btn-whatsapp { background: #dcfce7; color: #166534; }
+    .btn-whatsapp:hover { background: #bbf7d0; }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: white;
+      border-radius: 0.75rem;
+    }
+    .empty-state svg { width: 64px; height: 64px; color: #9ca3af; margin: 0 auto 1rem; }
+    .empty-state h4 { font-size: 1.125rem; font-weight: 600; color: #111827; margin-bottom: 0.5rem; }
+    .empty-state p { color: #6b7280; }
+    @media (max-width: 768px) {
+      .messages-table-container { overflow-x: auto; }
+      .messages-table { min-width: 800px; }
+    }
+  </style>
+
+  <script>
+    document.querySelectorAll('.status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const target = e.target as HTMLSelectElement;
+        const msgId = target.dataset.msgId;
+        const newStatus = target.value;
+        const currentStatus = target.dataset.currentStatus;
+
+        try {
+          const response = await fetch(`/api/admin/messages/${msgId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus }),
+          });
+
+          if (!response.ok) throw new Error('Error');
+
+          target.dataset.currentStatus = newStatus;
+          const row = target.closest('tr');
+          if (row) {
+            row.classList.toggle('is-new', newStatus === 'new');
+          }
+        } catch {
+          alert('Error al actualizar el estado');
+          target.value = currentStatus || 'new';
+        }
+      });
+    });
+  </script>
+</AdminLayout>

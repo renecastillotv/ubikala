@@ -929,6 +929,73 @@ export async function getUbikalaInmobiliariasCount(): Promise<number> {
   return parseInt(rows[0]?.total || '0');
 }
 
+// ==================== CONTACT MESSAGES ====================
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  subject: string;
+  message: string;
+  status: 'new' | 'read' | 'replied';
+  created_at: string;
+}
+
+export async function createContactMessage(data: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+}): Promise<ContactMessage> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+
+  const rows = await ubikalaDb`
+    INSERT INTO contact_messages (name, email, phone, subject, message)
+    VALUES (${data.name}, ${data.email}, ${data.phone || null}, ${data.subject}, ${data.message})
+    RETURNING *
+  `;
+
+  return rows[0] as ContactMessage;
+}
+
+export async function getAllContactMessages(options: { limit?: number; offset?: number } = {}): Promise<ContactMessage[]> {
+  if (!ubikalaDb) return [];
+  const { limit = 100, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT * FROM contact_messages
+    ORDER BY created_at DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows as ContactMessage[];
+}
+
+export async function updateContactMessageStatus(id: number, status: ContactMessage['status']): Promise<ContactMessage | null> {
+  if (!ubikalaDb) return null;
+
+  const rows = await ubikalaDb`
+    UPDATE contact_messages
+    SET status = ${status}
+    WHERE id = ${id}
+    RETURNING *
+  `;
+
+  return (rows[0] as ContactMessage) || null;
+}
+
+export async function countNewContactMessages(): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as total FROM contact_messages WHERE status = 'new'
+  `;
+
+  return parseInt(rows[0]?.total || '0');
+}
+
 // Lead/Contact types - matches existing 'leads' table
 export interface Lead {
   id: number;

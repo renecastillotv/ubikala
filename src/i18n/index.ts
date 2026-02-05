@@ -101,6 +101,7 @@ export const routeTranslations: Record<string, Record<Lang, string>> = {
   'alquilar': { es: 'alquilar', en: 'rent', fr: 'louer' },
   'publicar': { es: 'publicar', en: 'list', fr: 'publier' },
   'asesores': { es: 'asesores', en: 'agents', fr: 'agents' },
+  'inmobiliarias': { es: 'inmobiliarias', en: 'real-estate', fr: 'immobilieres' },
   'nosotros': { es: 'nosotros', en: 'about', fr: 'a-propos' },
   'contacto': { es: 'contacto', en: 'contact', fr: 'contact' },
   'buscar': { es: 'buscar', en: 'search', fr: 'recherche' },
