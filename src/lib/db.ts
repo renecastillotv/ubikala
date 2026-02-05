@@ -564,6 +564,7 @@ export async function getPropertiesCount(options: {
 }
 
 // Queries para agentes
+// Busca asesores que tienen propiedades activas publicadas vía captador_id
 export async function getAgents(options: {
   limit?: number;
   offset?: number;
@@ -577,7 +578,6 @@ export async function getAgents(options: {
 
   const { limit = 20, offset = 0, zona, destacado } = options;
 
-  // Get agents with real property count calculated from actual properties
   let query = `
     SELECT
       pa.id,
@@ -602,28 +602,22 @@ export async function getAgents(options: {
       u.email,
       u.telefono,
       u.avatar_url,
-      -- Calculate real property count
+      t.nombre as company_name,
+      -- Count propiedades activas donde este usuario es captador
       (
         SELECT COUNT(*)
         FROM propiedades p
-        WHERE p.activo = true
-        AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-        AND EXISTS (
-          SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-          WHERE agent->>'slug' = pa.slug
-        )
+        WHERE p.captador_id = u.id
+        AND p.activo = true
+        AND ${PORTAL_FILTER}
       ) as real_property_count,
-      -- Build stats with real count
       jsonb_build_object(
         'propiedades_activas', (
           SELECT COUNT(*)
           FROM propiedades p
-          WHERE p.activo = true
-          AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-          AND EXISTS (
-            SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-            WHERE agent->>'slug' = pa.slug
-          )
+          WHERE p.captador_id = u.id
+          AND p.activo = true
+          AND ${PORTAL_FILTER}
         ),
         'propiedades_vendidas', COALESCE((pa.stats->>'propiedades_vendidas')::int, 0),
         'calificacion_promedio', COALESCE((pa.stats->>'calificacion_promedio')::numeric, 5),
@@ -631,15 +625,13 @@ export async function getAgents(options: {
       ) as stats
     FROM perfiles_asesor pa
     JOIN usuarios u ON pa.usuario_id = u.id
+    LEFT JOIN tenants t ON pa.tenant_id = t.id
     WHERE pa.activo = true
     AND EXISTS (
       SELECT 1 FROM propiedades p
-      WHERE p.activo = true
-      AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-      AND EXISTS (
-        SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-        WHERE agent->>'slug' = pa.slug
-      )
+      WHERE p.captador_id = u.id
+      AND p.activo = true
+      AND ${PORTAL_FILTER}
     )
   `;
 
@@ -982,7 +974,7 @@ export async function getLocationPropertyCount(locationSlug: string): Promise<nu
 }
 
 /**
- * Obtiene conteo total de agentes activos que tienen propiedades publicadas
+ * Obtiene conteo total de agentes activos que tienen propiedades publicadas (vía captador_id)
  */
 export async function getAgentsCount(): Promise<number> {
   const rows = await sql`
@@ -992,13 +984,9 @@ export async function getAgentsCount(): Promise<number> {
     WHERE pa.activo = true
     AND EXISTS (
       SELECT 1 FROM propiedades p
-      WHERE p.activo = true
+      WHERE p.captador_id = u.id
+      AND p.activo = true
       AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
-      AND EXISTS (
-        SELECT 1 FROM jsonb_array_elements(p.caracteristicas->'agents') AS agent
-        WHERE agent->>'slug' = pa.slug
-        OR agent->>'email' = u.email
-      )
     )
   `;
   return parseInt(rows[0]?.total || '0');
