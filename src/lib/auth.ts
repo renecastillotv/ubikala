@@ -272,4 +272,5 @@ export interface AuthUser {
   phone: string | null;
   company_name?: string | null;
   license_number?: string | null;
+  is_verified?: boolean;
 }

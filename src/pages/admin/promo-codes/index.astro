@@ -488,8 +488,9 @@ const plans = await getAllPlans();
     }
   </style>
 
-  <script define:vars={{ promoCodes: JSON.stringify(promoCodes) }}>
-    const promoData = JSON.parse(promoCodes);
+  <div id="promo-data" data-json={JSON.stringify(promoCodes)} hidden></div>
+  <script>
+    const promoData = JSON.parse(document.getElementById('promo-data')!.getAttribute('data-json')!);
     const modal = document.getElementById('promo-modal');
     const form = document.getElementById('promo-form') as HTMLFormElement;
     const modalTitle = document.getElementById('modal-title');
@@ -506,15 +507,14 @@ const plans = await getAllPlans();
     const formMessage = document.getElementById('form-message');
     const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
 
-    // Update value hint based on type
+    const hints: Record<string, string> = {
+      percentage: 'Ingresa el porcentaje de descuento (ej: 20 para 20%)',
+      fixed: 'Ingresa el monto de descuento (ej: 50 para $50)',
+      trial_days: 'Ingresa el número de días de prueba gratis',
+      free_months: 'Ingresa el número de meses gratis'
+    };
     typeSelect?.addEventListener('change', () => {
-      const hints = {
-        percentage: 'Ingresa el porcentaje de descuento (ej: 20 para 20%)',
-        fixed: 'Ingresa el monto de descuento (ej: 50 para $50)',
-        trial_days: 'Ingresa el número de días de prueba gratis',
-        free_months: 'Ingresa el número de meses gratis'
-      };
-      if (valueHint) valueHint.textContent = hints[typeSelect.value as keyof typeof hints] || '';
+      if (valueHint) valueHint.textContent = hints[typeSelect.value] || '';
     });
 
     // Open modal for new promo
@@ -542,8 +542,7 @@ const plans = await getAllPlans();
         validUntilInput.value = promo.valid_until ? promo.valid_until.split('T')[0] : '';
         activeCheckbox.checked = promo.is_active;
 
-        // Set roles
-        document.querySelectorAll('input[name="roles"]').forEach((cb: any) => {
+        document.querySelectorAll<HTMLInputElement>('input[name="roles"]').forEach(cb => {
           cb.checked = promo.applicable_roles?.includes(cb.value) || false;
         });
 
@@ -580,7 +579,7 @@ const plans = await getAllPlans();
       form?.reset();
       promoIdInput.value = '';
       formMessage?.classList.add('hidden');
-      document.querySelectorAll('input[name="roles"]').forEach((cb: any) => cb.checked = false);
+      document.querySelectorAll<HTMLInputElement>('input[name="roles"]').forEach(cb => cb.checked = false);
     }
 
     // Submit form
@@ -591,7 +590,7 @@ const plans = await getAllPlans();
       saveBtn.textContent = 'Guardando...';
 
       const selectedRoles: string[] = [];
-      document.querySelectorAll('input[name="roles"]:checked').forEach((cb: any) => {
+      document.querySelectorAll<HTMLInputElement>('input[name="roles"]:checked').forEach(cb => {
         selectedRoles.push(cb.value);
       });
 

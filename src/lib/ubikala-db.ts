@@ -1669,6 +1669,7 @@ export async function createPromoCode(data: {
   valid_until?: string;
   applicable_roles?: string[];
   applicable_plans?: string[];
+  is_active?: boolean;
   created_by?: string;
 }): Promise<PromoCode> {
   if (!ubikalaDb) throw new Error('Database not configured');
@@ -1676,7 +1677,7 @@ export async function createPromoCode(data: {
   const rows = await ubikalaDb`
     INSERT INTO ubikala_promo_codes (
       code, description, discount_type, discount_value, max_uses,
-      valid_from, valid_until, applicable_roles, applicable_plans, created_by
+      valid_from, valid_until, applicable_roles, applicable_plans, is_active, created_by
     ) VALUES (
       ${data.code.toUpperCase()},
       ${data.description || null},
@@ -1687,6 +1688,7 @@ export async function createPromoCode(data: {
       ${data.valid_until || null},
       ${data.applicable_roles || null},
       ${data.applicable_plans || null},
+      ${data.is_active !== undefined ? data.is_active : true},
       ${data.created_by || null}
     )
     RETURNING *

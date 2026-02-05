@@ -37,6 +37,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
           role: user.role,
           avatar_url: user.avatar_url,
           phone: user.phone,
+          is_verified: user.is_verified,
         } as AuthUser;
       }
     }

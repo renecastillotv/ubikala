@@ -409,8 +409,9 @@ const isTeamMember = !!fullUser?.parent_user_id;
     .mt-1 { margin-top: 1rem; }
   </style>
 
-  <script define:vars={{ requiredDocsJson: JSON.stringify(requiredDocs) }}>
-    const requiredDocs = JSON.parse(requiredDocsJson);
+  <div id="required-docs-data" data-json={JSON.stringify(requiredDocs)} hidden></div>
+  <script>
+    const requiredDocs = JSON.parse(document.getElementById('required-docs-data')!.getAttribute('data-json')!);
     const form = document.getElementById('verification-form') as HTMLFormElement;
     const formMessage = document.getElementById('form-message');
     const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
@@ -459,7 +460,7 @@ const isTeamMember = !!fullUser?.parent_user_id;
       removeBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         delete uploadedFiles[docId!];
-        input.value = '';
+        (input as HTMLInputElement).value = '';
         area.classList.remove('has-file');
         placeholder?.classList.remove('hidden');
         preview?.classList.add('hidden');

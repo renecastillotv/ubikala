@@ -50,6 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       valid_until,
       applicable_roles,
       applicable_plans,
+      is_active,
     } = body;
 
     if (!code || !discount_type || discount_value === undefined) {
@@ -69,6 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       valid_until,
       applicable_roles,
       applicable_plans,
+      is_active,
       created_by: user.id,
     });
 
