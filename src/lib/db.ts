@@ -632,7 +632,6 @@ export async function getAgents(options: {
     FROM perfiles_asesor pa
     JOIN usuarios u ON pa.usuario_id = u.id
     WHERE pa.activo = true
-    AND pa.visible_en_web = true
     AND EXISTS (
       SELECT 1 FROM propiedades p
       WHERE p.activo = true
@@ -991,7 +990,6 @@ export async function getAgentsCount(): Promise<number> {
     FROM perfiles_asesor pa
     JOIN usuarios u ON pa.usuario_id = u.id
     WHERE pa.activo = true
-    AND pa.visible_en_web = true
     AND EXISTS (
       SELECT 1 FROM propiedades p
       WHERE p.activo = true

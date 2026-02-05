@@ -157,10 +157,8 @@ const { propertySlug, propertyTitle, agentName, agentWhatsapp, agentCompany } = 
         agent_company: formData.get('agent_company')
       };
 
-      var apiBase = 'http://5.161.98.140:3002';
-
       try {
-        var response = await fetch(apiBase + '/api/leads', {
+        var response = await fetch('/api/leads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
