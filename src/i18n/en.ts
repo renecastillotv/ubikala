@@ -237,13 +237,13 @@ export const en: Translations = {
     expertsDesc: 'Professionals committed to finding your ideal property',
     viewAllAgents: 'View All Agents',
     whyChooseUs: 'Why Choose Us?',
-    portalTitle: 'The #1 Real Estate Portal in the Dominican Republic',
+    portalTitle: 'Your Trusted Real Estate Portal',
     smartSearch: 'Smart Search',
     smartSearchDesc: 'Find exactly what you are looking for with our advanced filters and search by location, price, property type and more.',
     verifiedProperties: 'Verified Properties',
     verifiedPropertiesDesc: 'All properties are verified by our team to ensure accurate and reliable information.',
     expertAgents: 'Expert Agents',
-    expertAgentsDesc: 'Connect with professional real estate agents who know the Dominican market perfectly.',
+    expertAgentsDesc: 'Connect with professional real estate agents who know the market perfectly.',
   },
 
   // Common Messages

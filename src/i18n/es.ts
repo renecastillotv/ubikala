@@ -235,13 +235,13 @@ export const es = {
     expertsDesc: 'Profesionales comprometidos con encontrar tu propiedad ideal',
     viewAllAgents: 'Ver Todos los Asesores',
     whyChooseUs: '¿Por Qué Elegirnos?',
-    portalTitle: 'El Portal Inmobiliario #1 de República Dominicana',
+    portalTitle: 'Tu Portal Inmobiliario de Confianza',
     smartSearch: 'Búsqueda Inteligente',
     smartSearchDesc: 'Encuentra exactamente lo que buscas con nuestros filtros avanzados y búsqueda por ubicación, precio, tipo de propiedad y más.',
     verifiedProperties: 'Propiedades Verificadas',
     verifiedPropertiesDesc: 'Todas las propiedades son verificadas por nuestro equipo para garantizar información precisa y confiable.',
     expertAgents: 'Asesores Expertos',
-    expertAgentsDesc: 'Conecta con asesores inmobiliarios profesionales que conocen el mercado dominicano a la perfección.',
+    expertAgentsDesc: 'Conecta con asesores inmobiliarios profesionales que conocen el mercado a la perfección.',
   },
 
   // Mensajes comunes

@@ -37,13 +37,6 @@ export interface SiteConfig {
   meta_title: string;
   meta_description: string;
 
-  // Portal Stats
-  stat_properties: string;
-  stat_agents: string;
-  stat_cities: string;
-  stat_monthly_visitors: string;
-  stat_satisfaction: string;
-
   // API Config
   analytics_api: string;
   lead_source: string;
@@ -80,12 +73,6 @@ const defaultConfig: SiteConfig = {
   og_image: 'https://ubikala.com/og-image.jpg',
   meta_title: 'Ubikala - Esa propiedad que buscas, ubíkala aquí',
   meta_description: 'Encuentra casas, apartamentos y terrenos en venta y alquiler. Esa propiedad que buscas, ubíkala aquí.',
-
-  stat_properties: '2,500+',
-  stat_agents: '150+',
-  stat_cities: '25+',
-  stat_monthly_visitors: '50K+',
-  stat_satisfaction: '95%',
 
   analytics_api: 'http://5.161.98.140:3002',
   lead_source: 'ubikala'

@@ -1111,14 +1111,14 @@ export async function getClicInmobiliarias(options: { limit?: number; offset?: n
       t.id,
       t.nombre as name,
       t.slug,
-      COUNT(DISTINCT p.id) as properties_count,
-      COUNT(DISTINCT pa.id) as agents_count
+      COUNT(DISTINCT p.id) as properties_count
     FROM tenants t
-    JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
-    JOIN usuarios u ON pa.usuario_id = u.id
-    JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
+    INNER JOIN propiedades p ON p.tenant_id = t.id
+      AND p.activo = true
       AND ${PORTAL_FILTER}
+    WHERE t.activo = true
     GROUP BY t.id, t.nombre, t.slug
+    HAVING COUNT(DISTINCT p.id) > 0
     ORDER BY COUNT(DISTINCT p.id) DESC
     LIMIT $1 OFFSET $2
   `;
@@ -1132,10 +1132,10 @@ export async function getClicInmobiliariasCount(): Promise<number> {
   const query = `
     SELECT COUNT(DISTINCT t.id) as total
     FROM tenants t
-    JOIN perfiles_asesor pa ON pa.tenant_id = t.id AND pa.activo = true
-    JOIN usuarios u ON pa.usuario_id = u.id
-    JOIN propiedades p ON p.captador_id = u.id AND p.activo = true
+    INNER JOIN propiedades p ON p.tenant_id = t.id
+      AND p.activo = true
       AND ${PORTAL_FILTER}
+    WHERE t.activo = true
   `;
 
   const rows = await sql(query);

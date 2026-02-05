@@ -2,15 +2,24 @@
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
+import { getPlatformStats, formatStatNumber } from '../../lib/platform-stats';
 
 const t = useTranslations('fr');
 const alternateUrls = getAlternateUrls('/fr/a-propos');
+
+let stats = { totalProperties: 0, totalAgents: 0, cities: 0 };
+try {
+  const platformStats = await getPlatformStats();
+  stats = { totalProperties: platformStats.totalProperties, totalAgents: platformStats.totalAgents, cities: platformStats.cities };
+} catch (error) {
+  console.error('Error fetching platform stats:', error);
+}
 ---
 
 <Layout
-  title="À Propos de PropiedadEnRD.com | Le Portail Immobilier de la République Dominicaine"
-  description="Découvrez PropiedadEnRD.com, le portail qui connecte acheteurs et locataires avec des agents immobiliers, agences et propriétaires dans toute la République Dominicaine."
-  keywords="portail immobilier dominicain, à propos propiedadenrd, qui sommes-nous, immobilier république dominicaine"
+  title="À Propos d'Ubikala | Votre Portail Immobilier de Confiance"
+  description="Découvrez Ubikala, le portail qui connecte acheteurs et locataires avec des agents immobiliers, agences et propriétaires."
+  keywords="portail immobilier, à propos ubikala, qui sommes-nous, immobilier"
   alternateLanguages={alternateUrls}
 >
   <!-- Breadcrumb -->
@@ -28,7 +37,7 @@ const alternateUrls = getAlternateUrls('/fr/a-propos');
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-16">
     <div class="container-custom text-center">
       <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
-        Le Portail Immobilier de la République Dominicaine
+        Votre Portail Immobilier de Confiance
       </h1>
       <p class="text-xl text-primary-100 max-w-3xl mx-auto">
         Nous connectons ceux qui recherchent des propriétés avec les professionnels qui les proposent.
@@ -43,25 +52,25 @@ const alternateUrls = getAlternateUrls('/fr/a-propos');
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
           <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
-            Qu'est-ce que PropiedadEnRD.com?
+            Qu'est-ce qu'Ubikala?
           </span>
           <h2 class="section-title mt-2 mb-6">
             Un Portail Ouvert pour le Marché Immobilier
           </h2>
           <div class="prose prose-lg text-gray-600">
             <p>
-              <strong>PropiedadEnRD.com</strong> est une plateforme où les agents immobiliers indépendants,
+              <strong>Ubikala</strong> est une plateforme où les agents immobiliers indépendants,
               les agences établies et les propriétaires privés peuvent publier leurs propriétés pour
               atteindre des milliers d'acheteurs et locataires potentiels.
             </p>
             <p>
               Nous ne sommes pas une agence immobilière. Nous sommes le point de rencontre entre l'offre et la demande
-              du marché immobilier dominicain. Chaque propriété publiée appartient à un agent ou propriétaire
+              du marché immobilier. Chaque propriété publiée appartient à un agent ou propriétaire
               vérifié qui vous assistera directement.
             </p>
             <p>
-              Que vous cherchiez à acheter votre première maison, investir à Punta Cana, louer un
-              appartement à Saint-Domingue ou vendre votre propriété, vous trouverez ici les outils
+              Que vous cherchiez à acheter votre première maison, louer un
+              appartement ou vendre votre propriété, vous trouverez ici les outils
               et les professionnels appropriés.
             </p>
           </div>
@@ -179,22 +188,18 @@ const alternateUrls = getAlternateUrls('/fr/a-propos');
   <!-- Chiffres -->
   <section class="py-16 bg-primary-600">
     <div class="container-custom">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div class="grid grid-cols-3 gap-8 text-center max-w-3xl mx-auto">
         <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">2,500+</div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.totalProperties)}</div>
           <div class="text-primary-200">Propriétés Actives</div>
         </div>
         <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">150+</div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.totalAgents)}</div>
           <div class="text-primary-200">Agents Inscrits</div>
         </div>
         <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">25+</div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.cities)}</div>
           <div class="text-primary-200">Villes</div>
-        </div>
-        <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">50K+</div>
-          <div class="text-primary-200">Visiteurs Mensuels</div>
         </div>
       </div>
     </div>

@@ -687,31 +687,6 @@ export async function getUserStats(userId: string): Promise<{
   };
 }
 
-// Stats for publish page (public stats)
-export async function getPublishPageStats(): Promise<{
-  monthly_visits: number;
-  active_properties: number;
-  total_agents: number;
-  total_owners: number;
-  satisfaction_rate: number;
-}> {
-  if (!ubikalaDb) return { monthly_visits: 50000, active_properties: 0, total_agents: 0, total_owners: 0, satisfaction_rate: 95 };
-
-  const [properties, agents, owners] = await Promise.all([
-    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_properties WHERE activo = true`,
-    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_users WHERE is_active = true AND (role = 'asesor_independiente' OR role = 'inmobiliaria')`,
-    ubikalaDb`SELECT COUNT(*) as count FROM ubikala_users WHERE is_active = true AND role = 'propietario'`,
-  ]);
-
-  return {
-    monthly_visits: 50000, // This would come from analytics in a real implementation
-    active_properties: Number(properties[0]?.count || 0),
-    total_agents: Number(agents[0]?.count || 0),
-    total_owners: Number(owners[0]?.count || 0),
-    satisfaction_rate: 95,
-  };
-}
-
 // Get properties by user ID (for non-admin users to see only their own)
 export async function getPropertiesByUser(userId: string, options: {
   limit?: number;
@@ -2298,4 +2273,201 @@ export async function canAddTeamMember(userId: string): Promise<TeamMemberCheckR
   }
 
   return { canAdd: true, currentCount, limit, isUnlimited: false };
+}
+
+// ============================================
+// SITE CONFIG (Ubikala.com Settings per country)
+// ============================================
+
+export interface SiteConfigRecord {
+  id?: string;
+  country_code: string;
+  domain: string;
+  company_name: string;
+  company_slogan: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  email: string | null;
+  phone: string | null;
+  phone_display: string | null;
+  whatsapp: string | null;
+  business_hours: string | null;
+  address_street: string | null;
+  address_city: string | null;
+  address_country: string | null;
+  geo_latitude: string | null;
+  geo_longitude: string | null;
+  social_facebook: string | null;
+  social_instagram: string | null;
+  social_linkedin: string | null;
+  social_youtube: string | null;
+  social_twitter: string | null;
+  social_tiktok: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  og_image: string | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_user: string | null;
+  smtp_password: string | null;
+  smtp_from_email: string | null;
+  smtp_from_name: string | null;
+  smtp_encryption: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+let siteConfigTableEnsured = false;
+
+export async function ensureSiteConfigTable(): Promise<void> {
+  if (!ubikalaDb || siteConfigTableEnsured) return;
+
+  await ubikalaDb`
+    CREATE TABLE IF NOT EXISTS ubikala_site_config (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      country_code VARCHAR(5) NOT NULL DEFAULT 'DO',
+      domain VARCHAR(255) NOT NULL DEFAULT 'ubikala.com',
+      company_name VARCHAR(255) DEFAULT 'Ubikala',
+      company_slogan TEXT,
+      logo_url TEXT,
+      favicon_url TEXT,
+      email VARCHAR(255),
+      phone VARCHAR(50),
+      phone_display VARCHAR(50),
+      whatsapp VARCHAR(50),
+      business_hours VARCHAR(255),
+      address_street TEXT,
+      address_city VARCHAR(255),
+      address_country VARCHAR(255),
+      geo_latitude VARCHAR(20),
+      geo_longitude VARCHAR(20),
+      social_facebook TEXT,
+      social_instagram TEXT,
+      social_linkedin TEXT,
+      social_youtube TEXT,
+      social_twitter TEXT,
+      social_tiktok TEXT,
+      meta_title TEXT,
+      meta_description TEXT,
+      og_image TEXT,
+      smtp_host VARCHAR(255),
+      smtp_port INTEGER DEFAULT 587,
+      smtp_user VARCHAR(255),
+      smtp_password VARCHAR(255),
+      smtp_from_email VARCHAR(255),
+      smtp_from_name VARCHAR(255),
+      smtp_encryption VARCHAR(10) DEFAULT 'tls',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(country_code)
+    )
+  `;
+  siteConfigTableEnsured = true;
+}
+
+export async function getSiteConfigByCountry(countryCode: string): Promise<SiteConfigRecord | null> {
+  if (!ubikalaDb) return null;
+  await ensureSiteConfigTable();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_site_config WHERE country_code = ${countryCode.toUpperCase()}
+  `;
+  return rows[0] as SiteConfigRecord || null;
+}
+
+export async function getAllSiteConfigs(): Promise<SiteConfigRecord[]> {
+  if (!ubikalaDb) return [];
+  await ensureSiteConfigTable();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_site_config ORDER BY country_code
+  `;
+  return rows as SiteConfigRecord[];
+}
+
+export async function upsertSiteConfig(config: Partial<SiteConfigRecord> & { country_code: string }): Promise<SiteConfigRecord> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  await ensureSiteConfigTable();
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_site_config (
+      country_code, domain, company_name, company_slogan,
+      logo_url, favicon_url, email, phone, phone_display,
+      whatsapp, business_hours, address_street, address_city,
+      address_country, geo_latitude, geo_longitude,
+      social_facebook, social_instagram, social_linkedin,
+      social_youtube, social_twitter, social_tiktok,
+      meta_title, meta_description, og_image,
+      smtp_host, smtp_port, smtp_user, smtp_password,
+      smtp_from_email, smtp_from_name, smtp_encryption
+    ) VALUES (
+      ${config.country_code.toUpperCase()},
+      ${config.domain || 'ubikala.com'},
+      ${config.company_name || 'Ubikala'},
+      ${config.company_slogan || null},
+      ${config.logo_url || null},
+      ${config.favicon_url || null},
+      ${config.email || null},
+      ${config.phone || null},
+      ${config.phone_display || null},
+      ${config.whatsapp || null},
+      ${config.business_hours || null},
+      ${config.address_street || null},
+      ${config.address_city || null},
+      ${config.address_country || null},
+      ${config.geo_latitude || null},
+      ${config.geo_longitude || null},
+      ${config.social_facebook || null},
+      ${config.social_instagram || null},
+      ${config.social_linkedin || null},
+      ${config.social_youtube || null},
+      ${config.social_twitter || null},
+      ${config.social_tiktok || null},
+      ${config.meta_title || null},
+      ${config.meta_description || null},
+      ${config.og_image || null},
+      ${config.smtp_host || null},
+      ${config.smtp_port || 587},
+      ${config.smtp_user || null},
+      ${config.smtp_password || null},
+      ${config.smtp_from_email || null},
+      ${config.smtp_from_name || null},
+      ${config.smtp_encryption || 'tls'}
+    )
+    ON CONFLICT (country_code) DO UPDATE SET
+      domain = EXCLUDED.domain,
+      company_name = EXCLUDED.company_name,
+      company_slogan = EXCLUDED.company_slogan,
+      logo_url = EXCLUDED.logo_url,
+      favicon_url = EXCLUDED.favicon_url,
+      email = EXCLUDED.email,
+      phone = EXCLUDED.phone,
+      phone_display = EXCLUDED.phone_display,
+      whatsapp = EXCLUDED.whatsapp,
+      business_hours = EXCLUDED.business_hours,
+      address_street = EXCLUDED.address_street,
+      address_city = EXCLUDED.address_city,
+      address_country = EXCLUDED.address_country,
+      geo_latitude = EXCLUDED.geo_latitude,
+      geo_longitude = EXCLUDED.geo_longitude,
+      social_facebook = EXCLUDED.social_facebook,
+      social_instagram = EXCLUDED.social_instagram,
+      social_linkedin = EXCLUDED.social_linkedin,
+      social_youtube = EXCLUDED.social_youtube,
+      social_twitter = EXCLUDED.social_twitter,
+      social_tiktok = EXCLUDED.social_tiktok,
+      meta_title = EXCLUDED.meta_title,
+      meta_description = EXCLUDED.meta_description,
+      og_image = EXCLUDED.og_image,
+      smtp_host = EXCLUDED.smtp_host,
+      smtp_port = EXCLUDED.smtp_port,
+      smtp_user = EXCLUDED.smtp_user,
+      smtp_password = EXCLUDED.smtp_password,
+      smtp_from_email = EXCLUDED.smtp_from_email,
+      smtp_from_name = EXCLUDED.smtp_from_name,
+      smtp_encryption = EXCLUDED.smtp_encryption,
+      updated_at = NOW()
+    RETURNING *
+  `;
+  return rows[0] as SiteConfigRecord;
 }

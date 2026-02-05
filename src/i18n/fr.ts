@@ -237,13 +237,13 @@ export const fr: Translations = {
     expertsDesc: 'Des professionnels engagés à trouver votre propriété idéale',
     viewAllAgents: 'Voir Tous les Agents',
     whyChooseUs: 'Pourquoi Nous Choisir?',
-    portalTitle: 'Le Portail Immobilier #1 en République Dominicaine',
+    portalTitle: 'Votre Portail Immobilier de Confiance',
     smartSearch: 'Recherche Intelligente',
     smartSearchDesc: 'Trouvez exactement ce que vous cherchez avec nos filtres avancés et recherche par emplacement, prix, type de propriété et plus.',
     verifiedProperties: 'Propriétés Vérifiées',
     verifiedPropertiesDesc: 'Toutes les propriétés sont vérifiées par notre équipe pour garantir des informations précises et fiables.',
     expertAgents: 'Agents Experts',
-    expertAgentsDesc: 'Connectez-vous avec des agents immobiliers professionnels qui connaissent parfaitement le marché dominicain.',
+    expertAgentsDesc: 'Connectez-vous avec des agents immobiliers professionnels qui connaissent parfaitement le marché.',
   },
 
   // Messages communs
