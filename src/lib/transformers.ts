@@ -1,4 +1,5 @@
-import type { Property, Agent, PropertyType, TransactionType, PropertyImage } from '../data/types';
+import type { Property, Agent, PropertyType, TransactionType, PropertyImage, UserType } from '../data/types';
+import type { UbikalaAgentRow } from './ubikala-db';
 
 // Tipo de la propiedad que viene de la base de datos
 export interface DBProperty {
@@ -466,4 +467,63 @@ export function transformAgent(dbAgent: DBAgent): Agent {
 // Transformar array de agentes
 export function transformAgents(dbAgents: DBAgent[]): Agent[] {
   return dbAgents.map(transformAgent);
+}
+
+// Helper to generate Ubikala user slug
+function generateUbikalaSlug(name: string, id: string): string {
+  const slugName = name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  return `ubk-${slugName}-${id.substring(0, 8)}`;
+}
+
+// Transformar usuario Ubikala a Agent (para listados públicos)
+export function transformUbikalaAgent(row: UbikalaAgentRow): Agent {
+  const roleToUserType: Record<string, UserType> = {
+    'inmobiliaria': 'agent',
+    'asesor_independiente': 'independent',
+    'propietario': 'owner',
+  };
+
+  const userType = roleToUserType[row.role] || 'owner';
+
+  // Company label: for inmobiliarias use company_name, for affiliated agents use parent company
+  let company: string | undefined;
+  if (row.role === 'inmobiliaria') {
+    company = row.company_name || undefined;
+  } else if (row.parent_company_name) {
+    company = row.parent_company_name;
+  }
+
+  return {
+    id: row.id,
+    slug: generateUbikalaSlug(row.name, row.id),
+    name: row.name,
+    email: row.email || '',
+    phone: row.phone || '',
+    whatsapp: row.phone || '',
+    photo: row.avatar_url || '/images/agent-placeholder.svg',
+    company,
+    userType,
+    verified: row.is_verified,
+    rating: 5,
+    reviewCount: 0,
+    experienceYears: Math.max(1, Math.floor((Date.now() - new Date(row.created_at).getTime()) / (365.25 * 24 * 60 * 60 * 1000))),
+    languages: ['Español'],
+    bio: row.bio || '',
+    propertiesCount: Number(row.properties_count) || 0,
+    responseTime: 'menos de 1 hora',
+    specializations: [],
+    locations: [],
+    isUbikalaUser: true,
+    parentCompany: row.parent_company_name || undefined,
+    parentUserId: row.parent_user_id || undefined,
+  };
+}
+
+// Transformar array de usuarios Ubikala a Agent
+export function transformUbikalaAgents(rows: UbikalaAgentRow[]): Agent[] {
+  return rows.map(transformUbikalaAgent);
 }

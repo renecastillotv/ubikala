@@ -800,6 +800,78 @@ export async function getUsersByRole(role: UserRole): Promise<UbikalaUser[]> {
   return rows as UbikalaUser[];
 }
 
+// Public agent listing - fetch Ubikala users who have active properties (for homepage and asesores page)
+export interface UbikalaAgentRow {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  avatar_url: string | null;
+  role: UserRole;
+  company_name: string | null;
+  bio: string | null;
+  is_verified: boolean;
+  created_at: string;
+  properties_count: number;
+  parent_user_id: string | null;
+  parent_company_name: string | null;
+  parent_name: string | null;
+}
+
+export async function getUbikalaAgents(options: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<UbikalaAgentRow[]> {
+  if (!ubikalaDb) return [];
+
+  const { limit = 20, offset = 0 } = options;
+
+  const rows = await ubikalaDb`
+    SELECT
+      u.id,
+      u.name,
+      u.email,
+      u.phone,
+      u.avatar_url,
+      u.role,
+      u.company_name,
+      u.bio,
+      u.is_verified,
+      u.created_at,
+      u.parent_user_id,
+      parent.company_name as parent_company_name,
+      parent.name as parent_name,
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) as properties_count
+    FROM ubikala_users u
+    LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
+    WHERE u.is_active = true
+    AND u.role IN ('inmobiliaria', 'asesor_independiente')
+    AND EXISTS (
+      SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true
+    )
+    ORDER BY u.is_verified DESC, (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
+
+  return rows as UbikalaAgentRow[];
+}
+
+export async function getUbikalaAgentsCount(): Promise<number> {
+  if (!ubikalaDb) return 0;
+
+  const rows = await ubikalaDb`
+    SELECT COUNT(*) as total
+    FROM ubikala_users u
+    WHERE u.is_active = true
+    AND u.role IN ('inmobiliaria', 'asesor_independiente')
+    AND EXISTS (
+      SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true
+    )
+  `;
+
+  return parseInt(rows[0]?.total || '0');
+}
+
 // Lead/Contact types - matches existing 'leads' table
 export interface Lead {
   id: number;

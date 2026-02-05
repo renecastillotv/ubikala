@@ -7,16 +7,25 @@ import CTASection from '../components/CTASection.astro';
 import AgentCard from '../components/AgentCard.astro';
 import { useTranslations } from '../i18n';
 import { getAgents } from '../lib/db';
-import { transformAgents, type DBAgent } from '../lib/transformers';
+import { getUbikalaAgents } from '../lib/ubikala-db';
+import { transformAgents, transformUbikalaAgents, type DBAgent } from '../lib/transformers';
 import type { Agent } from '../data/types';
 
 const t = useTranslations('es');
 
-// Fetch agents from database
+// Fetch agents from both databases and merge
 let featuredAgents: Agent[] = [];
 try {
-  const dbAgents = await getAgents({ limit: 4 });
-  featuredAgents = transformAgents(dbAgents as unknown as DBAgent[]);
+  const [dbAgents, ubikalaAgentRows] = await Promise.all([
+    getAgents({ limit: 4 }),
+    getUbikalaAgents({ limit: 4 })
+  ]);
+  const clicAgents = transformAgents(dbAgents as unknown as DBAgent[]);
+  const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
+  // Merge and sort by properties count, take top 4
+  featuredAgents = [...clicAgents, ...ubikalaAgents]
+    .sort((a, b) => b.propertiesCount - a.propertiesCount)
+    .slice(0, 4);
 } catch (error) {
   console.error('Error fetching agents:', error);
 }
