@@ -19,8 +19,6 @@ const navItems = [
   ...(user?.role === 'admin' ? [{ href: '/admin/verifications', label: 'Verificaciones', icon: 'verify' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/messages', label: 'Mensajes', icon: 'mail' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/activity', label: 'Actividad', icon: 'activity' }] : []),
-  { href: '/admin/account', label: 'Mi Cuenta', icon: 'account' },
-  { href: '/admin/profile', label: 'Mi Perfil', icon: 'profile' },
 ];
 ---
 
@@ -180,39 +178,92 @@ const navItems = [
         border-radius: 50%;
         object-fit: cover;
       }
-      .logout-btn {
-        padding: 0.5rem 1rem;
-        background: var(--ubikala-terracotta);
-        color: white;
-        border: none;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 500;
-        transition: background 0.2s;
+      .profile-dropdown {
+        position: relative;
       }
-      .logout-btn:hover {
-        background: var(--ubikala-terracotta-dark);
+      .profile-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .profile-toggle:hover {
+        background: var(--ubikala-sand-light);
+        border-color: var(--ubikala-sand);
+      }
+      .chevron-icon {
+        width: 16px;
+        height: 16px;
+        color: var(--ubikala-warm-gray-light);
+        transition: transform 0.2s;
+      }
+      .profile-dropdown.open .chevron-icon {
+        transform: rotate(180deg);
+      }
+      .profile-menu {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        right: 0;
+        min-width: 220px;
+        background: white;
+        border: 1px solid var(--ubikala-sand);
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1), 0 4px 10px rgba(0,0,0,0.05);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-8px);
+        transition: all 0.2s ease;
+        z-index: 50;
+        padding: 0.375rem;
+      }
+      .profile-dropdown.open .profile-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.625rem;
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: none;
+        background: none;
+        color: var(--ubikala-warm-gray-dark);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-family: inherit;
+        cursor: pointer;
+        border-radius: 0.5rem;
+        transition: background 0.15s;
+        text-align: left;
+      }
+      .menu-item:hover {
+        background: var(--ubikala-ivory);
+      }
+      .menu-item svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+      }
+      .menu-item-danger {
+        color: var(--ubikala-terracotta);
+      }
+      .menu-item-danger:hover {
+        background: #fef2f2;
+      }
+      .menu-divider {
+        height: 1px;
+        background: var(--ubikala-sand-light);
+        margin: 0.375rem 0.5rem;
       }
       .content {
         padding: 2rem;
-      }
-      /* Back to site link */
-      .back-to-site {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        margin-top: auto;
-        color: rgba(255,255,255,0.6);
-        text-decoration: none;
-        font-size: 0.8125rem;
-        border-top: 1px solid rgba(255,255,255,0.1);
-        transition: all 0.2s;
-      }
-      .back-to-site:hover {
-        color: white;
-        background: rgba(255,255,255,0.05);
       }
       .sidebar-content {
         display: flex;
@@ -264,12 +315,6 @@ const navItems = [
             </a>
           ))}
         </nav>
-        <a href="/" class="back-to-site">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Volver al sitio
-        </a>
       </div>
     </aside>
 
@@ -277,18 +322,51 @@ const navItems = [
       <header class="topbar">
         <h2 class="page-title">{title}</h2>
         <div class="user-menu">
-          <div class="user-info">
-            <div class="user-name">{user?.name}</div>
-            <div class="user-role">{user?.role}</div>
+          <div class="profile-dropdown">
+            <button id="profile-toggle" class="profile-toggle" type="button">
+              <div class="user-info">
+                <div class="user-name">{user?.name}</div>
+                <div class="user-role">{user?.role}</div>
+              </div>
+              <div class="avatar">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.name} class="avatar-img" />
+                ) : (
+                  user?.name?.charAt(0).toUpperCase()
+                )}
+              </div>
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div id="profile-menu" class="profile-menu">
+              <a href="/admin/profile" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                </svg>
+                Mi Perfil
+              </a>
+              <a href="/admin/account" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M6 12h12M6 16h8" />
+                </svg>
+                Mi Cuenta
+              </a>
+              <a href="/" class="menu-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Volver al sitio
+              </a>
+              <div class="menu-divider"></div>
+              <button id="logout-btn" class="menu-item menu-item-danger" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Cerrar Sesión
+              </button>
+            </div>
           </div>
-          <div class="avatar">
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} alt={user.name} class="avatar-img" />
-            ) : (
-              user?.name?.charAt(0).toUpperCase()
-            )}
-          </div>
-          <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
         </div>
       </header>
       <div class="content">
@@ -297,6 +375,26 @@ const navItems = [
     </main>
 
     <script>
+      const profileToggle = document.getElementById('profile-toggle');
+      const profileDropdown = profileToggle?.closest('.profile-dropdown');
+
+      profileToggle?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        profileDropdown?.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!profileDropdown?.contains(e.target as Node)) {
+          profileDropdown?.classList.remove('open');
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          profileDropdown?.classList.remove('open');
+        }
+      });
+
       document.getElementById('logout-btn')?.addEventListener('click', async () => {
         try {
           await fetch('/api/admin/auth/logout', { method: 'POST' });
