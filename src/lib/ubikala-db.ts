@@ -331,24 +331,43 @@ export async function getUbikalaProperties(options: {
 }): Promise<UbikalaProperty[]> {
   if (!ubikalaDb) return [];
 
-  const { limit = 20, offset = 0, activo = true } = options;
+  const { limit = 20, offset = 0 } = options;
+  // When activo is undefined, show all properties (for admin view)
+  const filterByActivo = options.activo !== undefined;
+  const activoValue = options.activo ?? true;
 
-  const rows = await ubikalaDb`
-    SELECT
-      p.*,
-      u.name as owner_name,
-      u.avatar_url as owner_avatar,
-      u.phone as owner_phone,
-      u.email as owner_email,
-      u.is_verified as owner_verified,
-      u.role as owner_role,
-      u.company_name as owner_company_name
-    FROM ubikala_properties p
-    LEFT JOIN ubikala_users u ON p.created_by = u.id
-    WHERE p.activo = ${activo}
-    ORDER BY p.created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  const rows = filterByActivo
+    ? await ubikalaDb`
+        SELECT
+          p.*,
+          u.name as owner_name,
+          u.avatar_url as owner_avatar,
+          u.phone as owner_phone,
+          u.email as owner_email,
+          u.is_verified as owner_verified,
+          u.role as owner_role,
+          u.company_name as owner_company_name
+        FROM ubikala_properties p
+        LEFT JOIN ubikala_users u ON p.created_by = u.id
+        WHERE p.activo = ${activoValue}
+        ORDER BY p.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    : await ubikalaDb`
+        SELECT
+          p.*,
+          u.name as owner_name,
+          u.avatar_url as owner_avatar,
+          u.phone as owner_phone,
+          u.email as owner_email,
+          u.is_verified as owner_verified,
+          u.role as owner_role,
+          u.company_name as owner_company_name
+        FROM ubikala_properties p
+        LEFT JOIN ubikala_users u ON p.created_by = u.id
+        ORDER BY p.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
   return (rows as UbikalaProperty[]).map(p => ({ ...p, source: 'ubikala' as const }));
 }
