@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getPromoCodeById, updatePromoCode, deletePromoCode, logActivity } from '../../../../lib/ubikala-db';
+import { getPromoCodeById, updatePromoCode, deletePromoCode, logActivity } from '../../../../../lib/ubikala-db';
 
 // GET - Get single promo code
 export const GET: APIRoute = async ({ params, locals }) => {

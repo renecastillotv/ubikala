@@ -73,9 +73,13 @@ const plans = await getAllPlans();
                     {promo.discount_type === 'free_months' && `${promo.discount_value} meses`}
                   </td>
                   <td>
-                    <span class="usage">
-                      {promo.used_count} / {promo.max_uses || '∞'}
-                    </span>
+                    {Number(promo.used_count) > 0 ? (
+                      <button class="usage-link" data-promo-id={promo.id}>
+                        {promo.used_count} / {promo.max_uses || '∞'}
+                      </button>
+                    ) : (
+                      <span class="usage">0 / {promo.max_uses || '∞'}</span>
+                    )}
                   </td>
                   <td class="validity-cell">
                     {promo.valid_until ? (
@@ -108,6 +112,12 @@ const plans = await getAllPlans();
                         </svg>
                       </button>
                     </div>
+                  </td>
+                </tr>
+                <tr class="usage-detail-row" id={`usage-${promo.id}`} hidden>
+                  <td colspan="7">
+                    <div class="usage-detail-loading">Cargando...</div>
+                    <div class="usage-detail-content hidden"></div>
                   </td>
                 </tr>
               ))}
@@ -299,6 +309,67 @@ const plans = await getAllPlans();
       color: var(--ubikala-olive, #5C6B3C);
     }
     .usage {
+      font-size: 0.8125rem;
+    }
+    .usage-link {
+      background: none;
+      border: none;
+      color: var(--ubikala-olive, #5C6B3C);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      font-family: inherit;
+      padding: 0;
+    }
+    .usage-link:hover { color: #4A5730; }
+    .usage-detail-row td {
+      background: #f9fafb;
+      padding: 1rem 1.5rem;
+    }
+    .usage-detail-loading {
+      text-align: center;
+      color: #6b7280;
+      padding: 0.75rem;
+      font-size: 0.8125rem;
+    }
+    .usage-detail-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .usage-detail-content.hidden { display: none; }
+    .usage-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      background: white;
+      border-radius: 0.5rem;
+      border: 1px solid #e5e7eb;
+    }
+    .usage-user-name {
+      font-weight: 600;
+      color: #111827;
+      font-size: 0.8125rem;
+    }
+    .usage-user-email {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .usage-user-role {
+      font-size: 0.6875rem;
+      color: #9ca3af;
+    }
+    .usage-meta {
+      text-align: right;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .usage-no-records {
+      text-align: center;
+      color: #9ca3af;
+      padding: 0.75rem;
       font-size: 0.8125rem;
     }
     .validity-cell .expired {
@@ -630,6 +701,59 @@ const plans = await getAllPlans();
         saveBtn.disabled = false;
         saveBtn.textContent = 'Guardar';
       }
+    });
+
+    // Usage detail toggle
+    document.querySelectorAll('.usage-link').forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const promoId = this.getAttribute('data-promo-id');
+        const detailRow = document.getElementById(`usage-${promoId}`);
+        if (!detailRow) return;
+
+        if (!detailRow.hasAttribute('hidden')) {
+          detailRow.setAttribute('hidden', '');
+          return;
+        }
+
+        detailRow.removeAttribute('hidden');
+        const loadingEl = detailRow.querySelector('.usage-detail-loading') as HTMLElement;
+        const contentEl = detailRow.querySelector('.usage-detail-content') as HTMLElement;
+
+        if (loadingEl) loadingEl.style.display = 'block';
+        if (contentEl) contentEl.classList.add('hidden');
+
+        try {
+          const response = await fetch(`/api/admin/promo-codes/${promoId}/usage`);
+          const data = await response.json();
+
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) {
+            contentEl.classList.remove('hidden');
+            if (data.usage && data.usage.length > 0) {
+              contentEl.innerHTML = data.usage.map((u: any) => `
+                <div class="usage-item">
+                  <div>
+                    <div class="usage-user-name">${u.user_name || 'Usuario desconocido'}</div>
+                    <div class="usage-user-email">${u.user_email || ''}</div>
+                    <div class="usage-user-role">${u.user_role || ''}</div>
+                  </div>
+                  <div class="usage-meta">
+                    ${new Date(u.used_at).toLocaleDateString('es-DO', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              `).join('');
+            } else {
+              contentEl.innerHTML = '<div class="usage-no-records">No hay registros de uso.</div>';
+            }
+          }
+        } catch (error) {
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) {
+            contentEl.classList.remove('hidden');
+            contentEl.innerHTML = '<div class="usage-no-records">Error al cargar registros.</div>';
+          }
+        }
+      });
     });
   </script>
 </AdminLayout>

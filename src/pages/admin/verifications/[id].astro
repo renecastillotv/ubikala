@@ -201,7 +201,16 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
     <div class="modal-content modal-content-doc">
       <div class="modal-header">
         <h3 id="doc-modal-title">Documento</h3>
-        <button class="modal-close" id="close-doc-modal">&times;</button>
+        <div class="modal-header-actions">
+          <button class="btn-icon download-doc-btn" id="download-doc-btn" title="Descargar" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </button>
+          <button class="modal-close" id="close-doc-modal">&times;</button>
+        </div>
       </div>
       <div id="doc-preview" class="doc-preview"></div>
     </div>
@@ -512,6 +521,26 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
       padding: 2rem;
       color: #6b7280;
     }
+    .modal-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .download-doc-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.375rem;
+      background: var(--ubikala-olive, #5C6B3C);
+      border: none;
+      border-radius: 0.375rem;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .download-doc-btn:hover {
+      background: #4A5730;
+    }
   </style>
 
   <div id="request-data" data-id={id} hidden></div>
@@ -596,6 +625,11 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
     const docModal = document.getElementById('doc-modal');
     const docPreview = document.getElementById('doc-preview');
     const docModalTitle = document.getElementById('doc-modal-title');
+    const downloadDocBtn = document.getElementById('download-doc-btn');
+
+    let currentBlobUrl: string | null = null;
+    let currentDataUrl: string | null = null;
+    let currentFileName: string | null = null;
 
     document.querySelectorAll('.view-doc-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -603,14 +637,32 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
         const name = btn.getAttribute('data-name') || 'Documento';
 
         if (docModalTitle) docModalTitle.textContent = name;
+        currentFileName = name;
+        currentDataUrl = url;
+        if (downloadDocBtn) downloadDocBtn.removeAttribute('hidden');
 
         if (docPreview) {
           if (url.startsWith('data:image/')) {
             docPreview.innerHTML = `<img src="${url}" alt="${name}" />`;
           } else if (url.startsWith('data:application/pdf')) {
-            docPreview.innerHTML = `<iframe src="${url}" title="${name}"></iframe>`;
+            try {
+              const base64Data = url.split(',')[1];
+              const binaryString = atob(base64Data);
+              const bytes = new Uint8Array(binaryString.length);
+              for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const blob = new Blob([bytes], { type: 'application/pdf' });
+              if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+              currentBlobUrl = URL.createObjectURL(blob);
+              docPreview.innerHTML = `<iframe src="${currentBlobUrl}" title="${name}"></iframe>`;
+            } catch (err) {
+              console.error('Error creating blob URL:', err);
+              docPreview.innerHTML = `<div class="unsupported"><p>Error al cargar el documento PDF.</p></div>`;
+            }
           } else {
             docPreview.innerHTML = `<div class="unsupported"><p>No se puede previsualizar este tipo de documento.</p></div>`;
+            if (downloadDocBtn) downloadDocBtn.setAttribute('hidden', '');
           }
         }
 
@@ -618,13 +670,35 @@ const requiredDocs = await getVerificationDocuments(requestUser?.role as UserRol
       });
     });
 
-    document.getElementById('close-doc-modal')?.addEventListener('click', () => {
+    // Download document
+    downloadDocBtn?.addEventListener('click', () => {
+      if (!currentDataUrl || !currentFileName) return;
+      const link = document.createElement('a');
+      link.href = currentDataUrl;
+      let ext = '.bin';
+      if (currentDataUrl.startsWith('data:image/png')) ext = '.png';
+      else if (currentDataUrl.startsWith('data:image/jpeg') || currentDataUrl.startsWith('data:image/jpg')) ext = '.jpg';
+      else if (currentDataUrl.startsWith('data:image/webp')) ext = '.webp';
+      else if (currentDataUrl.startsWith('data:application/pdf')) ext = '.pdf';
+      link.download = `${currentFileName}${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    function closeDocModal() {
       docModal?.classList.add('hidden');
       if (docPreview) docPreview.innerHTML = '';
-    });
-    document.getElementById('doc-modal-backdrop')?.addEventListener('click', () => {
-      docModal?.classList.add('hidden');
-      if (docPreview) docPreview.innerHTML = '';
-    });
+      if (currentBlobUrl) {
+        URL.revokeObjectURL(currentBlobUrl);
+        currentBlobUrl = null;
+      }
+      currentDataUrl = null;
+      currentFileName = null;
+      if (downloadDocBtn) downloadDocBtn.setAttribute('hidden', '');
+    }
+
+    document.getElementById('close-doc-modal')?.addEventListener('click', closeDocModal);
+    document.getElementById('doc-modal-backdrop')?.addEventListener('click', closeDocModal);
   </script>
 </AdminLayout>

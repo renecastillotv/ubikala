@@ -1746,6 +1746,50 @@ export async function usePromoCode(promoCodeId: string, userId: string, discount
 }
 
 // ============================================
+// PROMO CODE USAGE QUERIES
+// ============================================
+
+export interface PromoCodeUsage {
+  id: string;
+  promo_code_id: string;
+  user_id: string;
+  used_at: string;
+  discount_applied: number;
+  user_name?: string;
+  user_email?: string;
+  user_role?: string;
+}
+
+export async function getPromoCodeUsage(promoCodeId: string): Promise<PromoCodeUsage[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT
+      pcu.*,
+      u.name as user_name,
+      u.email as user_email,
+      u.role as user_role
+    FROM ubikala_promo_code_usage pcu
+    LEFT JOIN ubikala_users u ON pcu.user_id = u.id
+    WHERE pcu.promo_code_id = ${promoCodeId}
+    ORDER BY pcu.used_at DESC
+  `;
+  return rows as PromoCodeUsage[];
+}
+
+export async function getUserActivePromoCode(userId: string): Promise<(PromoCode & { used_at: string }) | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    SELECT pc.*, pcu.used_at
+    FROM ubikala_promo_codes pc
+    JOIN ubikala_promo_code_usage pcu ON pc.id = pcu.promo_code_id
+    WHERE pcu.user_id = ${userId}
+    ORDER BY pcu.used_at DESC
+    LIMIT 1
+  `;
+  return rows[0] as (PromoCode & { used_at: string }) || null;
+}
+
+// ============================================
 // VERIFICATION SYSTEM
 // ============================================
 

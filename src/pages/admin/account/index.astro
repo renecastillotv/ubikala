@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getUserWithPlan, getUserConsumption, getPlansByRole, getRoleLabel, type UserRole, type UbikalaPlan } from '../../../lib/ubikala-db';
+import { getUserWithPlan, getUserConsumption, getPlansByRole, getRoleLabel, getUserActivePromoCode, type UserRole, type UbikalaPlan } from '../../../lib/ubikala-db';
 
 const user = Astro.locals.user;
 
@@ -10,6 +10,7 @@ if (!user) {
 
 const fullUser = await getUserWithPlan(user.id);
 const consumption = await getUserConsumption(user.id);
+const activePromo = await getUserActivePromoCode(user.id);
 
 // Detect team member (child of inmobiliaria)
 const isTeamMember = fullUser?.parent_user_id !== null && fullUser?.parent_user_id !== undefined;
@@ -32,6 +33,37 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
       <h2>Mi Cuenta</h2>
       <p class="subtitle">Gestiona tu plan y suscripción</p>
     </div>
+
+    {activePromo && !isTeamMember && (
+      <div class="promo-active-banner">
+        <div class="promo-banner-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <div class="promo-banner-content">
+          <div class="promo-banner-title">Promoción Activa</div>
+          <div class="promo-banner-code">{activePromo.code}</div>
+          {activePromo.description && (
+            <div class="promo-banner-desc">{activePromo.description}</div>
+          )}
+          <div class="promo-banner-benefit">
+            {activePromo.discount_type === 'percentage' && `${activePromo.discount_value}% de descuento`}
+            {activePromo.discount_type === 'fixed' && `$${activePromo.discount_value} de descuento`}
+            {activePromo.discount_type === 'trial_days' && `${activePromo.discount_value} días de prueba gratis`}
+            {activePromo.discount_type === 'free_months' && `${Number(activePromo.discount_value)} ${Number(activePromo.discount_value) === 1 ? 'mes gratis' : 'meses gratis'}`}
+          </div>
+          {activePromo.valid_until && (
+            <div class="promo-banner-expiry">
+              Válido hasta: {new Date(activePromo.valid_until).toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          )}
+          <div class="promo-banner-redeemed">
+            Canjeado el {new Date(activePromo.used_at).toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </div>
+      </div>
+    )}
 
     <div class="account-grid">
       <!-- Current Plan Card -->
@@ -199,16 +231,18 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
         </div>
       )}
 
-      <!-- Promo Code (hidden for team members) -->
-      {!isTeamMember && <div class="card promo-card">
-        <h3>Código Promocional</h3>
-        <p class="section-subtitle">¿Tienes un código de descuento?</p>
-        <div class="promo-input-group">
-          <input type="text" id="promo-code" placeholder="Ingresa tu código" />
-          <button type="button" id="apply-promo-btn" class="btn-primary">Aplicar</button>
+      <!-- Promo Code (hidden for team members or if already redeemed) -->
+      {!isTeamMember && !activePromo && (
+        <div class="card promo-card">
+          <h3>Código Promocional</h3>
+          <p class="section-subtitle">¿Tienes un código de descuento?</p>
+          <div class="promo-input-group">
+            <input type="text" id="promo-code" placeholder="Ingresa tu código" />
+            <button type="button" id="apply-promo-btn" class="btn-primary">Aplicar</button>
+          </div>
+          <div id="promo-message" class="promo-message hidden"></div>
         </div>
-        <div id="promo-message" class="promo-message hidden"></div>
-      </div>}
+      )}
 
       <!-- Account Info -->
       <div class="card account-info-card">
@@ -257,6 +291,30 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
       <div class="modal-footer">
         <button class="btn-outline" id="cancel-plan-btn">Cancelar</button>
         <button class="btn-primary" id="confirm-plan-btn">Confirmar Cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Promo Code Confirmation Modal -->
+  <div id="promo-confirm-modal" class="modal hidden">
+    <div class="modal-backdrop" id="promo-modal-backdrop"></div>
+    <div class="modal-content" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3>Confirmar Código Promocional</h3>
+        <button class="modal-close" id="close-promo-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="promo-confirm-info">
+          <div class="promo-confirm-code" id="confirm-code"></div>
+          <div class="promo-confirm-desc" id="confirm-desc"></div>
+          <div class="promo-confirm-benefit" id="confirm-benefit"></div>
+          <div class="promo-confirm-validity" id="confirm-validity"></div>
+        </div>
+        <p class="promo-confirm-note">Una vez canjeado, este código no podrá ser reemplazado por otro.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline" id="cancel-promo-modal" style="width:auto;">Cancelar</button>
+        <button class="btn-primary" id="confirm-redeem-btn">Canjear</button>
       </div>
     </div>
   </div>
@@ -641,6 +699,51 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
       gap: 0.75rem;
       justify-content: flex-end;
     }
+    /* Active Promo Banner */
+    .promo-active-banner {
+      display: flex;
+      gap: 1rem;
+      padding: 1.25rem;
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      border: 2px solid #86efac;
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .promo-banner-icon {
+      width: 44px;
+      height: 44px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .promo-banner-icon svg { width: 22px; height: 22px; color: #16a34a; }
+    .promo-banner-content { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; }
+    .promo-banner-title { font-size: 0.6875rem; font-weight: 600; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; }
+    .promo-banner-code { font-family: monospace; font-size: 1.125rem; font-weight: 700; color: #16a34a; }
+    .promo-banner-desc { font-size: 0.8125rem; color: #166534; }
+    .promo-banner-benefit { font-size: 0.9375rem; font-weight: 600; color: #15803d; }
+    .promo-banner-expiry { font-size: 0.75rem; color: #166534; }
+    .promo-banner-redeemed { font-size: 0.6875rem; color: #16a34a; font-style: italic; }
+    /* Promo Confirmation Modal */
+    .promo-confirm-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1.25rem;
+      background: #f9fafb;
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .promo-confirm-code { font-family: monospace; font-size: 1.25rem; font-weight: 700; color: var(--ubikala-olive, #5C6B3C); text-align: center; }
+    .promo-confirm-desc { font-size: 0.8125rem; color: #6b7280; text-align: center; }
+    .promo-confirm-desc:empty { display: none; }
+    .promo-confirm-benefit { padding: 0.75rem; background: #dcfce7; border: 1px solid #86efac; border-radius: 0.5rem; text-align: center; font-weight: 600; color: #166534; }
+    .promo-confirm-validity { font-size: 0.75rem; color: #6b7280; text-align: center; }
+    .promo-confirm-validity:empty { display: none; }
+    .promo-confirm-note { font-size: 0.75rem; color: #9ca3af; font-style: italic; margin: 0; }
   </style>
 
   <script>
@@ -703,17 +806,31 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
       }
     });
 
-    // Apply promo code
+    // Promo code handling
+    const promoConfirmModal = document.getElementById('promo-confirm-modal');
+    let validatedPromoData: any = null;
+
+    function formatBenefit(promo: any): string {
+      if (promo.discount_type === 'percentage') return `${promo.discount_value}% de descuento en tu plan`;
+      if (promo.discount_type === 'fixed') return `$${promo.discount_value} de descuento`;
+      if (promo.discount_type === 'trial_days') return `${promo.discount_value} días de prueba gratis`;
+      if (promo.discount_type === 'free_months') return `${promo.discount_value} ${promo.discount_value == 1 ? 'mes gratis' : 'meses gratis'}`;
+      return '';
+    }
+
     applyPromoBtn?.addEventListener('click', async () => {
       const code = promoCodeInput?.value.trim();
       if (!code) {
-        promoMessage!.textContent = 'Por favor ingresa un código';
-        promoMessage!.className = 'promo-message error';
+        if (promoMessage) {
+          promoMessage.textContent = 'Por favor ingresa un código';
+          promoMessage.className = 'promo-message error';
+        }
         return;
       }
 
-      applyPromoBtn.disabled = true;
+      (applyPromoBtn as HTMLButtonElement).disabled = true;
       applyPromoBtn.textContent = 'Validando...';
+      if (promoMessage) promoMessage.classList.add('hidden');
 
       try {
         const response = await fetch('/api/validate-promo-code', {
@@ -725,29 +842,89 @@ const otherPlans = isTeamMember ? [] : availablePlans.filter(p => p.id !== curre
         const result = await response.json();
 
         if (!response.ok) {
-          promoMessage!.textContent = result.error || 'Código inválido';
-          promoMessage!.className = 'promo-message error';
-        } else {
-          const promo = result.promoCode;
-          let discountText = '';
-          if (promo.discount_type === 'percentage') {
-            discountText = `${promo.discount_value}% de descuento`;
-          } else if (promo.discount_type === 'fixed') {
-            discountText = `$${promo.discount_value} de descuento`;
-          } else if (promo.discount_type === 'trial_days') {
-            discountText = `${promo.discount_value} días de prueba gratis`;
-          } else if (promo.discount_type === 'free_months') {
-            discountText = `${promo.discount_value} meses gratis`;
+          if (promoMessage) {
+            promoMessage.textContent = result.error || 'Código inválido';
+            promoMessage.className = 'promo-message error';
           }
-          promoMessage!.textContent = `Código válido: ${discountText}`;
-          promoMessage!.className = 'promo-message success';
+        } else {
+          validatedPromoData = result.promoCode;
+          const promo = result.promoCode;
+
+          const codeEl = document.getElementById('confirm-code');
+          const descEl = document.getElementById('confirm-desc');
+          const benefitEl = document.getElementById('confirm-benefit');
+          const validityEl = document.getElementById('confirm-validity');
+
+          if (codeEl) codeEl.textContent = promo.code;
+          if (descEl) descEl.textContent = promo.description || '';
+          if (benefitEl) benefitEl.textContent = formatBenefit(promo);
+          if (validityEl) validityEl.textContent = '';
+
+          promoConfirmModal?.classList.remove('hidden');
         }
       } catch (error: any) {
-        promoMessage!.textContent = 'Error al validar código';
-        promoMessage!.className = 'promo-message error';
+        if (promoMessage) {
+          promoMessage.textContent = 'Error al validar código';
+          promoMessage.className = 'promo-message error';
+        }
       } finally {
-        applyPromoBtn.disabled = false;
+        (applyPromoBtn as HTMLButtonElement).disabled = false;
         applyPromoBtn.textContent = 'Aplicar';
+      }
+    });
+
+    // Close promo confirm modal
+    function closePromoModal() {
+      promoConfirmModal?.classList.add('hidden');
+      validatedPromoData = null;
+    }
+
+    document.getElementById('close-promo-modal')?.addEventListener('click', closePromoModal);
+    document.getElementById('cancel-promo-modal')?.addEventListener('click', closePromoModal);
+    document.getElementById('promo-modal-backdrop')?.addEventListener('click', closePromoModal);
+
+    // Confirm redemption
+    document.getElementById('confirm-redeem-btn')?.addEventListener('click', async function() {
+      if (!validatedPromoData) return;
+
+      const btn = this as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = 'Canjeando...';
+
+      try {
+        const response = await fetch('/api/admin/account/redeem-promo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: validatedPromoData.code }),
+        });
+
+        const result = await response.json();
+
+        closePromoModal();
+
+        if (!response.ok) {
+          if (promoMessage) {
+            promoMessage.textContent = result.error || 'Error al canjear código';
+            promoMessage.className = 'promo-message error';
+          }
+        } else {
+          if (promoMessage) {
+            promoMessage.textContent = 'Código canjeado exitosamente. Recargando...';
+            promoMessage.className = 'promo-message success';
+          }
+          if (promoCodeInput) promoCodeInput.value = '';
+          setTimeout(() => window.location.reload(), 1500);
+        }
+      } catch (error: any) {
+        closePromoModal();
+        if (promoMessage) {
+          promoMessage.textContent = 'Error al canjear código';
+          promoMessage.className = 'promo-message error';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Canjear';
+        validatedPromoData = null;
       }
     });
   </script>
