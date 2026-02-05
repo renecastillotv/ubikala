@@ -18,7 +18,7 @@ const { propertySlug, propertyTitle, agentName, agentWhatsapp, agentCompany } = 
     <input type="hidden" name="property_title" value={propertyTitle} />
     <input type="hidden" name="agent_name" value={agentName} />
     <input type="hidden" name="agent_company" value={agentCompany || ''} />
-    <input type="hidden" name="source" value="propiedadenrd" />
+    <input type="hidden" name="source" value="ubikala" />
 
     <div>
       <label for="contact-name" class="block text-sm font-medium text-gray-700 mb-1">
@@ -151,7 +151,7 @@ const { propertySlug, propertyTitle, agentName, agentWhatsapp, agentCompany } = 
         phone: formData.get('phone'),
         email: formData.get('email') || null,
         message: formData.get('message') || 'Interesado en: ' + formData.get('property_title'),
-        source: 'propiedadenrd',
+        source: 'ubikala',
         session_id: sessionStorage.getItem('session_id') || Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         agent_name: formData.get('agent_name'),
         agent_company: formData.get('agent_company')

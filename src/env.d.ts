@@ -26,5 +26,6 @@ declare namespace App {
       company_name?: string | null;
       license_number?: string | null;
     };
+    country: import('./lib/country-config').CountryConfig;
   }
 }

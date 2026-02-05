@@ -25,10 +25,12 @@ const statusLabels: Record<string, string> = {
 };
 
 const sourceLabels: Record<string, string> = {
+  ubikala: 'Ubikala.com',
   website: 'Web',
   whatsapp: 'WhatsApp',
   phone: 'Teléfono',
   referral: 'Referido',
+  propiedadenrd: 'PropiedadEnRD',
 };
 
 function formatDate(dateStr: string): string {
@@ -418,10 +420,12 @@ function formatDate(dateStr: string): string {
     .badge-status-interested { background: #dcfce7; color: #166534; }
     .badge-status-discarded { background: #fee2e2; color: #991b1b; }
     .badge-status-closed { background: #f3f4f6; color: #374151; }
+    .badge-source-ubikala { background: #e8edde; color: #5C6B3C; }
     .badge-source-website { background: #dbeafe; color: #1e40af; }
     .badge-source-whatsapp { background: #dcfce7; color: #166534; }
     .badge-source-phone { background: #fef3c7; color: #92400e; }
     .badge-source-referral { background: #f3e8ff; color: #7c3aed; }
+    .badge-source-propiedadenrd { background: #fef3c7; color: #92400e; }
     .breakdown-count {
       font-size: 1.125rem;
       font-weight: 700;

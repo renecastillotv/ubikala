@@ -19,6 +19,9 @@ interface Props {
 // Fetch site config from API
 const config = await getSiteConfig();
 
+// Country detection from subdomain
+const country = Astro.locals.country;
+
 const {
   title,
   description,
@@ -134,7 +137,7 @@ const websiteSchema = {
 ---
 
 <!DOCTYPE html>
-<html lang={lang} class="scroll-smooth">
+<html lang={lang} class="scroll-smooth" data-country={country.code}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -144,6 +147,10 @@ const websiteSchema = {
     <meta name="description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
+
+    <!-- Country detection -->
+    <meta name="ubikala:country" content={country.code} />
+    <meta name="ubikala:country-name" content={country.name} />
 
     <!-- Canonical URL -->
     <link rel="canonical" href={fullCanonicalUrl} />
