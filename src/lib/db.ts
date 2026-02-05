@@ -121,23 +121,43 @@ const PORTAL_FILTER = `(
 )`;
 
 // Helper function to convert Ubikala property to Property interface
-function ubikalaToProperty(up: UbikalaProperty): Property {
+// Helper to generate slug from name
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+export function ubikalaToProperty(up: UbikalaProperty): Property {
+  // Generate a unique slug for Ubikala users: ubk-{name-slug}-{short-id}
+  const ownerSlug = up.owner_id
+    ? `ubk-${slugify(up.owner_name || 'usuario')}-${up.owner_id.substring(0, 8)}`
+    : 'ubikala';
+
   // Build agents array with owner info if available
   const agents = up.owner_name ? [{
-    id: 0,
+    id: up.owner_id || up.created_by || '0',
     nombre: up.owner_name,
     telefono: up.owner_phone || up.contacto_telefono || '',
     whatsapp: up.contacto_whatsapp || up.owner_phone || '',
     email: up.owner_email || up.contacto_email || '',
     foto: up.owner_avatar || '/images/agent-placeholder.svg',
-    slug: 'propietario',
+    slug: ownerSlug,
     verified: up.owner_verified || false,
     company: up.owner_company_name || undefined,
     role: up.owner_role || 'propietario',
+    bio: up.owner_bio || '',
+    propertiesCount: Number(up.owner_properties_count) || 0,
+    isUbikalaUser: true, // Flag to identify Ubikala users
   }] : [];
 
   return {
-    id: parseInt(up.id) || 0,
+    id: up.id, // Keep UUID as-is for Ubikala properties
     tenant_id: 0,
     titulo: up.titulo,
     slug: up.slug,

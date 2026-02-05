@@ -64,11 +64,9 @@ const mapCoordinates = propertyHasCoords
 const primaryImage = property.images.find(img => img.isPrimary) || property.images[0];
 
 function formatPrice(price: number, currency: string, isRent: boolean): string {
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    maximumFractionDigits: 0,
-  }).format(price);
+  // Use explicit currency symbols for clarity
+  const currencySymbol = currency === 'DOP' ? 'RD$' : 'US$';
+  const formatted = `${currencySymbol} ${price.toLocaleString('en-US')}`;
   return isRent ? `${formatted}${t.property.pricePerMonth}` : formatted;
 }
 
@@ -459,7 +457,7 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
               </div>
 
               <a
-                href={`/asesor/${agent?.slug}`}
+                href={agent?.isUbikalaUser ? `/usuario/${agent?.slug}` : `/asesor/${agent?.slug}`}
                 class="btn-outline w-full justify-center text-sm"
               >
                 {t.agent.viewProfile}

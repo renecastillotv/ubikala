@@ -150,6 +150,7 @@ export interface UbikalaProperty {
   updated_at: string;
   source?: 'ubikala' | 'clic';
   // Owner info from JOIN
+  owner_id?: string;
   owner_name?: string;
   owner_avatar?: string;
   owner_phone?: string;
@@ -157,6 +158,8 @@ export interface UbikalaProperty {
   owner_verified?: boolean;
   owner_role?: UserRole;
   owner_company_name?: string;
+  owner_bio?: string;
+  owner_properties_count?: number;
 }
 
 // User queries
@@ -174,6 +177,31 @@ export async function getUserById(id: string): Promise<UbikalaUser | null> {
     SELECT * FROM ubikala_users WHERE id = ${id} AND is_active = true
   `;
   return rows[0] as UbikalaUser || null;
+}
+
+// Get user by slug format: ubk-{name-slug}-{short-id}
+// The short-id is the first 8 characters of the user's UUID
+export async function getUserBySlug(slug: string): Promise<(UbikalaUser & { properties_count: number }) | null> {
+  if (!ubikalaDb) return null;
+
+  // Extract the short-id from the slug (last segment after final dash)
+  // Format: ubk-name-slug-12345678
+  const parts = slug.split('-');
+  if (parts.length < 3 || parts[0] !== 'ubk') return null;
+
+  const shortId = parts[parts.length - 1];
+  if (shortId.length !== 8) return null;
+
+  // Find user where ID starts with the short-id
+  const rows = await ubikalaDb`
+    SELECT u.*,
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) as properties_count
+    FROM ubikala_users u
+    WHERE u.id::text LIKE ${shortId + '%'} AND u.is_active = true
+    LIMIT 1
+  `;
+
+  return rows[0] as (UbikalaUser & { properties_count: number }) || null;
 }
 
 export async function updateUserLastLogin(userId: string): Promise<void> {
@@ -340,13 +368,16 @@ export async function getUbikalaProperties(options: {
     ? await ubikalaDb`
         SELECT
           p.*,
+          u.id as owner_id,
           u.name as owner_name,
           u.avatar_url as owner_avatar,
           u.phone as owner_phone,
           u.email as owner_email,
           u.is_verified as owner_verified,
           u.role as owner_role,
-          u.company_name as owner_company_name
+          u.company_name as owner_company_name,
+          u.bio as owner_bio,
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
         FROM ubikala_properties p
         LEFT JOIN ubikala_users u ON p.created_by = u.id
         WHERE p.activo = ${activoValue}
@@ -356,13 +387,16 @@ export async function getUbikalaProperties(options: {
     : await ubikalaDb`
         SELECT
           p.*,
+          u.id as owner_id,
           u.name as owner_name,
           u.avatar_url as owner_avatar,
           u.phone as owner_phone,
           u.email as owner_email,
           u.is_verified as owner_verified,
           u.role as owner_role,
-          u.company_name as owner_company_name
+          u.company_name as owner_company_name,
+          u.bio as owner_bio,
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
         FROM ubikala_properties p
         LEFT JOIN ubikala_users u ON p.created_by = u.id
         ORDER BY p.created_at DESC
@@ -377,13 +411,16 @@ export async function getUbikalaPropertyBySlug(slug: string): Promise<UbikalaPro
   const rows = await ubikalaDb`
     SELECT
       p.*,
+      u.id as owner_id,
       u.name as owner_name,
       u.avatar_url as owner_avatar,
       u.phone as owner_phone,
       u.email as owner_email,
       u.is_verified as owner_verified,
       u.role as owner_role,
-      u.company_name as owner_company_name
+      u.company_name as owner_company_name,
+      u.bio as owner_bio,
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
     FROM ubikala_properties p
     LEFT JOIN ubikala_users u ON p.created_by = u.id
     WHERE p.slug = ${slug}
@@ -396,13 +433,16 @@ export async function getUbikalaPropertyById(id: string): Promise<UbikalaPropert
   const rows = await ubikalaDb`
     SELECT
       p.*,
+      u.id as owner_id,
       u.name as owner_name,
       u.avatar_url as owner_avatar,
       u.phone as owner_phone,
       u.email as owner_email,
       u.is_verified as owner_verified,
       u.role as owner_role,
-      u.company_name as owner_company_name
+      u.company_name as owner_company_name,
+      u.bio as owner_bio,
+      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
     FROM ubikala_properties p
     LEFT JOIN ubikala_users u ON p.created_by = u.id
     WHERE p.id = ${id}
@@ -655,14 +695,49 @@ export async function getPropertiesByUser(userId: string, options: {
 }): Promise<UbikalaProperty[]> {
   if (!ubikalaDb) return [];
 
-  const { limit = 20, offset = 0 } = options;
+  const { limit = 20, offset = 0, activo } = options;
 
-  const rows = await ubikalaDb`
-    SELECT * FROM ubikala_properties
-    WHERE created_by = ${userId}
-    ORDER BY created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  // Build query based on activo filter - include owner info for proper display
+  let rows;
+  if (activo !== undefined) {
+    rows = await ubikalaDb`
+      SELECT p.*,
+        u.id as owner_id,
+        u.name as owner_name,
+        u.avatar_url as owner_avatar,
+        u.phone as owner_phone,
+        u.email as owner_email,
+        u.is_verified as owner_verified,
+        u.role as owner_role,
+        u.company_name as owner_company_name,
+        u.bio as owner_bio,
+        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+      FROM ubikala_properties p
+      LEFT JOIN ubikala_users u ON p.created_by = u.id
+      WHERE p.created_by = ${userId} AND p.activo = ${activo}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+  } else {
+    rows = await ubikalaDb`
+      SELECT p.*,
+        u.id as owner_id,
+        u.name as owner_name,
+        u.avatar_url as owner_avatar,
+        u.phone as owner_phone,
+        u.email as owner_email,
+        u.is_verified as owner_verified,
+        u.role as owner_role,
+        u.company_name as owner_company_name,
+        u.bio as owner_bio,
+        (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = p.created_by AND activo = true) as owner_properties_count
+      FROM ubikala_properties p
+      LEFT JOIN ubikala_users u ON p.created_by = u.id
+      WHERE p.created_by = ${userId}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+  }
 
   return (rows as UbikalaProperty[]).map(p => ({ ...p, source: 'ubikala' as const }));
 }

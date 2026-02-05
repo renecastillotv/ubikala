@@ -57,6 +57,7 @@ export interface Agent {
     facebook?: string;
     linkedin?: string;
   };
+  isUbikalaUser?: boolean;
 }
 
 export interface Property {

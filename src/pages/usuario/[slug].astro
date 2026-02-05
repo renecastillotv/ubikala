@@ -1,0 +1,270 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PropertyCard from '../../components/PropertyCard.astro';
+import Icon from '../../components/Icons.astro';
+import { useTranslations } from '../../i18n';
+import { getUserBySlug, getPropertiesByUser, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../lib/ubikala-db';
+import { ubikalaToProperty } from '../../lib/db';
+import { transformProperty, type DBProperty } from '../../lib/transformers';
+import type { Agent, Property } from '../../data/types';
+
+// SSR for dynamic pages
+export const prerender = false;
+
+const { slug } = Astro.params;
+const t = useTranslations('es');
+
+// Fetch Ubikala user by slug
+let user: (UbikalaUser & { properties_count: number }) | null = null;
+let userProperties: Property[] = [];
+
+try {
+  user = await getUserBySlug(slug || '');
+  if (user) {
+    // Fetch user's properties and transform them for display
+    const dbProperties = await getPropertiesByUser(user.id, { limit: 50, activo: true });
+    // First convert to legacy format, then transform to front-end format
+    userProperties = dbProperties.map(p => {
+      const legacyProp = ubikalaToProperty(p as UbikalaProperty);
+      return transformProperty(legacyProp as unknown as DBProperty);
+    });
+  }
+} catch (error) {
+  console.error('Error fetching user:', error);
+}
+
+if (!user) {
+  return Astro.redirect('/404');
+}
+
+// Convert to agent-like format for display
+const agent: Partial<Agent> = {
+  id: user.id,
+  slug: slug || '',
+  name: user.name,
+  email: user.email,
+  phone: user.phone || '',
+  whatsapp: user.phone || '',
+  photo: user.avatar_url || '/images/agent-placeholder.svg',
+  company: user.company_name || undefined,
+  userType: user.role === 'inmobiliaria' ? 'agent' : user.role === 'asesor_independiente' ? 'independent' : 'owner',
+  verified: user.is_verified,
+  bio: user.bio || '',
+  propertiesCount: user.properties_count,
+  responseTime: 'menos de 1 hora',
+  rating: 5,
+  reviewCount: 0,
+  experienceYears: 0,
+  languages: ['Espanol'],
+  specializations: [],
+  locations: [],
+};
+
+// Check if user has valid photo
+const hasValidPhoto = user.avatar_url &&
+  user.avatar_url !== '/images/agent-placeholder.svg' &&
+  !user.avatar_url.includes('placeholder');
+const userInitials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+
+// Schema for SEO
+const userSchema = {
+  '@context': 'https://schema.org',
+  '@type': ['Person', 'RealEstateAgent'],
+  '@id': `https://ubikala.com/usuario/${slug}#user`,
+  name: user.name,
+  url: `https://ubikala.com/usuario/${slug}`,
+  image: hasValidPhoto ? user.avatar_url : undefined,
+  description: user.bio || `${getRoleLabel(user.role)} en Ubikala`,
+  telephone: user.phone,
+  email: user.email,
+  jobTitle: getRoleLabel(user.role),
+  worksFor: user.company_name ? {
+    '@type': 'Organization',
+    name: user.company_name,
+  } : undefined,
+  areaServed: { '@type': 'Country', name: 'Dominican Republic' },
+};
+
+// Breadcrumb Schema
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://ubikala.com' },
+    { '@type': 'ListItem', position: 2, name: 'Usuarios', item: 'https://ubikala.com/usuarios' },
+    { '@type': 'ListItem', position: 3, name: user.name, item: `https://ubikala.com/usuario/${slug}` }
+  ]
+};
+
+const pageTitle = `${user.name} - ${user.company_name || getRoleLabel(user.role)} | Ubikala`;
+const pageDescription = user.bio
+  ? `${user.bio.substring(0, 150)}... Contacta a ${user.name} para propiedades en Republica Dominicana.`
+  : `${user.name} - ${getRoleLabel(user.role)}. ${user.properties_count} propiedades activas. Contacta ahora.`;
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={user.avatar_url || undefined}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(userSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head" />
+
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/" class="hover:text-primary-600">Inicio</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{user.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Sidebar - User Info -->
+        <div class="lg:col-span-1">
+          <div class="card p-6 sticky top-24">
+            <!-- Photo and name -->
+            <div class="text-center mb-6">
+              <div class="relative inline-block">
+                {hasValidPhoto ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    class="w-32 h-32 rounded-full object-cover mx-auto ring-4 ring-gray-100"
+                  />
+                ) : (
+                  <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 mx-auto ring-4 ring-gray-100 flex items-center justify-center">
+                    <span class="text-white text-3xl font-bold">{userInitials}</span>
+                  </div>
+                )}
+                {user.is_verified && (
+                  <span class="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center ring-2 ring-white">
+                    <Icon name="check" class="w-5 h-5 text-white" />
+                  </span>
+                )}
+              </div>
+              <h1 class="text-2xl font-bold text-gray-900 mt-4">{user.name}</h1>
+              <p class="text-gray-600">{user.company_name || getRoleLabel(user.role)}</p>
+              {user.is_verified && (
+                <span class="inline-flex items-center gap-1 text-sm text-primary-600 mt-2">
+                  <Icon name="verified" class="w-4 h-4" />
+                  Usuario Verificado
+                </span>
+              )}
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 gap-4 mb-6">
+              <div class="text-center p-3 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-bold text-gray-900">{user.properties_count}</div>
+                <div class="text-sm text-gray-600">Propiedades Activas</div>
+              </div>
+            </div>
+
+            <!-- Role badge -->
+            <div class="mb-6">
+              <span class="inline-flex items-center gap-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
+                <Icon name="user" class="w-4 h-4" />
+                {getRoleLabel(user.role)}
+              </span>
+            </div>
+
+            <!-- Contact buttons -->
+            <div class="space-y-3">
+              {user.phone && (
+                <a
+                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hola ${user.name}, te contacto desde Ubikala`}
+                  target="_blank"
+                  class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
+                >
+                  <Icon name="whatsapp" class="w-5 h-5 mr-2" />
+                  WhatsApp
+                </a>
+              )}
+              {user.phone && (
+                <a
+                  href={`tel:${user.phone}`}
+                  class="btn-primary w-full justify-center"
+                >
+                  <Icon name="phone" class="w-5 h-5 mr-2" />
+                  Llamar
+                </a>
+              )}
+              {user.email && (
+                <a
+                  href={`mailto:${user.email}`}
+                  class="btn-outline w-full justify-center"
+                >
+                  <Icon name="email" class="w-5 h-5 mr-2" />
+                  Email
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-2">
+          <!-- Bio -->
+          {user.bio && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Sobre {user.name}</h2>
+              <p class="text-gray-600 leading-relaxed">{user.bio}</p>
+            </div>
+          )}
+
+          <!-- Company info for inmobiliarias -->
+          {user.role === 'inmobiliaria' && user.company_name && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Empresa</h2>
+              <div class="flex items-start gap-4">
+                {user.company_logo && (
+                  <img src={user.company_logo} alt={user.company_name} class="w-16 h-16 object-contain rounded" />
+                )}
+                <div>
+                  <h3 class="font-semibold text-gray-900">{user.company_name}</h3>
+                  {user.company_description && (
+                    <p class="text-gray-600 text-sm mt-1">{user.company_description}</p>
+                  )}
+                  {user.company_website && (
+                    <a href={user.company_website} target="_blank" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
+                      Visitar sitio web
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <!-- User's Properties -->
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">
+              Propiedades de {user.name}
+              <span class="text-gray-500 font-normal">({userProperties.length})</span>
+            </h2>
+
+            {userProperties.length > 0 ? (
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {userProperties.map((property) => (
+                  <PropertyCard property={property} />
+                ))}
+              </div>
+            ) : (
+              <div class="card p-8 text-center">
+                <Icon name="house" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p class="text-gray-600">Este usuario no tiene propiedades activas actualmente.</p>
+                <a href="/comprar" class="btn-primary mt-4">
+                  Ver todas las propiedades
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

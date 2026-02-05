@@ -46,7 +46,7 @@ export interface DBProperty {
   amenidades: string[];
   caracteristicas: {
     agents?: Array<{
-      id: number;
+      id: number | string;
       full_name?: string;
       nombre?: string;
       slug: string;
@@ -60,6 +60,8 @@ export interface DBProperty {
       company?: number | string;
       verified?: boolean;
       role?: string;
+      propertiesCount?: number;
+      isUbikalaUser?: boolean;
     }>;
     [key: string]: any;
   };
@@ -304,10 +306,12 @@ export function transformProperty(dbProp: DBProperty, forceRental: boolean = fal
       experienceYears: 5,
       languages: ['es'],
       bio: legacyAgent.bio || '',
-      propertiesCount: 0,
+      propertiesCount: legacyAgent.propertiesCount || 0,
       responseTime: 'Responde en menos de 1 hora',
       specializations: [],
-      locations: []
+      locations: [],
+      // Flag for Ubikala users to use different URL pattern
+      isUbikalaUser: legacyAgent.isUbikalaUser || false,
     } : {
       // Default fallback
       id: '0',

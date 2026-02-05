@@ -119,7 +119,7 @@ const typeLabel = typeLabels[property.type] || 'Propiedad';
       <!-- Agent info overlay on image -->
       {property.agent && (
         <a
-          href={localizedUrl(`/asesor/${property.agent.slug}`, lang)}
+          href={localizedUrl(property.agent.isUbikalaUser ? `/usuario/${property.agent.slug}` : `/asesor/${property.agent.slug}`, lang)}
           class="card-agent-overlay"
           onclick="event.stopPropagation();"
         >
