@@ -147,6 +147,15 @@ function ubikalaToProperty(up: UbikalaProperty): Property {
     operacion: up.operacion,
     precio: Number(up.precio),
     moneda: up.moneda || 'USD',
+    // Direct location fields for transformer compatibility
+    pais: up.pais || 'República Dominicana',
+    provincia: up.provincia || '',
+    ciudad: up.ciudad || '',
+    sector: up.sector || '',
+    direccion: up.direccion || '',
+    latitud: Number(up.latitud) || 0,
+    longitud: Number(up.longitud) || 0,
+    // Also keep ubicacion for backwards compatibility
     ubicacion: {
       pais: up.pais || 'República Dominicana',
       provincia: up.provincia || '',
@@ -157,6 +166,15 @@ function ubikalaToProperty(up: UbikalaProperty): Property {
       longitud: Number(up.longitud) || 0,
       slug: up.ciudad?.toLowerCase().replace(/\s+/g, '-') || '',
     },
+    // Direct feature fields for transformer compatibility
+    habitaciones: up.habitaciones || 0,
+    banos: up.banos || 0,
+    medios_banos: up.medios_banos || 0,
+    estacionamientos: up.estacionamientos || 0,
+    m2_construccion: String(up.m2_construccion || 0),
+    m2_terreno: up.m2_terreno ? String(up.m2_terreno) : null,
+    pisos: up.pisos || null,
+    amenidades: up.amenidades || [],
     caracteristicas: {
       habitaciones: up.habitaciones || 0,
       banos: up.banos || 0,
@@ -170,6 +188,10 @@ function ubikalaToProperty(up: UbikalaProperty): Property {
     portales: { ubikala: true },
     activo: up.activo,
     destacada: up.destacada,
+    estado_propiedad: up.estado || 'disponible',
+    exclusiva: up.exclusiva || false,
+    video_url: up.video_url || null,
+    tour_virtual_url: up.tour_virtual_url || null,
     created_at: up.created_at,
     updated_at: up.updated_at,
     // Additional fields for display
