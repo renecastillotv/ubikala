@@ -140,22 +140,255 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- CTA -->
+  <!-- Ventajas de Inmobiliarias -->
   <section class="py-16 bg-gray-50">
     <div class="container-custom">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4">
+        ¿Por Qué Elegir una Inmobiliaria Verificada?
+      </h2>
+      <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+        Las inmobiliarias ofrecen ventajas únicas sobre asesores independientes para operaciones inmobiliarias de mayor escala
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Equipo Multidisciplinario</h3>
+          <p class="text-gray-600 text-sm">
+            Múltiples asesores especializados por zona, tipo de propiedad y rango de precios
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Portafolio Extenso</h3>
+          <p class="text-gray-600 text-sm">
+            Mayor variedad de propiedades disponibles para compra, venta y alquiler
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Respaldo Institucional</h3>
+          <p class="text-gray-600 text-sm">
+            Garantía legal, seguros y protección en cada transacción inmobiliaria
+          </p>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 mb-2">Servicios Integrales</h3>
+          <p class="text-gray-600 text-sm">
+            Asesoría legal, financiera, valuación y gestión de documentos en un solo lugar
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Servicios y Cobertura -->
+  <section class="py-16">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Servicios -->
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            Servicios que Ofrecen las Inmobiliarias
+          </h2>
+          <div class="space-y-4">
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Compra y Venta</h3>
+                <p class="text-gray-600 text-sm">Intermediación profesional en transacciones de compraventa con documentación completa</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Alquileres</h3>
+                <p class="text-gray-600 text-sm">Gestión de contratos de arrendamiento, evaluación de inquilinos y cobranza</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Avalúos y Tasaciones</h3>
+                <p class="text-gray-600 text-sm">Valuación profesional de propiedades para venta, herencias o financiamiento</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Asesoría Legal</h3>
+                <p class="text-gray-600 text-sm">Revisión de títulos, contratos y acompañamiento en notaría</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cómo Elegir -->
+        <div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-6">
+            Cómo Elegir la Inmobiliaria Correcta
+          </h2>
+          <div class="space-y-6">
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">1</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Verifica su Experiencia</h3>
+                <p class="text-gray-600 text-sm">Revisa el número de propiedades activas y años en el mercado. Una inmobiliaria establecida tiene mejor conocimiento de precios y zonas.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">2</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Revisa su Portafolio</h3>
+                <p class="text-gray-600 text-sm">Busca inmobiliarias con propiedades similares a lo que necesitas en ubicación, tipo y rango de precio.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">3</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Consulta Referencias</h3>
+                <p class="text-gray-600 text-sm">Pregunta por testimonios de clientes anteriores y verifica su reputación en el mercado.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">4</div>
+              <div>
+                <h3 class="font-semibold text-gray-900">Evalúa la Comunicación</h3>
+                <p class="text-gray-600 text-sm">Una buena inmobiliaria responde rápido, es transparente con comisiones y mantiene informado al cliente.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+            <p class="text-blue-800 text-sm">
+              <strong>Consejo:</strong> Trabaja con inmobiliarias verificadas en Ubikala. Todas las empresas en nuestro directorio han sido validadas y cuentan con propiedades activas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQs -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4">
+        Preguntas Frecuentes sobre Inmobiliarias
+      </h2>
+      <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+        Resolvemos tus dudas sobre cómo trabajar con inmobiliarias
+      </p>
+
+      <div class="max-w-3xl mx-auto space-y-4">
+        <details class="bg-white rounded-xl shadow-sm group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer">
+            <span class="font-semibold text-gray-900">¿Cuánto cobra una inmobiliaria por sus servicios?</span>
+            <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            La comisión estándar en el mercado es entre 3% y 5% del valor de la transacción para ventas. En alquileres, generalmente es un mes de renta. Algunas inmobiliarias ofrecen servicios de administración de propiedades con tarifas mensuales del 8-10% del alquiler.
+          </div>
+        </details>
+
+        <details class="bg-white rounded-xl shadow-sm group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer">
+            <span class="font-semibold text-gray-900">¿Qué diferencia hay entre una inmobiliaria y un asesor independiente?</span>
+            <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            Las inmobiliarias tienen múltiples asesores, mayor portafolio de propiedades, respaldo legal institucional y servicios complementarios (avalúos, asesoría legal, financiamiento). Los asesores independientes ofrecen atención más personalizada y a veces comisiones más flexibles.
+          </div>
+        </details>
+
+        <details class="bg-white rounded-xl shadow-sm group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer">
+            <span class="font-semibold text-gray-900">¿Puedo trabajar con varias inmobiliarias a la vez?</span>
+            <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            Sí, a menos que firmes un contrato de exclusividad. Sin embargo, trabajar con una sola inmobiliaria de confianza suele dar mejores resultados porque el asesor se compromete más con tu caso y tiene incentivo para cerrar la operación rápidamente.
+          </div>
+        </details>
+
+        <details class="bg-white rounded-xl shadow-sm group">
+          <summary class="flex items-center justify-between p-6 cursor-pointer">
+            <span class="font-semibold text-gray-900">¿Qué documentos necesito para vender mi propiedad con una inmobiliaria?</span>
+            <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          <div class="px-6 pb-6 text-gray-600">
+            Generalmente necesitas: título de propiedad certificado, plano catastral, certificación de no gravamen, cédula del propietario, y si aplica, poder notarial o documentos de sucesión. La inmobiliaria te guiará sobre requisitos específicos según tu caso.
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Gradient -->
+  <section class="py-16 bg-gradient-to-r from-primary-600 to-primary-700">
+    <div class="container-custom">
       <div class="max-w-3xl mx-auto text-center">
-        <h2 class="text-3xl font-bold text-gray-900 mb-4">
+        <h2 class="text-3xl font-bold text-white mb-4">
           ¿Tienes una Inmobiliaria?
         </h2>
-        <p class="text-gray-600 text-lg mb-8">
+        <p class="text-primary-100 text-lg mb-8">
           Registra tu inmobiliaria en Ubikala y accede a miles de clientes potenciales.
           Gestiona tu equipo, publica propiedades y haz crecer tu negocio.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <a href="/publicar" class="btn-primary">
+          <a href="/publicar" class="bg-white text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3 rounded-lg transition-colors">
             Registrar mi Inmobiliaria
           </a>
-          <a href="/contacto" class="btn-outline">
+          <a href="/contacto" class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
             Más Información
           </a>
         </div>
@@ -163,24 +396,87 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- SEO Content -->
+  <!-- Links Relacionados -->
   <section class="py-12">
     <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Directorio de Inmobiliarias</h2>
-        <p>
-          Explora nuestro directorio de inmobiliarias verificadas con amplia experiencia en el mercado inmobiliario.
-          Cada inmobiliaria cuenta con un equipo de profesionales dedicados a ayudarte a encontrar la propiedad ideal.
-        </p>
+      <h2 class="text-xl font-bold text-gray-900 mb-6">Enlaces Relacionados</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="/asesores" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Asesores Independientes</span>
+            <p class="text-sm text-gray-500">Profesionales verificados</p>
+          </div>
+        </a>
 
-        <h3>¿Por qué elegir una inmobiliaria verificada?</h3>
-        <ul>
-          <li><strong>Equipo profesional:</strong> Múltiples asesores especializados por zona y tipo de propiedad</li>
-          <li><strong>Amplio portafolio:</strong> Mayor variedad de opciones para comprar, vender o alquilar</li>
-          <li><strong>Respaldo institucional:</strong> Garantía y seguridad en cada transacción</li>
-          <li><strong>Soporte integral:</strong> Asesoría legal, financiera y técnica</li>
-        </ul>
+        <a href="/comprar" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Propiedades en Venta</span>
+            <p class="text-sm text-gray-500">Explora el catálogo</p>
+          </div>
+        </a>
+
+        <a href="/guias/como-comprar" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Guía de Compra</span>
+            <p class="text-sm text-gray-500">Paso a paso</p>
+          </div>
+        </a>
       </div>
     </div>
   </section>
+
+  <!-- FAQ Schema -->
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "¿Cuánto cobra una inmobiliaria por sus servicios?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "La comisión estándar en el mercado es entre 3% y 5% del valor de la transacción para ventas. En alquileres, generalmente es un mes de renta. Algunas inmobiliarias ofrecen servicios de administración de propiedades con tarifas mensuales del 8-10% del alquiler."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué diferencia hay entre una inmobiliaria y un asesor independiente?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Las inmobiliarias tienen múltiples asesores, mayor portafolio de propiedades, respaldo legal institucional y servicios complementarios. Los asesores independientes ofrecen atención más personalizada y a veces comisiones más flexibles."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Puedo trabajar con varias inmobiliarias a la vez?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sí, a menos que firmes un contrato de exclusividad. Sin embargo, trabajar con una sola inmobiliaria de confianza suele dar mejores resultados."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "¿Qué documentos necesito para vender mi propiedad con una inmobiliaria?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Generalmente necesitas: título de propiedad certificado, plano catastral, certificación de no gravamen, cédula del propietario, y si aplica, poder notarial o documentos de sucesión."
+        }
+      }
+    ]
+  })} />
 </Layout>
