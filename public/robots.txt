@@ -1,18 +1,19 @@
-# Robots.txt for PropiedadEnRD.com
+# Robots.txt for Ubikala.com
 User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://propiedadenrd.com/sitemap-index.xml
+Sitemap: https://ubikala.com/sitemap.xml
 
 # Crawl-delay for bots
 Crawl-delay: 1
 
-# Block admin areas (when implemented)
+# Block admin areas
 Disallow: /admin/
 Disallow: /api/
 Disallow: /login
 Disallow: /registro
+Disallow: /favoritos
 
 # Allow search engines to index property images
 User-agent: Googlebot-Image
