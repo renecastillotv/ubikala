@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getUbikalaProperties, createProperty, logActivity, canUserPublish } from '../../../../lib/ubikala-db';
+import { notifyPropertyChange } from '../../../../lib/search-engine-ping';
 
 function generateSlug(titulo: string): string {
   return titulo
@@ -87,6 +88,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       entity_id: property.id,
       details: { titulo: property.titulo, slug: property.slug },
     });
+
+    // Notify search engines about new property (non-blocking)
+    notifyPropertyChange(property.slug).catch(() => {});
 
     return new Response(JSON.stringify({ property }), {
       status: 201,

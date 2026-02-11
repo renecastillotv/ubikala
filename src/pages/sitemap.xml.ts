@@ -96,9 +96,9 @@ export const GET: APIRoute = async () => {
   }
 
   try {
-    // 3. CLIC property slugs
     if (sql) {
-      const clicProperties = await sql`
+      // 3. All CLIC property detail pages
+      const clicProperties = await sql(`
         SELECT slug, updated_at
         FROM propiedades
         WHERE activo = true
@@ -106,7 +106,7 @@ export const GET: APIRoute = async () => {
         AND (portales @> '{"ubikala": true}'::jsonb OR portales @> '{"propiedadenrd": true}'::jsonb OR portales IS NULL OR portales = '{}'::jsonb)
         ORDER BY updated_at DESC
         LIMIT 10000
-      `;
+      `);
 
       for (const prop of clicProperties) {
         const lastmod = prop.updated_at
@@ -115,8 +115,8 @@ export const GET: APIRoute = async () => {
         entries.push(urlEntry(`/propiedad/${prop.slug}`, lastmod, 'weekly', '0.8'));
       }
 
-      // 4. CLIC agent slugs
-      const clicAgents = await sql`
+      // 4. CLIC agent pages
+      const clicAgents = await sql(`
         SELECT DISTINCT pa.slug
         FROM perfiles_asesor pa
         JOIN usuarios u ON pa.usuario_id = u.id
@@ -128,20 +128,20 @@ export const GET: APIRoute = async () => {
           AND p.activo = true
           AND (p.portales @> '{"ubikala": true}'::jsonb OR p.portales @> '{"propiedadenrd": true}'::jsonb OR p.portales IS NULL OR p.portales = '{}'::jsonb)
         )
-      `;
+      `);
 
       for (const agent of clicAgents) {
         entries.push(urlEntry(`/asesor/${agent.slug}`, today, 'weekly', '0.6'));
       }
 
       // 5. Location pages from ubicaciones table
-      const locations = await sql`
+      const locations = await sql(`
         SELECT slug, updated_at
         FROM ubicaciones
         WHERE activo = true
         AND slug IS NOT NULL AND slug != ''
         ORDER BY nombre ASC
-      `;
+      `);
 
       for (const loc of locations) {
         const lastmod = loc.updated_at
@@ -150,8 +150,8 @@ export const GET: APIRoute = async () => {
         entries.push(urlEntry(`/propiedades/${loc.slug}`, lastmod, 'weekly', '0.7'));
       }
 
-      // 6. Dynamic city slugs from properties (for cities not in ubicaciones)
-      const citySlugs = await sql`
+      // 6. City slugs from actual properties (not in ubicaciones)
+      const citySlugs = await sql(`
         SELECT DISTINCT
           LOWER(REPLACE(REPLACE(REPLACE(ciudad, ' ', '-'), '''', ''), '.', '')) as slug
         FROM propiedades
@@ -159,13 +159,10 @@ export const GET: APIRoute = async () => {
         AND ciudad IS NOT NULL AND ciudad != ''
         AND (portales @> '{"ubikala": true}'::jsonb OR portales @> '{"propiedadenrd": true}'::jsonb OR portales IS NULL OR portales = '{}'::jsonb)
         ORDER BY slug
-      `;
+      `);
 
-      // Generate type+location combinations for popular cities
       const locationSlugs = new Set<string>();
-      for (const loc of locations) {
-        locationSlugs.add(loc.slug);
-      }
+      for (const loc of locations) locationSlugs.add(loc.slug);
       for (const city of citySlugs) {
         if (city.slug && !locationSlugs.has(city.slug)) {
           entries.push(urlEntry(`/propiedades/${city.slug}`, today, 'weekly', '0.6'));
@@ -173,12 +170,66 @@ export const GET: APIRoute = async () => {
         }
       }
 
-      // 7. Type+Location combinations for main types and locations
-      const mainTypes = ['apartamento', 'casa', 'villa', 'penthouse', 'terreno'];
-      for (const type of mainTypes) {
-        for (const locSlug of locationSlugs) {
-          entries.push(urlEntry(`/comprar/${type}/${locSlug}`, today, 'weekly', '0.6'));
-          entries.push(urlEntry(`/alquilar/${type}/${locSlug}`, today, 'weekly', '0.5'));
+      // 7. Type+Location combos - ONLY those with actual properties
+      // Single efficient query: get all (tipo, ciudad) combos that have active properties
+      const typeLocationCombos = await sql(`
+        SELECT
+          LOWER(tipo) as tipo,
+          LOWER(REPLACE(REPLACE(REPLACE(ciudad, ' ', '-'), '''', ''), '.', '')) as ciudad_slug,
+          LOWER(operacion) as operacion,
+          COUNT(*) as cnt,
+          MAX(updated_at) as last_updated
+        FROM propiedades
+        WHERE activo = true
+        AND tipo IS NOT NULL AND tipo != ''
+        AND ciudad IS NOT NULL AND ciudad != ''
+        AND (portales @> '{"ubikala": true}'::jsonb OR portales @> '{"propiedadenrd": true}'::jsonb OR portales IS NULL OR portales = '{}'::jsonb)
+        GROUP BY LOWER(tipo), LOWER(REPLACE(REPLACE(REPLACE(ciudad, ' ', '-'), '''', ''), '.', '')), LOWER(operacion)
+        HAVING COUNT(*) >= 1
+        ORDER BY cnt DESC
+      `);
+
+      // Map DB type values to URL slugs
+      const typeToSlug: Record<string, string> = {
+        'apartamento': 'apartamento',
+        'casa': 'casa',
+        'villa': 'villa',
+        'penthouse': 'penthouse',
+        'terreno': 'terreno',
+        'solar': 'terreno',
+        'local comercial': 'local-comercial',
+        'local': 'local-comercial',
+        'oficina': 'oficina',
+        'nave': 'nave',
+        'finca': 'finca',
+      };
+
+      const addedCombos = new Set<string>();
+      for (const combo of typeLocationCombos) {
+        const typeSlug = typeToSlug[combo.tipo] || combo.tipo;
+        const locSlug = combo.ciudad_slug;
+        if (!typeSlug || !locSlug) continue;
+
+        const lastmod = combo.last_updated
+          ? new Date(combo.last_updated).toISOString().split('T')[0]
+          : today;
+
+        const isVenta = combo.operacion === 'venta' || combo.operacion === 'sale';
+        const isAlquiler = combo.operacion === 'alquiler' || combo.operacion === 'renta' || combo.operacion === 'rent';
+
+        if (isVenta) {
+          const key = `comprar/${typeSlug}/${locSlug}`;
+          if (!addedCombos.has(key)) {
+            entries.push(urlEntry(`/comprar/${typeSlug}/${locSlug}`, lastmod, 'weekly', '0.6'));
+            addedCombos.add(key);
+          }
+        }
+        if (isAlquiler) {
+          const key = `alquilar/${typeSlug}/${locSlug}`;
+          if (!addedCombos.has(key)) {
+            entries.push(urlEntry(`/alquilar/${typeSlug}/${locSlug}`, lastmod, 'weekly', '0.5'));
+            addedCombos.add(key);
+          }
         }
       }
     }
@@ -201,9 +252,9 @@ export const GET: APIRoute = async () => {
         entries.push(urlEntry(`/propiedad/${prop.slug}`, lastmod, 'weekly', '0.8'));
       }
 
-      // 9. Ubikala user slugs
+      // 9. Ubikala user pages
       const ubikalaUsers = await ubikalaDb`
-        SELECT id, name, slug, updated_at
+        SELECT slug, updated_at
         FROM ubikala_users
         WHERE is_active = true
         AND slug IS NOT NULL AND slug != ''

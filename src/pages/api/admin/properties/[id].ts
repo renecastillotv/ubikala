@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getUbikalaPropertyById, updateProperty, deleteProperty, logActivity } from '../../../../lib/ubikala-db';
+import { notifyPropertyChange } from '../../../../lib/search-engine-ping';
 
 // GET - Get single property
 export const GET: APIRoute = async ({ params }) => {
@@ -66,6 +67,11 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       entity_id: params.id,
       details: { fields: Object.keys(body) },
     });
+
+    // Notify search engines about updated property (non-blocking)
+    if (updatedProperty.slug) {
+      notifyPropertyChange(updatedProperty.slug).catch(() => {});
+    }
 
     return new Response(JSON.stringify({ property: updatedProperty }), {
       status: 200,
