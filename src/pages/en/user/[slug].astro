@@ -1,0 +1,373 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PropertyCard from '../../../components/PropertyCard.astro';
+import Icon from '../../../components/Icons.astro';
+import { useTranslations, localizedUrl, getAlternateUrls } from '../../../i18n';
+import { getUserBySlug, getPropertiesByUser, getParentCompanyInfo, getTeamMembers, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../../lib/ubikala-db';
+import { ubikalaToProperty } from '../../../lib/db';
+import { transformProperty, type DBProperty } from '../../../lib/transformers';
+import type { Agent, Property } from '../../../data/types';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const t = useTranslations('en');
+const alternateUrls = getAlternateUrls(`/en/user/${slug}`);
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+let user: (UbikalaUser & { properties_count: number }) | null = null;
+let userProperties: Property[] = [];
+
+try {
+  user = await getUserBySlug(slug || '');
+  if (user) {
+    const dbProperties = await getPropertiesByUser(user.id, { limit: 50, activo: true });
+    userProperties = dbProperties.map(p => {
+      const legacyProp = ubikalaToProperty(p as UbikalaProperty);
+      return transformProperty(legacyProp as unknown as DBProperty);
+    });
+  }
+} catch (error) {
+  console.error('Error fetching user:', error);
+}
+
+if (!user) {
+  return Astro.redirect('/en');
+}
+
+let parentCompanyInfo: Awaited<ReturnType<typeof getParentCompanyInfo>> = null;
+let teamMembers: UbikalaUser[] = [];
+let teamProperties: Property[] = [];
+
+try {
+  if (user.parent_user_id) {
+    parentCompanyInfo = await getParentCompanyInfo(user.id);
+  }
+  if (user.role === 'inmobiliaria') {
+    teamMembers = await getTeamMembers(user.id);
+    for (const member of teamMembers) {
+      const memberProps = await getPropertiesByUser(member.id, { limit: 50, activo: true });
+      const transformed = memberProps.map(p => {
+        const legacyProp = ubikalaToProperty(p as UbikalaProperty);
+        return transformProperty(legacyProp as unknown as DBProperty);
+      });
+      teamProperties.push(...transformed);
+    }
+  }
+} catch (error) {
+  console.error('Error fetching hierarchy data:', error);
+}
+
+const totalProperties = user.role === 'inmobiliaria'
+  ? userProperties.length + teamProperties.length
+  : userProperties.length;
+
+const allProperties = user.role === 'inmobiliaria'
+  ? [...userProperties, ...teamProperties]
+  : userProperties;
+
+function getDisplayLabel(): string {
+  if (user!.parent_user_id && parentCompanyInfo?.company_name) {
+    return `Real Estate Agent at ${parentCompanyInfo.company_name}`;
+  }
+  if (user!.role === 'inmobiliaria') {
+    return user!.company_name || 'Real Estate Agency';
+  }
+  if (user!.role === 'asesor_independiente') {
+    return 'Independent Agent';
+  }
+  return 'Property Owner';
+}
+
+const displayLabel = getDisplayLabel();
+
+const parentSlug = parentCompanyInfo && user.parent_user_id
+  ? `ubk-${slugify(parentCompanyInfo.parent_name || 'inmobiliaria')}-${user.parent_user_id.substring(0, 8)}`
+  : null;
+
+const hasValidPhoto = user.avatar_url &&
+  user.avatar_url !== '/images/agent-placeholder.svg' &&
+  !user.avatar_url.includes('placeholder');
+const userInitials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+
+const userSchema = {
+  '@context': 'https://schema.org',
+  '@type': user.role === 'inmobiliaria' ? 'RealEstateAgent' : ['Person', 'RealEstateAgent'],
+  '@id': `https://ubikala.com/en/user/${slug}#user`,
+  name: user.name,
+  url: `https://ubikala.com/en/user/${slug}`,
+  image: hasValidPhoto ? user.avatar_url : undefined,
+  description: user.bio || `${displayLabel} on Ubikala`,
+  telephone: user.phone,
+  email: user.email,
+  jobTitle: displayLabel,
+  worksFor: parentCompanyInfo?.company_name ? {
+    '@type': 'Organization',
+    name: parentCompanyInfo.company_name,
+  } : user.company_name ? {
+    '@type': 'Organization',
+    name: user.company_name,
+  } : undefined,
+  areaServed: { '@type': 'Country', name: 'Dominican Republic' },
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://ubikala.com/en' },
+    { '@type': 'ListItem', position: 2, name: user.name, item: `https://ubikala.com/en/user/${slug}` }
+  ]
+};
+
+const pageTitle = `${user.name} - ${displayLabel} | Ubikala`;
+const pageDescription = user.bio
+  ? `${user.bio.substring(0, 150)}... Contact ${user.name} for properties in the Dominican Republic.`
+  : `${user.name} - ${displayLabel}. ${totalProperties} active properties. Contact now.`;
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={user.avatar_url || undefined}
+  alternateLanguages={alternateUrls}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(userSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head" />
+
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{user.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+          <div class="card p-6 sticky top-24">
+            <div class="text-center mb-6">
+              <div class="relative inline-block">
+                {hasValidPhoto ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    class="w-32 h-32 rounded-full object-cover mx-auto ring-4 ring-gray-100"
+                  />
+                ) : (
+                  <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 mx-auto ring-4 ring-gray-100 flex items-center justify-center">
+                    <span class="text-white text-3xl font-bold">{userInitials}</span>
+                  </div>
+                )}
+                {user.is_verified && (
+                  <span class="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center ring-2 ring-white">
+                    <Icon name="check" class="w-5 h-5 text-white" />
+                  </span>
+                )}
+              </div>
+              <h1 class="text-2xl font-bold text-gray-900 mt-4">{user.name}</h1>
+              <p class="text-gray-600">{displayLabel}</p>
+              {user.is_verified && (
+                <span class="inline-flex items-center gap-1 text-sm text-primary-600 mt-2">
+                  <Icon name="verified" class="w-4 h-4" />
+                  Verified User
+                </span>
+              )}
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 gap-4 mb-6">
+              <div class="text-center p-3 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-bold text-gray-900">{totalProperties}</div>
+                <div class="text-sm text-gray-600">Active Properties</div>
+              </div>
+              {user.role === 'inmobiliaria' && teamMembers.length > 0 && (
+                <div class="text-center p-3 bg-gray-50 rounded-lg">
+                  <div class="text-2xl font-bold text-gray-900">{teamMembers.length}</div>
+                  <div class="text-sm text-gray-600">Team Members</div>
+                </div>
+              )}
+            </div>
+
+            <!-- Role badge -->
+            <div class="mb-6">
+              <span class="inline-flex items-center gap-2 px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm">
+                <Icon name={user.role === 'inmobiliaria' ? 'building' : 'user'} class="w-4 h-4" />
+                {displayLabel}
+              </span>
+            </div>
+
+            <!-- Parent company info -->
+            {parentCompanyInfo && parentSlug && (
+              <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p class="text-xs text-gray-500 uppercase tracking-wide mb-2">Affiliated with</p>
+                <a href={localizedUrl(`/usuario/${parentSlug}`, 'en')} class="flex items-center gap-3 group">
+                  {parentCompanyInfo.company_logo ? (
+                    <img
+                      src={parentCompanyInfo.company_logo}
+                      alt={parentCompanyInfo.company_name || ''}
+                      class="w-10 h-10 object-contain rounded"
+                    />
+                  ) : (
+                    <div class="w-10 h-10 rounded bg-primary-100 flex items-center justify-center">
+                      <Icon name="building" class="w-5 h-5 text-primary-600" />
+                    </div>
+                  )}
+                  <div>
+                    <p class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                      {parentCompanyInfo.company_name || parentCompanyInfo.parent_name}
+                    </p>
+                    <p class="text-xs text-gray-500">View agency profile</p>
+                  </div>
+                </a>
+              </div>
+            )}
+
+            <!-- Contact buttons -->
+            <div class="space-y-3">
+              {user.phone && (
+                <a
+                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hello ${user.name}, I'm contacting you from Ubikala`}
+                  target="_blank"
+                  class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
+                >
+                  <Icon name="whatsapp" class="w-5 h-5 mr-2" />
+                  WhatsApp
+                </a>
+              )}
+              {user.phone && (
+                <a
+                  href={`tel:${user.phone}`}
+                  class="btn-primary w-full justify-center"
+                >
+                  <Icon name="phone" class="w-5 h-5 mr-2" />
+                  Call
+                </a>
+              )}
+              {user.email && (
+                <a
+                  href={`mailto:${user.email}`}
+                  class="btn-outline w-full justify-center"
+                >
+                  <Icon name="email" class="w-5 h-5 mr-2" />
+                  Email
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-2">
+          {user.bio && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">About {user.name}</h2>
+              <p class="text-gray-600 leading-relaxed">{user.bio}</p>
+            </div>
+          )}
+
+          <!-- Company info for inmobiliarias -->
+          {user.role === 'inmobiliaria' && user.company_name && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">Company</h2>
+              <div class="flex items-start gap-4">
+                {user.company_logo && (
+                  <img src={user.company_logo} alt={user.company_name} class="w-16 h-16 object-contain rounded" />
+                )}
+                <div>
+                  <h3 class="font-semibold text-gray-900">{user.company_name}</h3>
+                  {user.company_description && (
+                    <p class="text-gray-600 text-sm mt-1">{user.company_description}</p>
+                  )}
+                  {user.company_website && (
+                    <a href={user.company_website} target="_blank" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
+                      Visit website
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <!-- Team section -->
+          {user.role === 'inmobiliaria' && teamMembers.length > 0 && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">
+                Team
+                <span class="text-gray-500 font-normal">({teamMembers.length})</span>
+              </h2>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {teamMembers.map(member => {
+                  const memberSlug = `ubk-${slugify(member.name)}-${member.id.substring(0, 8)}`;
+                  const memberHasPhoto = member.avatar_url &&
+                    member.avatar_url !== '/images/agent-placeholder.svg' &&
+                    !member.avatar_url.includes('placeholder');
+                  const memberInitials = member.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+                  return (
+                    <a href={localizedUrl(`/usuario/${memberSlug}`, 'en')} class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group">
+                      {memberHasPhoto ? (
+                        <img
+                          src={member.avatar_url}
+                          alt={member.name}
+                          class="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                          <span class="text-white text-sm font-bold">{memberInitials}</span>
+                        </div>
+                      )}
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate group-hover:text-primary-600">{member.name}</p>
+                        <p class="text-xs text-gray-500">{getRoleLabel(member.role)}</p>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <!-- Properties -->
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">
+              {user.role === 'inmobiliaria' ? `Properties by ${user.company_name || user.name}` : `${user.name}'s Properties`}
+              <span class="text-gray-500 font-normal">({allProperties.length})</span>
+            </h2>
+
+            {allProperties.length > 0 ? (
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {allProperties.map((property) => (
+                  <PropertyCard property={property} />
+                ))}
+              </div>
+            ) : (
+              <div class="card p-8 text-center">
+                <Icon name="house" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p class="text-gray-600">This user has no active properties at this time.</p>
+                <a href="/en/buy" class="btn-primary mt-4">
+                  View all properties
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

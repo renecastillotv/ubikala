@@ -98,6 +98,7 @@ export const routeTranslations: Record<string, Record<Lang, string>> = {
   'buscar': { es: 'buscar', en: 'search', fr: 'recherche' },
   'propiedad': { es: 'propiedad', en: 'property', fr: 'propriete' },
   'asesor': { es: 'asesor', en: 'agent', fr: 'agent' },
+  'usuario': { es: 'usuario', en: 'user', fr: 'utilisateur' },
   'propiedades': { es: 'propiedades', en: 'properties', fr: 'proprietes' },
   'privacidad': { es: 'privacidad', en: 'privacy', fr: 'confidentialite' },
   'terminos': { es: 'terminos', en: 'terms', fr: 'conditions' },
@@ -155,6 +156,13 @@ const availableRoutes: Record<Lang, Set<string>> = {
   fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'immobilieres', 'louer', 'publier', 'recherche']),
 };
 
+/** Route prefixes that have dynamic sub-routes (e.g. /en/agent/[slug]) */
+const nestedRoutePrefixes: Record<Lang, Set<string>> = {
+  es: new Set(), // ES is default
+  en: new Set(['agent', 'user', 'property']),
+  fr: new Set(['agent', 'utilisateur', 'propriete']),
+};
+
 function isRouteAvailable(path: string, lang: Lang): boolean {
   if (lang === defaultLang) return true;
 
@@ -165,8 +173,11 @@ function isRouteAvailable(path: string, lang: Lang): boolean {
   const segments = afterPrefix.split('/').filter(Boolean);
   if (segments.length === 0) return true;
 
-  // Only flat (single-segment) routes exist in EN/FR currently
-  return segments.length === 1 && availableRoutes[lang].has(segments[0]);
+  // Single-segment flat routes
+  if (segments.length === 1) return availableRoutes[lang].has(segments[0]);
+
+  // Nested routes: first segment must be a known prefix with dynamic children
+  return nestedRoutePrefixes[lang].has(segments[0]);
 }
 
 /**

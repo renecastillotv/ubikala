@@ -1,0 +1,265 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PropertyCard from '../../../components/PropertyCard.astro';
+import Icon from '../../../components/Icons.astro';
+import { useTranslations, localizedUrl, getAlternateUrls } from '../../../i18n';
+import { getAgentBySlug, getPropertiesByAgent } from '../../../lib/meilisearch';
+import type { Agent, Property } from '../../../data/types';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls(`/fr/agent/${slug}`);
+
+let agent: Agent | null = null;
+let agentProperties: Property[] = [];
+
+try {
+  agent = await getAgentBySlug(slug || '');
+  if (agent) {
+    agentProperties = await getPropertiesByAgent(agent.slug, 12, 'fr');
+  }
+} catch (error) {
+  console.error('Error fetching agent:', error);
+}
+
+if (!agent) {
+  return Astro.redirect('/fr');
+}
+
+const actualPropertyCount = agentProperties.length;
+
+const agentSchema = {
+  '@context': 'https://schema.org',
+  '@type': ['Person', 'RealEstateAgent'],
+  '@id': `https://ubikala.com/fr/agent/${agent.slug}#agent`,
+  name: agent.name,
+  url: `https://ubikala.com/fr/agent/${agent.slug}`,
+  image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
+  description: agent.bio || `Agent immobilier verifie en Republique Dominicaine`,
+  telephone: agent.phone,
+  email: agent.email,
+  jobTitle: 'Agent Immobilier',
+  worksFor: agent.company ? { '@type': 'Organization', name: agent.company } : undefined,
+  areaServed: agent.locations.length > 0
+    ? agent.locations.map(loc => ({ '@type': 'City', name: loc }))
+    : { '@type': 'Country', name: 'Dominican Republic' },
+  knowsLanguage: agent.languages,
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: agent.rating || 5,
+    bestRating: 5,
+    worstRating: 1,
+    reviewCount: agent.reviewCount || 1,
+    ratingCount: agent.reviewCount || 1
+  }
+};
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://ubikala.com/fr' },
+    { '@type': 'ListItem', position: 2, name: 'Agents', item: 'https://ubikala.com/fr/agents' },
+    { '@type': 'ListItem', position: 3, name: agent.name, item: `https://ubikala.com/fr/agent/${agent.slug}` }
+  ]
+};
+
+const hasValidPhoto = agent.photo &&
+  agent.photo !== '/images/agent-placeholder.svg' &&
+  !agent.photo.includes('placeholder');
+const agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+
+const pageTitle = `${agent.name} - ${agent.company || 'Agent Immobilier'} | Ubikala`;
+const pageDescription = agent.bio
+  ? `${agent.bio.substring(0, 150)}... Contactez ${agent.name} pour des proprietes a ${agent.locations.slice(0, 3).join(', ')}.`
+  : `${agent.name} - Agent immobilier verifie. ${actualPropertyCount} proprietes actives. Contactez maintenant.`;
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  image={agent.photo}
+  alternateLanguages={alternateUrls}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(agentSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head" />
+
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <a href="/fr/agents" class="hover:text-primary-600">{t.nav.agents}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{agent.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container-custom">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+          <div class="card p-6 sticky top-24">
+            <div class="text-center mb-6">
+              <div class="relative inline-block">
+                {hasValidPhoto ? (
+                  <img
+                    src={agent.photo}
+                    alt={agent.name}
+                    class="w-32 h-32 rounded-full object-cover mx-auto ring-4 ring-gray-100"
+                  />
+                ) : (
+                  <div class="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 mx-auto ring-4 ring-gray-100 flex items-center justify-center">
+                    <span class="text-white text-3xl font-bold">{agentInitials}</span>
+                  </div>
+                )}
+                {agent.verified && (
+                  <span class="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center ring-2 ring-white">
+                    <Icon name="check" class="w-5 h-5 text-white" />
+                  </span>
+                )}
+              </div>
+              <h1 class="text-2xl font-bold text-gray-900 mt-4">{agent.name}</h1>
+              {agent.company && (
+                <p class="text-gray-600">{agent.company}</p>
+              )}
+              {agent.verified && (
+                <span class="inline-flex items-center gap-1 text-sm text-primary-600 mt-2">
+                  <Icon name="verified" class="w-4 h-4" />
+                  Agent {t.agent.verified}
+                </span>
+              )}
+            </div>
+
+            <!-- Rating -->
+            <div class="flex items-center justify-center gap-2 mb-6">
+              <div class="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Icon
+                    name="star"
+                    class={`w-5 h-5 ${star <= Math.round(agent.rating) ? 'text-accent-500' : 'text-gray-300'}`}
+                  />
+                ))}
+              </div>
+              <span class="text-gray-600">
+                {agent.rating} ({agent.reviewCount} avis)
+              </span>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="text-center p-3 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-bold text-gray-900">{actualPropertyCount}</div>
+                <div class="text-sm text-gray-600">{t.agent.properties}</div>
+              </div>
+              <div class="text-center p-3 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-bold text-gray-900">{agent.experienceYears}</div>
+                <div class="text-sm text-gray-600">Ans Exp.</div>
+              </div>
+            </div>
+
+            <!-- Languages -->
+            {agent.languages.length > 0 && (
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Langues</h3>
+                <div class="flex flex-wrap gap-2">
+                  {agent.languages.map((lang) => (
+                    <span class="badge-primary">{lang}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- Locations -->
+            {agent.locations.length > 0 && (
+              <div class="mb-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Zones de Travail</h3>
+                <div class="flex flex-wrap gap-2">
+                  {agent.locations.map((loc) => (
+                    <span class="badge bg-gray-100 text-gray-700">{loc}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <!-- Response time -->
+            <div class="flex items-center gap-2 text-sm text-gray-600 mb-6">
+              <Icon name="clock" class="w-4 h-4" />
+              <span>Repond en {agent.responseTime}</span>
+            </div>
+
+            <!-- Contact buttons -->
+            <div class="space-y-3">
+              {agent.whatsapp && (
+                <a
+                  href={`https://wa.me/${agent.whatsapp.replace(/[^0-9]/g, '')}?text=Bonjour ${agent.name}, je vous contacte depuis Ubikala.com`}
+                  target="_blank"
+                  class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
+                >
+                  <Icon name="whatsapp" class="w-5 h-5 mr-2" />
+                  WhatsApp
+                </a>
+              )}
+              {agent.phone && (
+                <a
+                  href={`tel:${agent.phone}`}
+                  class="btn-primary w-full justify-center"
+                >
+                  <Icon name="phone" class="w-5 h-5 mr-2" />
+                  Appeler
+                </a>
+              )}
+              {agent.email && (
+                <a
+                  href={`mailto:${agent.email}`}
+                  class="btn-outline w-full justify-center"
+                >
+                  <Icon name="email" class="w-5 h-5 mr-2" />
+                  Email
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-2">
+          {agent.bio && (
+            <div class="card p-6 mb-8">
+              <h2 class="text-xl font-semibold text-gray-900 mb-4">A propos de {agent.name}</h2>
+              <p class="text-gray-600 leading-relaxed">{agent.bio}</p>
+            </div>
+          )}
+
+          <div>
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">
+              Proprietes de {agent.name}
+              <span class="text-gray-500 font-normal">({agentProperties.length})</span>
+            </h2>
+
+            {agentProperties.length > 0 ? (
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {agentProperties.map((property) => (
+                  <PropertyCard property={property} />
+                ))}
+              </div>
+            ) : (
+              <div class="card p-8 text-center">
+                <Icon name="house" class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p class="text-gray-600">Cet agent n'a pas de proprietes actives pour le moment.</p>
+                <a href="/fr/acheter" class="btn-primary mt-4">
+                  Voir toutes les proprietes
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>

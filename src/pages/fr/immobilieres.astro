@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import AgentCard from '../../components/AgentCard.astro';
 import Pagination from '../../components/Pagination.astro';
-import { useTranslations, getAlternateUrls } from '../../i18n';
+import { useTranslations, getAlternateUrls, localizedUrl } from '../../i18n';
 import { getPortalInmobiliarias } from '../../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../../lib/ubikala-db';
 import { transformUbikalaAgents } from '../../lib/transformers';
@@ -101,7 +101,7 @@ if (currentPage > totalPages && totalPages > 0) {
         {inmobiliarias.map((agent) => (
           <AgentCard
             agent={agent}
-            href={agent.isUbikalaUser ? `/usuario/${agent.slug}` : `/buscar?tenant_id=${agent.id}`}
+            href={agent.isUbikalaUser ? localizedUrl(`/usuario/${agent.slug}`, 'fr') : `${localizedUrl('/buscar', 'fr')}?tenant_id=${agent.id}`}
           />
         ))}
       </div>

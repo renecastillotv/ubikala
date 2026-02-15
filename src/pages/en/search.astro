@@ -1,127 +1,223 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
-import SearchBox from '../../components/SearchBox.astro';
+import Pagination from '../../components/Pagination.astro';
+import Icon from '../../components/Icons.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
-import { properties } from '../../data/properties';
+import { searchProperties } from '../../lib/meilisearch';
+import type { Property } from '../../data/types';
+
+// SSR for dynamic search
+export const prerender = false;
 
 const t = useTranslations('en');
 const alternateUrls = getAlternateUrls('/en/search');
 
-// Get query params
-const query = Astro.url.searchParams.get('q') || '';
-const type = Astro.url.searchParams.get('type') || '';
-const transaction = Astro.url.searchParams.get('transaction') || '';
-const location = Astro.url.searchParams.get('location') || '';
-const minPrice = Astro.url.searchParams.get('minPrice') || '';
-const maxPrice = Astro.url.searchParams.get('maxPrice') || '';
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-// Filter properties
-let filteredProperties = [...properties];
+const params = Astro.url.searchParams;
 
-if (query) {
-  const q = query.toLowerCase();
-  filteredProperties = filteredProperties.filter(p =>
-    p.title.toLowerCase().includes(q) ||
-    p.location.city.toLowerCase().includes(q) ||
-    p.location.sector.toLowerCase().includes(q) ||
-    p.description.toLowerCase().includes(q)
-  );
+const typeToDb: Record<string, string> = {
+  'house': 'casa',
+  'apartment': 'apartamento',
+  'villa': 'villa',
+  'penthouse': 'penthouse',
+  'land': 'terreno',
+  'commercial': 'local',
+  'office': 'oficina',
+};
+
+const filters = {
+  query: params.get('q') || undefined,
+  transactionType: (params.get('transactionType') as 'sale' | 'rent' | 'all') || 'all',
+  propertyType: params.get('propertyType') || 'all',
+  location: params.get('location') || undefined,
+  minPrice: params.get('minPrice') ? parseInt(params.get('minPrice')!) : undefined,
+  maxPrice: params.get('maxPrice') ? parseInt(params.get('maxPrice')!) : undefined,
+  bedrooms: params.get('bedrooms') ? parseInt(params.get('bedrooms')!) : undefined,
+  bathrooms: params.get('bathrooms') ? parseInt(params.get('bathrooms')!) : undefined,
+  tenantId: params.get('tenant_id') || undefined,
+};
+
+let results: Property[] = [];
+let totalCount = 0;
+
+try {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const operacion = filters.transactionType === 'sale' ? 'venta'
+    : filters.transactionType === 'rent' ? 'renta' : undefined;
+
+  const tipo = (filters.propertyType && filters.propertyType !== 'all')
+    ? (typeToDb[filters.propertyType] || filters.propertyType)
+    : undefined;
+
+  const searchResult = await searchProperties({
+    query: filters.query || filters.location || '',
+    tipo,
+    operacion,
+    precioMin: filters.minPrice,
+    precioMax: filters.maxPrice,
+    habitacionesMin: filters.bedrooms,
+    banosMin: filters.bathrooms,
+    tenantId: filters.tenantId,
+    limit: ITEMS_PER_PAGE,
+    offset,
+    lang: 'en',
+  });
+
+  results = searchResult.properties;
+  totalCount = searchResult.total;
+} catch (error) {
+  console.error('Error searching properties:', error);
 }
 
-if (type) {
-  filteredProperties = filteredProperties.filter(p => p.type === type);
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+// Preserve search params for pagination
+const preserveParams: Record<string, string> = {};
+if (filters.query) preserveParams.q = filters.query;
+if (filters.transactionType !== 'all') preserveParams.transactionType = filters.transactionType;
+if (filters.propertyType !== 'all') preserveParams.propertyType = filters.propertyType;
+if (filters.location) preserveParams.location = filters.location;
+if (filters.minPrice) preserveParams.minPrice = String(filters.minPrice);
+if (filters.maxPrice) preserveParams.maxPrice = String(filters.maxPrice);
+if (filters.bedrooms) preserveParams.bedrooms = String(filters.bedrooms);
+if (filters.tenantId) preserveParams.tenant_id = filters.tenantId;
+
+// Dynamic title
+let pageTitle = 'Search Properties';
+if (filters.location) {
+  pageTitle = `Properties in ${filters.location}`;
+}
+if (filters.propertyType && filters.propertyType !== 'all') {
+  const typeNames: Record<string, string> = {
+    house: 'Houses', apartment: 'Apartments', villa: 'Villas',
+    penthouse: 'Penthouses', land: 'Land', commercial: 'Commercial', office: 'Offices',
+  };
+  pageTitle = typeNames[filters.propertyType] || pageTitle;
+  if (filters.location) pageTitle += ` in ${filters.location}`;
 }
 
-if (transaction) {
-  filteredProperties = filteredProperties.filter(p => p.transaction === transaction);
-}
-
-if (location) {
-  filteredProperties = filteredProperties.filter(p =>
-    p.location.city.toLowerCase().includes(location.toLowerCase()) ||
-    p.location.sector.toLowerCase().includes(location.toLowerCase())
-  );
-}
-
-if (minPrice) {
-  filteredProperties = filteredProperties.filter(p => p.price >= parseInt(minPrice));
-}
-
-if (maxPrice) {
-  filteredProperties = filteredProperties.filter(p => p.price <= parseInt(maxPrice));
-}
+const fullTitle = `${pageTitle} | Ubikala`;
+const description = `Find ${totalCount} properties available. Search houses, apartments, villas and more in the Dominican Republic.`;
 ---
 
 <Layout
-  title={`Search Results${query ? ` for "${query}"` : ''} | PropiedadEnRD.com`}
-  description="Search properties in the Dominican Republic. Houses, apartments, villas and land for sale and rent."
-  keywords="search properties dr, find real estate dominican republic"
+  title={fullTitle}
+  description={description}
   alternateLanguages={alternateUrls}
 >
-  <!-- Search -->
-  <section class="py-8 bg-white shadow-sm sticky top-16 z-40">
-    <div class="container-custom">
-      <SearchBox variant="inline" />
+  <!-- Sticky Filter Bar -->
+  <div class="sticky top-16 z-40 bg-white border-b shadow-sm">
+    <div class="container-custom py-3">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <nav class="text-sm text-gray-500 hidden md:flex items-center">
+          <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+          <span class="mx-1">/</span>
+          <span class="text-gray-900">{pageTitle}</span>
+        </nav>
+
+        <form action="/en/search" method="GET" class="flex flex-1 items-center gap-2 sm:justify-end">
+          {filters.tenantId && <input type="hidden" name="tenant_id" value={filters.tenantId} />}
+          <select name="transactionType" class="select py-1.5 px-3 text-sm w-auto" onchange="this.form.submit()">
+            <option value="all" selected={filters.transactionType === 'all'}>Transaction</option>
+            <option value="sale" selected={filters.transactionType === 'sale'}>For Sale</option>
+            <option value="rent" selected={filters.transactionType === 'rent'}>For Rent</option>
+          </select>
+          <select name="propertyType" class="select py-1.5 px-3 text-sm w-auto" onchange="this.form.submit()">
+            <option value="all" selected={filters.propertyType === 'all'}>Type</option>
+            <option value="house" selected={filters.propertyType === 'house'}>House</option>
+            <option value="apartment" selected={filters.propertyType === 'apartment'}>Apartment</option>
+            <option value="villa" selected={filters.propertyType === 'villa'}>Villa</option>
+            <option value="land" selected={filters.propertyType === 'land'}>Land</option>
+          </select>
+          <select name="location" class="select py-1.5 px-3 text-sm w-auto hidden sm:block" onchange="this.form.submit()">
+            <option value="">Location</option>
+            <option value="santo-domingo" selected={filters.location === 'santo-domingo'}>Santo Domingo</option>
+            <option value="punta-cana" selected={filters.location === 'punta-cana'}>Punta Cana</option>
+            <option value="santiago" selected={filters.location === 'santiago'}>Santiago</option>
+          </select>
+          <noscript><button type="submit" class="btn-primary py-1.5 px-3 text-sm">Filter</button></noscript>
+        </form>
+      </div>
     </div>
-  </section>
+  </div>
+
+  <!-- Page Header -->
+  <div class="bg-gray-50 py-6">
+    <div class="container-custom">
+      <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{pageTitle}</h1>
+      <p class="text-gray-600 mt-1">
+        {totalCount} {totalCount === 1 ? 'property available' : 'properties available'} in the Dominican Republic
+      </p>
+    </div>
+  </div>
 
   <!-- Results -->
-  <section class="section">
+  <section class="py-8">
     <div class="container-custom">
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">
-            {query ? `Results for "${query}"` : 'All Properties'}
-          </h1>
-          <p class="text-gray-600 mt-1">
-            <span class="font-semibold text-gray-900">{filteredProperties.length}</span> {t.filters.results}
-          </p>
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-wrap items-center gap-2">
+          {filters.transactionType !== 'all' && (
+            <span class="badge-primary flex items-center gap-1">
+              {filters.transactionType === 'sale' ? 'For Sale' : 'For Rent'}
+            </span>
+          )}
+          {filters.propertyType !== 'all' && (
+            <span class="badge-secondary flex items-center gap-1">
+              {filters.propertyType}
+            </span>
+          )}
+          {filters.location && (
+            <span class="badge bg-gray-200 text-gray-700 flex items-center gap-1">
+              {filters.location}
+            </span>
+          )}
         </div>
-        <select class="select py-2 text-sm w-auto">
+
+        <select id="sort" class="select py-1.5 px-3 text-sm w-auto">
           <option value="recent">Most Recent</option>
           <option value="price-asc">Price: Low to High</option>
           <option value="price-desc">Price: High to Low</option>
-          <option value="area">Largest Area</option>
         </select>
       </div>
 
-      {filteredProperties.length > 0 ? (
+      {results.length > 0 ? (
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProperties.map((property) => (
+          {results.map((property) => (
             <PropertyCard property={property} />
           ))}
         </div>
       ) : (
-        <div class="text-center py-16">
-          <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <h2 class="text-xl font-semibold text-gray-900 mb-2">{t.common.noResults}</h2>
-          <p class="text-gray-600 mb-6">
-            Try adjusting your search filters or explore our featured properties.
+        <div class="card p-12 text-center">
+          <Icon name="search" class="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 class="text-2xl font-semibold text-gray-900 mb-2">
+            No properties found
+          </h2>
+          <p class="text-gray-600 mb-6 max-w-md mx-auto">
+            Try adjusting your search filters or explore other locations.
           </p>
-          <a href="/en/buy" class="btn-primary">
-            View All Properties
-          </a>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/en/buy" class="btn-primary">
+              View all for sale
+            </a>
+            <a href="/en/rent" class="btn-outline">
+              View all for rent
+            </a>
+          </div>
         </div>
       )}
 
-      {filteredProperties.length > 12 && (
-        <div class="mt-12 flex justify-center">
-          <nav class="flex items-center gap-2">
-            <button class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">
-              {t.common.previous}
-            </button>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg">1</button>
-            <button class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">2</button>
-            <button class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">3</button>
-            <button class="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50">
-              {t.common.next}
-            </button>
-          </nav>
+      {results.length > 0 && (
+        <div class="mt-12">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            baseUrl="/en/search"
+            preserveParams={preserveParams}
+          />
         </div>
       )}
     </div>
