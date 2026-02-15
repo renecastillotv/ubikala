@@ -17,7 +17,7 @@ const hasValidPhoto = agent.photo &&
 ---
 
 <a
-  href={localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.slug}` : agent.isClicInmobiliaria ? `/inmobiliaria/${agent.slug}` : `/asesor/${agent.slug}`, lang)}
+  href={localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.slug}` : `/asesor/${agent.slug}`, lang)}
   class="card group p-6 text-center"
   data-agent-name={agent.name}
   data-agent-company={agent.company || 'Asesor Independiente'}

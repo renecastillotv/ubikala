@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
 import { useTranslations } from '../i18n';
-import { searchAgents } from '../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../lib/ubikala-db';
 import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
@@ -17,21 +16,12 @@ const t = useTranslations('es');
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-// Fetch inmobiliarias from both databases and merge
+// Fetch inmobiliarias (company accounts only, not individual agents)
 let inmobiliarias: Agent[] = [];
 let totalCount = 0;
 try {
-  const [meiliResult, ubikalaRows] = await Promise.all([
-    searchAgents({ limit: 100 }),
-    getUbikalaInmobiliarias({ limit: 100 })
-  ]);
-
-  // Filter MeiliSearch agents that have a company (inmobiliarias)
-  const clicInmobiliarias = meiliResult.agents.filter(a => a.company);
-  const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
-
-  // Merge, sort by properties count, then paginate
-  const allInmobiliarias = [...clicInmobiliarias, ...ubikalaInmobiliarias]
+  const ubikalaRows = await getUbikalaInmobiliarias({ limit: 100 });
+  const allInmobiliarias = transformUbikalaAgents(ubikalaRows)
     .sort((a, b) => b.propertiesCount - a.propertiesCount);
 
   totalCount = allInmobiliarias.length;

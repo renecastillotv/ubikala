@@ -123,6 +123,7 @@ export interface MeiliAgentDoc {
   redes_sociales: { instagram?: string; facebook?: string; linkedin?: string } | null;
   equipo_id: string | null;
   equipo_nombre: string | null;
+  tenant_nombre: string | null;
   stats: {
     propiedades_activas?: number;
     propiedades_vendidas?: number;
@@ -355,7 +356,7 @@ export function meiliToAgent(doc: MeiliAgentDoc): Agent {
     phone: doc.telefono_directo || doc.telefono || '',
     whatsapp: doc.whatsapp || doc.telefono_directo || doc.telefono || '',
     photo: doc.foto_url || doc.avatar_url || '/images/agent-placeholder.svg',
-    company: doc.equipo_nombre || doc.titulo_profesional || undefined,
+    company: doc.tenant_nombre || undefined,
     userType: 'agent' as UserType,
     verified: true,
     rating: doc.stats?.calificacion_promedio || 5,
