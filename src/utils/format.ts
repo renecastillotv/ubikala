@@ -1,5 +1,5 @@
 /**
- * Utilidades de formateo para PropiedadEnRD.com
+ * Utilidades de formateo para Ubikala.com
  */
 
 /**

@@ -1,50 +1,45 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import PropertyCard from '../../components/PropertyCard.astro';
-import ContactForm from '../../components/ContactForm.astro';
-import PropertyMap from '../../components/PropertyMap.astro';
-import Icon from '../../components/Icons.astro';
-import { useTranslations, localizedUrl, getAlternateUrls } from '../../i18n';
-import { getPropertyBySlug, getSimilarProperties, getAgentBySlug } from '../../lib/meilisearch';
-import { getLocationCoordinates, hasValidCoordinates } from '../../lib/location-coordinates';
-import type { Property, Agent } from '../../data/types';
+import Layout from '../../../layouts/Layout.astro';
+import PropertyCard from '../../../components/PropertyCard.astro';
+import ContactForm from '../../../components/ContactForm.astro';
+import PropertyMap from '../../../components/PropertyMap.astro';
+import Icon from '../../../components/Icons.astro';
+import { useTranslations, localizedUrl, getAlternateUrls } from '../../../i18n';
+import { getPropertyBySlug, getSimilarProperties, getAgentBySlug } from '../../../lib/meilisearch';
+import { getLocationCoordinates, hasValidCoordinates } from '../../../lib/location-coordinates';
+import type { Property, Agent } from '../../../data/types';
 
 // SSR - no prerender for dynamic property pages
 export const prerender = false;
 
 const { slug } = Astro.params;
-const t = useTranslations('es');
-const alternateUrls = getAlternateUrls(`/propiedad/${slug}`);
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls(`/fr/propriete/${slug}`);
 
-// Fetch property from MeiliSearch
+// Fetch property from MeiliSearch (with lang for translated slug lookup)
 let property: Property | null = null;
 let similarProperties: Property[] = [];
 let fullAgent: Agent | null = null;
 
 try {
-  property = await getPropertyBySlug(slug || '');
+  property = await getPropertyBySlug(slug || '', 'fr');
 
   if (property) {
-    // Get full agent data from MeiliSearch asesores index
     if (property.agent.slug && property.agent.slug !== 'ubikala') {
       fullAgent = await getAgentBySlug(property.agent.slug);
     }
-
-    // Get similar properties (same city, excluding current)
-    similarProperties = (await getSimilarProperties(property, 3));
+    similarProperties = (await getSimilarProperties(property, 3, 'fr'));
   }
 } catch (error) {
   console.error('Error fetching property:', error);
 }
 
-// Use full agent if available, otherwise use embedded agent from property
 const agent = fullAgent || property?.agent;
 
 if (!property) {
-  return Astro.redirect('/404');
+  return Astro.redirect('/fr');
 }
 
-// Determine map coordinates - use property coords if valid, otherwise fallback to location coords
 const propertyHasCoords = hasValidCoordinates(property.location.latitude, property.location.longitude);
 const mapCoordinates = propertyHasCoords
   ? { lat: property.location.latitude, lng: property.location.longitude, zoom: 15 }
@@ -53,19 +48,17 @@ const mapCoordinates = propertyHasCoords
 const primaryImage = property.images.find(img => img.isPrimary) || property.images[0];
 
 function formatPrice(price: number, currency: string, isRent: boolean): string {
-  // Use explicit currency symbols for clarity
   const currencySymbol = currency === 'DOP' ? 'RD$' : 'US$';
   const formatted = `${currencySymbol} ${price.toLocaleString('en-US')}`;
   return isRent ? `${formatted}${t.property.pricePerMonth}` : formatted;
 }
 
-// Schema para propiedad individual (SEO)
 const propertySchema = {
   '@context': 'https://schema.org',
   '@type': 'RealEstateListing',
   name: property.title,
   description: property.description,
-  url: `https://ubikala.com/propiedad/${property.slug}`,
+  url: `https://ubikala.com/fr/propriete/${property.slug}`,
   image: property.images.map(img => img.url),
   datePosted: property.createdAt,
   dateModified: property.updatedAt,
@@ -95,12 +88,11 @@ const propertySchema = {
   },
 };
 
-// Strip HTML tags for meta description
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 const cleanDescription = stripHtml(property.description);
 
-const pageTitle = `${property.title} | ${property.transactionType === 'sale' ? 'En Venta' : 'En Alquiler'} - Ubíkala.com`;
-const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bedrooms ? property.bedrooms + ' habitaciones, ' : ''}${property.bathrooms ? property.bathrooms + ' baños, ' : ''}${property.area} m² en ${property.location.city}.`;
+const pageTitle = `${property.title} | ${property.transactionType === 'sale' ? 'A Vendre' : 'A Louer'} - Ubíkala.com`;
+const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bedrooms ? property.bedrooms + ' chambres, ' : ''}${property.bathrooms ? property.bathrooms + ' salles de bain, ' : ''}${property.area} m² a ${property.location.city}.`;
 ---
 
 <Layout
@@ -112,7 +104,6 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
 >
   <script is:inline type="application/ld+json" set:html={JSON.stringify(propertySchema)} slot="head" />
 
-  <!-- BreadcrumbList Schema -->
   <script is:inline type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -120,26 +111,26 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
       {
         "@type": "ListItem",
         "position": 1,
-        "name": "Inicio",
-        "item": "https://ubikala.com"
+        "name": "Accueil",
+        "item": "https://ubikala.com/fr"
       },
       {
         "@type": "ListItem",
         "position": 2,
-        "name": property.transactionType === 'sale' ? 'Comprar' : 'Alquilar',
-        "item": `https://ubikala.com/${property.transactionType === 'sale' ? 'comprar' : 'alquilar'}`
+        "name": property.transactionType === 'sale' ? 'Acheter' : 'Louer',
+        "item": `https://ubikala.com/fr/${property.transactionType === 'sale' ? 'acheter' : 'louer'}`
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": property.location.city,
-        "item": `https://ubikala.com/propiedades/${property.location.city.toLowerCase().replace(/\s+/g, '-')}`
+        "item": `https://ubikala.com/fr/proprietes/${property.location.city.toLowerCase().replace(/\s+/g, '-')}`
       },
       {
         "@type": "ListItem",
         "position": 4,
         "name": property.title,
-        "item": `https://ubikala.com/propiedad/${property.slug}`
+        "item": `https://ubikala.com/fr/propriete/${property.slug}`
       }
     ]
   })} />
@@ -148,13 +139,13 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
   <div class="bg-gray-100 py-4">
     <div class="container-custom">
       <nav class="flex text-sm text-gray-600 flex-wrap">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
+        <a href="/fr" class="hover:text-primary-600">Accueil</a>
         <span class="mx-2">/</span>
-        <a href={property.transactionType === 'sale' ? '/comprar' : '/alquilar'} class="hover:text-primary-600">
-          {property.transactionType === 'sale' ? 'Comprar' : 'Alquilar'}
+        <a href={property.transactionType === 'sale' ? '/fr/acheter' : '/fr/louer'} class="hover:text-primary-600">
+          {property.transactionType === 'sale' ? 'Acheter' : 'Louer'}
         </a>
         <span class="mx-2">/</span>
-        <a href={`/propiedades/${property.location.city.toLowerCase().replace(/\s+/g, '-')}`} class="hover:text-primary-600">
+        <a href={`/fr/proprietes/${property.location.city.toLowerCase().replace(/\s+/g, '-')}`} class="hover:text-primary-600">
           {property.location.city}
         </a>
         <span class="mx-2">/</span>
@@ -176,7 +167,6 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                 alt={primaryImage.alt || property.title}
                 class="w-full h-[400px] md:h-[500px] object-cover"
               />
-              <!-- Badges -->
               <div class="absolute top-4 left-4 flex gap-2">
                 {property.transactionType === 'sale' ? (
                   <span class="badge bg-primary-600 text-white text-sm px-3 py-1">{t.property.forSale}</span>
@@ -187,15 +177,13 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   <span class="badge bg-purple-600 text-white text-sm px-3 py-1">{t.common.exclusive}</span>
                 )}
               </div>
-              <!-- Photo count -->
               <div class="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1 rounded-lg text-sm flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                {property.images.length} fotos
+                {property.images.length} photos
               </div>
             </div>
-            <!-- Thumbnail gallery -->
             <div class="grid grid-cols-4 gap-2">
               {property.images.slice(0, 4).map((image, index) => (
                 <button class="rounded-lg overflow-hidden relative gallery-thumb" data-index={index}>
@@ -244,7 +232,7 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              {[property.location.sector, property.location.city, property.location.province].filter(Boolean).join(', ') || 'República Dominicana'}
+              {[property.location.sector, property.location.city, property.location.province].filter(Boolean).join(', ') || 'Republique Dominicaine'}
             </p>
           </div>
 
@@ -347,7 +335,7 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                 </a>
                 {agent?.email && (
                   <a
-                    href={`mailto:${agent.email}?subject=Consulta: ${property.title}`}
+                    href={`mailto:${agent.email}?subject=Demande: ${property.title}`}
                     class="btn-outline flex-1 justify-center"
                   >
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,7 +348,7 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
 
               <div class="flex gap-2">
                 <a
-                  href={`https://wa.me/${agent?.whatsapp}?text=Hola, me interesa la propiedad: ${property.title}`}
+                  href={`https://wa.me/${agent?.whatsapp}?text=Bonjour, je suis interesse par la propriete: ${property.title}`}
                   target="_blank"
                   class="flex-1 btn bg-green-600 text-white hover:bg-green-700 justify-center"
                   data-whatsapp-btn
@@ -392,8 +380,8 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   class="btn-outline px-4"
                   data-share-btn
                   data-share-title={property.title}
-                  data-share-text={`Mira esta propiedad: ${property.title} en ${property.location.city}`}
-                  data-share-url={`https://ubikala.com/propiedad/${property.slug}`}
+                  data-share-text={`Decouvrez cette propriete: ${property.title} a ${property.location.city}`}
+                  data-share-url={`https://ubikala.com/fr/propriete/${property.slug}`}
                   aria-label={t.property.share}
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,12 +410,12 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   <p class="text-sm text-gray-500">
                     {agent?.isUbikalaUser
                       ? agent?.parentCompany
-                        ? `Asesor Inmobiliario de ${agent.parentCompany}`
+                        ? `Agent Immobilier chez ${agent.parentCompany}`
                         : agent?.userType === 'agent'
-                          ? agent?.company || 'Inmobiliaria'
+                          ? agent?.company || 'Agence Immobiliere'
                           : agent?.userType === 'independent'
-                            ? 'Asesor Independiente'
-                            : 'Propietario'
+                            ? 'Agent Independant'
+                            : 'Proprietaire'
                       : agent?.company || t.agent.title
                     }
                   </p>
@@ -453,12 +441,12 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
                   <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {t.agent.responseTime}: {agent?.responseTime || 'menos de 1 hora'}
+                  {t.agent.responseTime}: {agent?.responseTime || "moins d'une heure"}
                 </div>
               </div>
 
               <a
-                href={localizedUrl(agent?.isUbikalaUser ? `/usuario/${agent?.slug}` : `/asesor/${agent?.slug}`, 'es')}
+                href={localizedUrl(agent?.isUbikalaUser ? `/usuario/${agent?.slug}` : `/asesor/${agent?.slug}`, 'fr')}
                 class="btn-outline w-full justify-center text-sm"
               >
                 {t.agent.viewProfile}
@@ -538,7 +526,6 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
       updateLightbox();
     }
 
-    // Event listeners
     mainImageContainer?.addEventListener('click', () => openLightbox(0));
     thumbs.forEach(thumb => {
       thumb.addEventListener('click', () => {
@@ -551,12 +538,10 @@ const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bed
     lightboxPrev?.addEventListener('click', prevImage);
     lightboxNext?.addEventListener('click', nextImage);
 
-    // Close on background click
     lightbox?.addEventListener('click', (e) => {
       if (e.target === lightbox) closeLightbox();
     });
 
-    // Keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (lightbox?.classList.contains('hidden')) return;
       if (e.key === 'Escape') closeLightbox();

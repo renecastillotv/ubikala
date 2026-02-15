@@ -144,7 +144,7 @@ const userSchema = {
   name: user.name,
   url: `https://ubikala.com/usuario/${slug}`,
   image: hasValidPhoto ? user.avatar_url : undefined,
-  description: user.bio || `${displayLabel} en Ubikala`,
+  description: user.bio || `${displayLabel} en Ubíkala`,
   telephone: user.phone,
   email: user.email,
   jobTitle: displayLabel,
@@ -169,7 +169,7 @@ const breadcrumbSchema = {
   ]
 };
 
-const pageTitle = `${user.name} - ${displayLabel} | Ubikala`;
+const pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
 const pageDescription = user.bio
   ? `${user.bio.substring(0, 150)}... Contacta a ${user.name} para propiedades en Republica Dominicana.`
   : `${user.name} - ${displayLabel}. ${totalProperties} propiedades activas. Contacta ahora.`;
@@ -282,7 +282,7 @@ const pageDescription = user.bio
             <div class="space-y-3">
               {user.phone && (
                 <a
-                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hola ${user.name}, te contacto desde Ubikala`}
+                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hola ${user.name}, te contacto desde Ubíkala`}
                   target="_blank"
                   class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
                 >

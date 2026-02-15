@@ -98,7 +98,7 @@ if (currentPage > totalPages && totalPages > 0) {
 }
 
 // Títulos y descripciones dinámicas para SEO
-const pageTitle = `${typeInfo.plural} en Alquiler en ${locationData.name} | Ubikala`;
+const pageTitle = `${typeInfo.plural} en Alquiler en ${locationData.name} | Ubíkala`;
 const pageDescription = `Encuentra ${typeInfo.plural.toLowerCase()} en alquiler en ${locationData.name}, ${locationData.province}. ${totalCount} propiedades disponibles con fotos, precios y contacto directo.`;
 
 // Contenido SEO específico para alquileres
@@ -202,7 +202,7 @@ const listingSchema = {
       '@type': 'RealEstateListing',
       name: property.title,
       description: property.description.substring(0, 160),
-      url: `https://propiedadenrd.com/propiedad/${property.slug}`,
+      url: `https://ubikala.com/propiedad/${property.slug}`,
       image: property.images[0]?.url,
       offers: {
         '@type': 'Offer',

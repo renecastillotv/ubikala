@@ -1,7 +1,7 @@
 export const es = {
   // Meta SEO
   meta: {
-    siteName: 'Ubikala',
+    siteName: 'Ubíkala',
     siteDescription: 'Esa propiedad que buscas, ubíkala aquí. Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler. Miles de propiedades verificadas en Santo Domingo, Punta Cana, Santiago y todo el país.',
     keywords: 'propiedades en republica dominicana, casas en venta rd, apartamentos santo domingo, inmobiliaria dominicana, bienes raices rd, alquiler punta cana, terrenos santiago, locales comerciales republica dominicana',
   },
@@ -118,6 +118,8 @@ export const es = {
     virtualTour: 'Tour Virtual',
     photos: 'Fotos',
     video: 'Video',
+    call: 'Llamar',
+    parking: 'Parqueos',
   },
 
   // Asesor
@@ -215,7 +217,7 @@ export const es = {
   // Footer
   footer: {
     about: 'Sobre el Portal',
-    aboutText: 'Ubikala es el portal donde asesores inmobiliarios, agencias y propietarios publican sus propiedades para conectar con compradores e inquilinos. Esa propiedad que buscas, ubíkala aquí.',
+    aboutText: 'Ubíkala es el portal donde asesores inmobiliarios, agencias y propietarios publican sus propiedades para conectar con compradores e inquilinos. Esa propiedad que buscas, ubíkala aquí.',
     quickLinks: 'Enlaces Rápidos',
     propertyTypes: 'Tipos de Propiedad',
     popularLocations: 'Ubicaciones Populares',
@@ -276,23 +278,23 @@ export const es = {
   // SEO Páginas
   pages: {
     home: {
-      title: 'Ubikala - Esa propiedad que buscas, ubíkala aquí',
+      title: 'Ubíkala - Esa propiedad que buscas, ubíkala aquí',
       description: 'Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler. Miles de propiedades verificadas en Santo Domingo, Punta Cana, Santiago y más.',
     },
     buy: {
-      title: 'Propiedades en Venta | Ubikala',
+      title: 'Propiedades en Venta | Ubíkala',
       description: 'Explora miles de propiedades en venta. Casas, apartamentos, villas, terrenos y locales comerciales con los mejores precios del mercado.',
     },
     rent: {
-      title: 'Propiedades en Alquiler | Ubikala',
+      title: 'Propiedades en Alquiler | Ubíkala',
       description: 'Alquila tu próximo hogar. Apartamentos amueblados, casas familiares, oficinas y locales comerciales disponibles para alquiler.',
     },
     agents: {
-      title: 'Asesores Inmobiliarios | Ubikala',
+      title: 'Asesores Inmobiliarios | Ubíkala',
       description: 'Conecta con los mejores asesores inmobiliarios. Profesionales verificados listos para ayudarte a encontrar tu propiedad ideal.',
     },
     publish: {
-      title: 'Publica tu Propiedad Gratis | Ubikala',
+      title: 'Publica tu Propiedad Gratis | Ubíkala',
       description: 'Publica tu propiedad y alcanza miles de compradores. Registro gratuito para propietarios, asesores independientes e inmobiliarias.',
     },
   },

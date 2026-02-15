@@ -107,7 +107,7 @@ const userSchema = {
   name: user.name,
   url: `https://ubikala.com/en/user/${slug}`,
   image: hasValidPhoto ? user.avatar_url : undefined,
-  description: user.bio || `${displayLabel} on Ubikala`,
+  description: user.bio || `${displayLabel} on Ubíkala`,
   telephone: user.phone,
   email: user.email,
   jobTitle: displayLabel,
@@ -130,7 +130,7 @@ const breadcrumbSchema = {
   ]
 };
 
-const pageTitle = `${user.name} - ${displayLabel} | Ubikala`;
+const pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
 const pageDescription = user.bio
   ? `${user.bio.substring(0, 150)}... Contact ${user.name} for properties in the Dominican Republic.`
   : `${user.name} - ${displayLabel}. ${totalProperties} active properties. Contact now.`;
@@ -243,7 +243,7 @@ const pageDescription = user.bio
             <div class="space-y-3">
               {user.phone && (
                 <a
-                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hello ${user.name}, I'm contacting you from Ubikala`}
+                  href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Hello ${user.name}, I'm contacting you from Ubíkala`}
                   target="_blank"
                   class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
                 >

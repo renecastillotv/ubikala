@@ -10,7 +10,7 @@ export interface FAQ {
 export const generalFAQs: FAQ[] = [
   {
     question: "¿Cómo puedo contactar a un asesor inmobiliario?",
-    answer: "Cada propiedad en PropiedadEnRD.com incluye información de contacto del asesor. Puedes llamar, enviar WhatsApp o completar el formulario de contacto directamente desde la página de la propiedad.",
+    answer: "Cada propiedad en Ubikala.com incluye información de contacto del asesor. Puedes llamar, enviar WhatsApp o completar el formulario de contacto directamente desde la página de la propiedad.",
     category: 'general'
   },
   {
@@ -25,7 +25,7 @@ export const generalFAQs: FAQ[] = [
   },
   {
     question: "¿Qué tipos de propiedades puedo encontrar?",
-    answer: "En PropiedadEnRD.com encontrarás casas, apartamentos, villas, penthouses, terrenos, locales comerciales y oficinas, tanto en venta como en alquiler en toda República Dominicana.",
+    answer: "En Ubikala.com encontrarás casas, apartamentos, villas, penthouses, terrenos, locales comerciales y oficinas, tanto en venta como en alquiler en toda República Dominicana.",
     category: 'general'
   }
 ];

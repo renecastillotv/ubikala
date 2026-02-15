@@ -34,9 +34,9 @@ if (!agent) {
 const agentSchema = {
   '@context': 'https://schema.org',
   '@type': ['Person', 'RealEstateAgent'],
-  '@id': `https://propiedadenrd.com/asesor/${agent.slug}#agent`,
+  '@id': `https://ubikala.com/asesor/${agent.slug}#agent`,
   name: agent.name,
-  url: `https://propiedadenrd.com/asesor/${agent.slug}`,
+  url: `https://ubikala.com/asesor/${agent.slug}`,
   image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
   description: agent.bio || `Asesor inmobiliario verificado en Republica Dominicana`,
   telephone: agent.phone,
@@ -72,16 +72,16 @@ const breadcrumbSchema = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://propiedadenrd.com' },
-    { '@type': 'ListItem', position: 2, name: 'Asesores', item: 'https://propiedadenrd.com/asesores' },
-    { '@type': 'ListItem', position: 3, name: agent.name, item: `https://propiedadenrd.com/asesor/${agent.slug}` }
+    { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://ubikala.com' },
+    { '@type': 'ListItem', position: 2, name: 'Asesores', item: 'https://ubikala.com/asesores' },
+    { '@type': 'ListItem', position: 3, name: agent.name, item: `https://ubikala.com/asesor/${agent.slug}` }
   ]
 };
 
 // Use actual property count from query, not from stats
 const actualPropertyCount = agentProperties.length;
 
-const pageTitle = `${agent.name} - ${agent.company || 'Asesor Inmobiliario'} | PropiedadEnRD.com`;
+const pageTitle = `${agent.name} - ${agent.company || 'Asesor Inmobiliario'} | Ubíkala.com`;
 const pageDescription = agent.bio
   ? `${agent.bio.substring(0, 150)}... Contacta a ${agent.name} para propiedades en ${agent.locations.slice(0, 3).join(', ')}.`
   : `${agent.name} - Asesor inmobiliario verificado. ${actualPropertyCount} propiedades activas. Contacta ahora.`;
@@ -213,7 +213,7 @@ const agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
             <div class="space-y-3">
               {agent.whatsapp && (
                 <a
-                  href={`https://wa.me/${agent.whatsapp.replace(/[^0-9]/g, '')}?text=Hola ${agent.name}, te contacto desde PropiedadEnRD.com`}
+                  href={`https://wa.me/${agent.whatsapp.replace(/[^0-9]/g, '')}?text=Hola ${agent.name}, te contacto desde Ubikala.com`}
                   target="_blank"
                   class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
                 >

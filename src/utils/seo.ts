@@ -1,5 +1,5 @@
-/**
- * Utilidades SEO para PropiedadEnRD.com
+﻿/**
+ * Utilidades SEO para Ubíkala.com
  */
 
 import type { Property, Agent, LocationSEO } from '../data/types';
@@ -7,7 +7,7 @@ import type { Property, Agent, LocationSEO } from '../data/types';
 /**
  * Genera Schema.org JSON-LD para una propiedad
  */
-export function generatePropertySchema(property: Property, siteUrl: string = 'https://propiedadenrd.com') {
+export function generatePropertySchema(property: Property, siteUrl: string = 'https://ubikala.com') {
   return {
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
@@ -50,7 +50,7 @@ export function generatePropertySchema(property: Property, siteUrl: string = 'ht
 /**
  * Genera Schema.org JSON-LD para un agente
  */
-export function generateAgentSchema(agent: Agent, siteUrl: string = 'https://propiedadenrd.com') {
+export function generateAgentSchema(agent: Agent, siteUrl: string = 'https://ubikala.com') {
   return {
     '@context': 'https://schema.org',
     '@type': 'RealEstateAgent',
@@ -96,7 +96,7 @@ export function generateOpenGraphTags(data: {
     'og:url': url,
     'og:type': type,
     'og:locale': locale,
-    'og:site_name': 'PropiedadEnRD.com',
+    'og:site_name': 'Ubíkala.com',
     ...(image && {
       'og:image': image,
       'og:image:width': '1200',
@@ -168,7 +168,7 @@ export function generatePropertyTitle(property: Property): string {
   const type = property.type.charAt(0).toUpperCase() + property.type.slice(1);
   const transaction = property.transactionType === 'sale' ? 'en Venta' : 'en Alquiler';
 
-  return `${type} ${transaction} en ${property.location.sector}, ${property.location.city} | PropiedadEnRD.com`;
+  return `${type} ${transaction} en ${property.location.sector}, ${property.location.city} | Ubíkala.com`;
 }
 
 /**

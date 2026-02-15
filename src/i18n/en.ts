@@ -3,7 +3,7 @@ import type { Translations } from './es';
 export const en: Translations = {
   // Meta SEO
   meta: {
-    siteName: 'Ubikala',
+    siteName: 'Ubíkala',
     siteDescription: 'That property you are looking for, find it here. Discover houses, apartments, land and commercial properties for sale and rent. Thousands of verified properties in Santo Domingo, Punta Cana, Santiago and throughout the country.',
     keywords: 'real estate dominican republic, houses for sale dr, apartments santo domingo, dominican real estate, properties dr, punta cana rental, santiago land, commercial properties dominican republic',
   },
@@ -120,6 +120,8 @@ export const en: Translations = {
     virtualTour: 'Virtual Tour',
     photos: 'Photos',
     video: 'Video',
+    call: 'Call',
+    parking: 'Parking',
   },
 
   // Agent
@@ -217,7 +219,7 @@ export const en: Translations = {
   // Footer
   footer: {
     about: 'About Us',
-    aboutText: 'Ubikala is the portal where real estate agents, agencies and property owners connect with buyers and tenants. That property you are looking for, find it here.',
+    aboutText: 'Ubíkala is the portal where real estate agents, agencies and property owners connect with buyers and tenants. That property you are looking for, find it here.',
     quickLinks: 'Quick Links',
     propertyTypes: 'Property Types',
     popularLocations: 'Popular Locations',
@@ -278,23 +280,23 @@ export const en: Translations = {
   // SEO Pages
   pages: {
     home: {
-      title: 'Ubikala - That property you are looking for, find it here',
+      title: 'Ubíkala - That property you are looking for, find it here',
       description: 'Find houses, apartments, land and commercial properties for sale and rent. Thousands of verified properties in Santo Domingo, Punta Cana, Santiago and more.',
     },
     buy: {
-      title: 'Properties for Sale | Ubikala',
+      title: 'Properties for Sale | Ubíkala',
       description: 'Explore thousands of properties for sale. Houses, apartments, villas, land and commercial properties at the best market prices.',
     },
     rent: {
-      title: 'Properties for Rent | Ubikala',
+      title: 'Properties for Rent | Ubíkala',
       description: 'Rent your next home. Furnished apartments, family houses, offices and commercial spaces available for rent.',
     },
     agents: {
-      title: 'Real Estate Agents | Ubikala',
+      title: 'Real Estate Agents | Ubíkala',
       description: 'Connect with the best real estate agents. Verified professionals ready to help you find your ideal property.',
     },
     publish: {
-      title: 'List Your Property Free | Ubikala',
+      title: 'List Your Property Free | Ubíkala',
       description: 'List your property and reach thousands of buyers. Free registration for owners, independent agents and real estate agencies.',
     },
   },

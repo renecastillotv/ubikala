@@ -21,7 +21,7 @@ const recentActivity = isAdmin
       <h3>Bienvenido, {user?.name}</h3>
       <p>
         {isAdmin
-          ? 'Panel de administración de Ubikala. Desde aquí puedes gestionar propiedades, usuarios y más.'
+          ? 'Panel de administración de Ubíkala. Desde aquí puedes gestionar propiedades, usuarios y más.'
           : `Panel de ${getRoleLabel(user?.role as UserRole)}. Gestiona tus propiedades y revisa tu actividad.`
         }
       </p>

@@ -71,7 +71,7 @@ const hasValidPhoto = agent.photo &&
   !agent.photo.includes('placeholder');
 const agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
 
-const pageTitle = `${agent.name} - ${agent.company || 'Agent Immobilier'} | Ubikala`;
+const pageTitle = `${agent.name} - ${agent.company || 'Agent Immobilier'} | Ubíkala`;
 const pageDescription = agent.bio
   ? `${agent.bio.substring(0, 150)}... Contactez ${agent.name} pour des proprietes a ${agent.locations.slice(0, 3).join(', ')}.`
   : `${agent.name} - Agent immobilier verifie. ${actualPropertyCount} proprietes actives. Contactez maintenant.`;

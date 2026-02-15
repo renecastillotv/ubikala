@@ -110,7 +110,7 @@ if (filters.propertyType && filters.propertyType !== 'all') {
   }
 }
 
-const fullTitle = `${pageTitle} | PropiedadEnRD.com`;
+const fullTitle = `${pageTitle} | Ubíkala.com`;
 const description = `Encuentra ${totalCount} propiedades disponibles. Busca casas, apartamentos, villas y más en República Dominicana.`;
 ---
 
@@ -250,7 +250,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
             <p>
               Explora nuestra selección de {totalCount} propiedades disponibles en {filters.location}.
               Ya sea que busques una casa familiar, un apartamento moderno, una villa de lujo o un terreno
-              para construir, en PropiedadEnRD.com encontrarás opciones verificadas por asesores inmobiliarios profesionales.
+              para construir, en Ubikala.com encontrarás opciones verificadas por asesores inmobiliarios profesionales.
             </p>
             <p>
               {filters.location} es una de las zonas más buscadas de República Dominicana,
@@ -280,7 +280,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           <>
             <h2>Buscar Propiedades en República Dominicana</h2>
             <p>
-              En PropiedadEnRD.com, asesores inmobiliarios verificados y agencias publican sus propiedades
+              En Ubikala.com, asesores inmobiliarios verificados y agencias publican sus propiedades
               para que puedas encontrar exactamente lo que buscas. Actualmente tenemos {totalCount} propiedades
               disponibles en todo el país.
             </p>
@@ -292,7 +292,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           </>
         )}
 
-        <h3>¿Por qué elegir PropiedadEnRD.com?</h3>
+        <h3>¿Por qué elegir Ubikala.com?</h3>
         <ul>
           <li><strong>Asesores verificados:</strong> Trabajamos solo con profesionales inmobiliarios certificados.</li>
           <li><strong>Información actualizada:</strong> Listados actualizados con precios y disponibilidad real.</li>
@@ -424,7 +424,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
       "item": {
         "@type": "RealEstateListing",
         "name": property.title,
-        "url": `https://propiedadenrd.com/propiedad/${property.slug}`,
+        "url": `https://ubikala.com/propiedad/${property.slug}`,
         "description": property.description?.substring(0, 200),
         "image": property.images[0]?.url,
         "offers": {
@@ -452,13 +452,13 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
         "@type": "ListItem",
         "position": 1,
         "name": "Inicio",
-        "item": "https://propiedadenrd.com"
+        "item": "https://ubikala.com"
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": pageTitle,
-        "item": `https://propiedadenrd.com/buscar${Object.keys(preserveParams).length > 0 ? '?' + new URLSearchParams(preserveParams).toString() : ''}`
+        "item": `https://ubikala.com/buscar${Object.keys(preserveParams).length > 0 ? '?' + new URLSearchParams(preserveParams).toString() : ''}`
       }
     ]
   })} />

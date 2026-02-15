@@ -3,7 +3,7 @@ import type { Translations } from './es';
 export const fr: Translations = {
   // Meta SEO
   meta: {
-    siteName: 'Ubikala',
+    siteName: 'Ubíkala',
     siteDescription: 'Cette propriété que vous cherchez, trouvez-la ici. Découvrez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer. Des milliers de propriétés vérifiées à Saint-Domingue, Punta Cana, Santiago et dans tout le pays.',
     keywords: 'immobilier république dominicaine, maisons à vendre rd, appartements saint domingue, immobilier dominicain, propriétés rd, location punta cana, terrains santiago, locaux commerciaux république dominicaine',
   },
@@ -120,6 +120,8 @@ export const fr: Translations = {
     virtualTour: 'Visite Virtuelle',
     photos: 'Photos',
     video: 'Vidéo',
+    call: 'Appeler',
+    parking: 'Stationnement',
   },
 
   // Agent
@@ -217,7 +219,7 @@ export const fr: Translations = {
   // Footer
   footer: {
     about: 'À Propos de Nous',
-    aboutText: 'Ubikala est le portail où agents immobiliers, agences et propriétaires se connectent avec acheteurs et locataires. Cette propriété que vous cherchez, trouvez-la ici.',
+    aboutText: 'Ubíkala est le portail où agents immobiliers, agences et propriétaires se connectent avec acheteurs et locataires. Cette propriété que vous cherchez, trouvez-la ici.',
     quickLinks: 'Liens Rapides',
     propertyTypes: 'Types de Propriété',
     popularLocations: 'Emplacements Populaires',
@@ -278,23 +280,23 @@ export const fr: Translations = {
   // Pages SEO
   pages: {
     home: {
-      title: 'Ubikala - Cette propriété que vous cherchez, trouvez-la ici',
+      title: 'Ubíkala - Cette propriété que vous cherchez, trouvez-la ici',
       description: 'Trouvez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer. Des milliers de propriétés vérifiées à Saint-Domingue, Punta Cana, Santiago et plus.',
     },
     buy: {
-      title: 'Propriétés à Vendre | Ubikala',
+      title: 'Propriétés à Vendre | Ubíkala',
       description: 'Explorez des milliers de propriétés à vendre. Maisons, appartements, villas, terrains et locaux commerciaux aux meilleurs prix du marché.',
     },
     rent: {
-      title: 'Propriétés à Louer | Ubikala',
+      title: 'Propriétés à Louer | Ubíkala',
       description: 'Louez votre prochain logement. Appartements meublés, maisons familiales, bureaux et locaux commerciaux disponibles à la location.',
     },
     agents: {
-      title: 'Agents Immobiliers | Ubikala',
+      title: 'Agents Immobiliers | Ubíkala',
       description: 'Connectez-vous avec les meilleurs agents immobiliers. Des professionnels vérifiés prêts à vous aider à trouver votre propriété idéale.',
     },
     publish: {
-      title: 'Publiez Votre Propriété Gratuitement | Ubikala',
+      title: 'Publiez Votre Propriété Gratuitement | Ubíkala',
       description: "Publiez votre propriété et atteignez des milliers d'acheteurs. Inscription gratuite pour les propriétaires, agents indépendants et agences immobilières.",
     },
   },
