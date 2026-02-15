@@ -63,13 +63,13 @@ const cardHref = href ?? localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.sl
   <p class="text-sm text-gray-500 mb-2">
     {agent.isUbikalaUser
       ? agent.parentCompany
-        ? `Asesor de ${agent.parentCompany}`
+        ? `${t.agent.agentOf} ${agent.parentCompany}`
         : agent.userType === 'agent'
-          ? agent.company || 'Inmobiliaria'
+          ? agent.company || t.agent.realEstateCompany
           : agent.userType === 'independent'
-            ? 'Asesor Independiente'
-            : 'Propietario'
-      : agent.company || 'Asesor Inmobiliario'
+            ? t.agent.independentAgent
+            : t.agent.propertyOwner
+      : agent.company || t.agent.realEstateAdvisor
     }
   </p>
 

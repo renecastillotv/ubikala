@@ -133,7 +133,10 @@ if (currentPage > totalPages && totalPages > 0) {
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {inmobiliarias.map((agent) => (
-          <AgentCard agent={agent} href={`/buscar?tenant_id=${agent.id}`} />
+          <AgentCard
+            agent={agent}
+            href={agent.isUbikalaUser ? `/usuario/${agent.slug}` : `/buscar?tenant_id=${agent.id}`}
+          />
         ))}
       </div>
 

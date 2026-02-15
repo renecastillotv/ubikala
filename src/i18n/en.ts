@@ -136,6 +136,11 @@ export const en: Translations = {
     contactNow: 'Contact Now',
     responseTime: 'Average response time',
     rating: 'Rating',
+    agentOf: 'Agent of',
+    realEstateCompany: 'Real Estate Company',
+    independentAgent: 'Independent Agent',
+    propertyOwner: 'Property Owner',
+    realEstateAdvisor: 'Real Estate Advisor',
   },
 
   // Publish Page

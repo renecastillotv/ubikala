@@ -136,6 +136,11 @@ export const fr: Translations = {
     contactNow: 'Contacter Maintenant',
     responseTime: 'Temps de réponse moyen',
     rating: 'Évaluation',
+    agentOf: 'Agent de',
+    realEstateCompany: 'Agence Immobilière',
+    independentAgent: 'Agent Indépendant',
+    propertyOwner: 'Propriétaire',
+    realEstateAdvisor: 'Agent Immobilier',
   },
 
   // Page de publication

@@ -134,6 +134,11 @@ export const es = {
     contactNow: 'Contactar Ahora',
     responseTime: 'Tiempo de respuesta promedio',
     rating: 'Calificación',
+    agentOf: 'Asesor de',
+    realEstateCompany: 'Inmobiliaria',
+    independentAgent: 'Asesor Independiente',
+    propertyOwner: 'Propietario',
+    realEstateAdvisor: 'Asesor Inmobiliario',
   },
 
   // Página de publicar
