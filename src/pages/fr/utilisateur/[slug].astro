@@ -2,6 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 import PropertyCard from '../../../components/PropertyCard.astro';
 import Icon from '../../../components/Icons.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations, localizedUrl, getAlternateUrls } from '../../../i18n';
 import { getUserBySlug, getPropertiesByUser, getParentCompanyInfo, getTeamMembers, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../../lib/ubikala-db';
 import { ubikalaToProperty } from '../../../lib/db';
@@ -121,14 +122,6 @@ const userSchema = {
   areaServed: { '@type': 'Country', name: 'Dominican Republic' },
 };
 
-const breadcrumbSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Accueil', item: 'https://ubikala.com/fr' },
-    { '@type': 'ListItem', position: 2, name: user.name, item: `https://ubikala.com/fr/utilisateur/${slug}` }
-  ]
-};
 
 const pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
 const pageDescription = user.bio
@@ -143,18 +136,11 @@ const pageDescription = user.bio
   alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(userSchema)} slot="head" />
-  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} slot="head" />
 
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{user.name}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: user.name }
+  ]} />
 
   <section class="section">
     <div class="container-custom">
@@ -245,6 +231,7 @@ const pageDescription = user.bio
                 <a
                   href={`https://wa.me/${user.phone.replace(/[^0-9]/g, '')}?text=Bonjour ${user.name}, je vous contacte depuis Ubíkala`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   class="btn bg-green-600 text-white hover:bg-green-700 w-full justify-center"
                 >
                   <Icon name="whatsapp" class="w-5 h-5 mr-2" />
@@ -296,7 +283,7 @@ const pageDescription = user.bio
                     <p class="text-gray-600 text-sm mt-1">{user.company_description}</p>
                   )}
                   {user.company_website && (
-                    <a href={user.company_website} target="_blank" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
+                    <a href={user.company_website} target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline text-sm mt-2 inline-block">
                       Visiter le site web
                     </a>
                   )}

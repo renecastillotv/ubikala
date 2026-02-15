@@ -5,6 +5,7 @@ import SearchBox from '../../../components/SearchBox.astro';
 import { useTranslations, getAlternateUrls } from '../../../i18n';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 
 // SSR for dynamic type pages
 export const prerender = false;
@@ -94,18 +95,11 @@ const pageTitle = `${typeName} for Sale in Dominican Republic | Ubikala`;
   keywords={`${typeName.toLowerCase()} for sale dominican republic, buy ${typeName.toLowerCase()} dr, ${typeName.toLowerCase()} santo domingo, ${typeName.toLowerCase()} punta cana`}
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <a href="/en/buy" class="hover:text-primary-600">{t.nav.buy}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{typeName}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/en' },
+    { label: t.nav.buy, href: '/en/buy' },
+    { label: typeName }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

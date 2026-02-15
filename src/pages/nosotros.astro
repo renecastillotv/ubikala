@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { useTranslations, localizedUrl } from '../i18n';
 import { getPlatformStats } from '../lib/meilisearch';
 
@@ -24,16 +25,10 @@ function formatStatNumber(n: number): string {
   description="Conoce Ubíkala, el portal que conecta a compradores e inquilinos con asesores inmobiliarios, agencias y propietarios."
   keywords="portal inmobiliario, sobre ubíkala, quienes somos, inmobiliarias"
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Sobre el Portal</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Sobre el Portal' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-16">

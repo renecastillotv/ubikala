@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
 
 const t = useTranslations('fr');
@@ -13,16 +14,10 @@ const alternateUrls = getAlternateUrls('/fr/contact');
   keywords="contact ubikala, support immobilier, aide portail"
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{t.nav.contact}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: t.nav.contact }
+  ]} />
 
   <section class="section">
     <div class="container-custom">

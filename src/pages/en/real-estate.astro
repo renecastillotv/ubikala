@@ -7,6 +7,7 @@ import { getPortalInmobiliarias } from '../../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../../lib/ubikala-db';
 import { transformUbikalaAgents } from '../../lib/transformers';
 import type { Agent } from '../../data/types';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 
 // SSR for pagination
 export const prerender = false;
@@ -62,16 +63,10 @@ if (currentPage > totalPages && totalPages > 0) {
   keywords="real estate agencies dominican republic, real estate companies, property agencies dr"
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Real Estate Agencies</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/en' },
+    { label: 'Real Estate Agencies' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

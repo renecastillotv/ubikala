@@ -160,7 +160,7 @@ const availableRoutes: Record<Lang, Set<string>> = {
 const nestedRoutePrefixes: Record<Lang, Set<string>> = {
   es: new Set(), // ES is default
   en: new Set(['agent', 'user', 'property', 'real-estate', 'properties', 'buy']),
-  fr: new Set(['agent', 'utilisateur', 'propriete', 'immobilieres', 'proprietes']),
+  fr: new Set(['acheter', 'agent', 'utilisateur', 'propriete', 'immobilieres', 'proprietes']),
 };
 
 function isRouteAvailable(path: string, lang: Lang): boolean {

@@ -3,6 +3,7 @@ import Layout from '../../../layouts/Layout.astro';
 import PropertyCard from '../../../components/PropertyCard.astro';
 import SearchBox from '../../../components/SearchBox.astro';
 import Pagination from '../../../components/Pagination.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls, localizedUrl, type Lang } from '../../../i18n';
 import { getPropertiesByLocation } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
@@ -69,16 +70,11 @@ const preserveParams: Record<string, string> = {};
   description={pageDescription}
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Proprietes a {locationData.name}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: 'Propriétés', href: '/fr/proprietes' },
+    { label: locationData.name }
+  ]} />
 
   <!-- Hero with Property Images -->
   <section class="relative h-[250px] md:h-[350px] flex items-center overflow-hidden">

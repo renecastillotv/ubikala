@@ -6,6 +6,7 @@ import Pagination from '../../components/Pagination.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 
 // Inline English rental FAQs
 const rentalFAQs = [
@@ -92,16 +93,10 @@ const listingSchema = {
 >
   <script is:inline type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
 
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{t.nav.rent}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/en' },
+    { label: t.nav.rent }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-secondary-600 to-secondary-700 py-12">

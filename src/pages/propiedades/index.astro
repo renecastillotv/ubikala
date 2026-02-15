@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Pagination from '../../components/Pagination.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations } from '../../i18n';
 import { getLocationsWithStats } from '../../lib/meilisearch';
 
@@ -29,16 +30,10 @@ const pageDescription = 'Explora propiedades en venta y alquiler en las principa
   description={pageDescription}
   keywords="propiedades republica dominicana, inmuebles por ubicacion, casas santo domingo, apartamentos punta cana, propiedades santiago"
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Propiedades por Ubicación</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Propiedades' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

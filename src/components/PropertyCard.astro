@@ -52,6 +52,8 @@ const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes]
           alt={carouselImages[0].alt || property.title}
           loading={priority ? "eager" : "lazy"}
           class="card-main-image"
+          width="400"
+          height="300"
         />
       )}
 
@@ -65,6 +67,8 @@ const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes]
               loading={index === 0 ? "eager" : "lazy"}
               class={`card-slide${index === 0 ? ' active' : ''}`}
               data-slide-index={index}
+              width="400"
+              height="300"
             />
           ))}
         </div>

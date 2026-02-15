@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { useTranslations } from '../i18n';
 import { getSiteConfig } from '../lib/config';
 
@@ -15,16 +16,10 @@ const config = await getSiteConfig();
   description={`Contáctanos para soporte, consultas o información sobre cómo publicar en ${config.company_name}. Estamos aquí para ayudarte.`}
   keywords="contacto ubikala, soporte inmobiliario, ayuda portal inmobiliario"
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Contacto</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Contacto' }
+  ]} />
 
   <section class="section">
     <div class="container-custom">

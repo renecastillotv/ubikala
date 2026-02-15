@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import type { Property, PropertyType } from '../../data/types';
@@ -75,18 +76,11 @@ const pageTitle = `${typeName} en Venta en República Dominicana | Ubíkala.com`
   description={typeDescription}
   keywords={`${typeName.toLowerCase()} en venta republica dominicana, comprar ${typeName.toLowerCase()} rd, ${typeName.toLowerCase()} santo domingo, ${typeName.toLowerCase()} punta cana`}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <a href="/comprar" class="hover:text-primary-600">Comprar</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{typeName}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Comprar', href: '/comprar' },
+    { label: typeName }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

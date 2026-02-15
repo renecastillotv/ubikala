@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getSiteConfig } from '../../lib/config';
 
 const config = await getSiteConfig();
@@ -58,16 +59,10 @@ const categories = [...new Set(guides.map(g => g.category))];
   description="Guias y recursos para comprar, vender o invertir en propiedades en Republica Dominicana. Aprende sobre fideicomisos, impuestos y mas."
   keywords="guias inmobiliarias rd, fideicomiso republica dominicana, comprar propiedad rd, impuestos inmobiliarios"
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Guias</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Guías' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

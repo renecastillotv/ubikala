@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { useTranslations } from '../i18n';
 import { getPortalInmobiliarias } from '../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../lib/ubikala-db';
@@ -60,16 +61,10 @@ if (currentPage > totalPages && totalPages > 0) {
   description="Encuentra las mejores inmobiliarias y empresas de bienes raíces. Compra, venta y alquiler de propiedades."
   keywords="inmobiliarias, empresas bienes raices, directorio inmobiliarias"
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Inmobiliarias</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Inmobiliarias' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

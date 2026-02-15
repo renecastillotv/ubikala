@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, type Lang } from '../../i18n';
 import { getPropertiesByLocation } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
@@ -222,18 +223,11 @@ const locationSchema = {
 >
   <script is:inline type="application/ld+json" set:html={JSON.stringify(locationSchema)} slot="head" />
 
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <a href="/propiedades" class="hover:text-primary-600">Propiedades</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{locationData.name}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Propiedades', href: '/propiedades' },
+    { label: locationData.name }
+  ]} />
 
   <!-- Hero with Property Images -->
   <section class="relative h-[300px] md:h-[400px] flex items-center overflow-hidden">
@@ -658,32 +652,6 @@ const locationSchema = {
       </div>
     </div>
   </section>
-
-  <!-- BreadcrumbList Schema -->
-  <script is:inline type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Inicio",
-        "item": "https://ubikala.com"
-      },
-      {
-        "@type": "ListItem",
-        "position": 2,
-        "name": "Propiedades",
-        "item": "https://ubikala.com/propiedades"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
-        "name": locationData.name,
-        "item": `https://ubikala.com/propiedades/${locationData.slug}`
-      }
-    ]
-  })} />
 
   <!-- FAQ Schema for location -->
   <script is:inline type="application/ld+json" set:html={JSON.stringify({

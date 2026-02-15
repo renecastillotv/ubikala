@@ -1,21 +1,16 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 ---
 
 <Layout
   title="Términos y Condiciones | Ubíkala.com"
   description="Términos y condiciones de uso de Ubikala.com. Conoce las reglas para usar nuestro portal inmobiliario."
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Términos y Condiciones</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Términos y Condiciones' }
+  ]} />
 
   <section class="section">
     <div class="container-custom">

@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
 import { getPlatformStats, formatStatNumber } from '../../lib/platform-stats';
 
@@ -22,16 +23,10 @@ try {
   keywords="portail immobilier, à propos ubíkala, qui sommes-nous, immobilier"
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{t.nav.about}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: t.nav.about }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-16">

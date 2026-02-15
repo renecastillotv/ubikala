@@ -3,6 +3,7 @@ import Layout from '../../../layouts/Layout.astro';
 import PropertyCard from '../../../components/PropertyCard.astro';
 import SearchBox from '../../../components/SearchBox.astro';
 import Pagination from '../../../components/Pagination.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations } from '../../../i18n';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
@@ -241,20 +242,12 @@ const relatedTypes = Object.entries(propertyTypeMap)
   <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
 
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex flex-wrap text-sm text-gray-600">
-        <a href="/" class="hover:text-primary-600">Inicio</a>
-        <span class="mx-2">/</span>
-        <a href="/alquilar" class="hover:text-secondary-600">Alquilar</a>
-        <span class="mx-2">/</span>
-        <a href={`/alquilar?tipo=${typeInfo.dbValue}`} class="hover:text-secondary-600">{typeInfo.plural}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{locationData.name}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: 'Inicio', href: '/' },
+    { label: 'Alquilar', href: '/alquilar' },
+    { label: typeInfo.plural, href: `/alquilar?tipo=${typeInfo.dbValue}` },
+    { label: locationData.name }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-secondary-600 to-secondary-700 py-12">

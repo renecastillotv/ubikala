@@ -1,0 +1,618 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import PropertyCard from '../../../../components/PropertyCard.astro';
+import SearchBox from '../../../../components/SearchBox.astro';
+import Pagination from '../../../../components/Pagination.astro';
+import Breadcrumb from '../../../../components/Breadcrumb.astro';
+import { useTranslations, getAlternateUrls } from '../../../../i18n';
+import { searchProperties } from '../../../../lib/meilisearch';
+import type { Property } from '../../../../data/types';
+import type { Lang } from '../../../../i18n';
+
+// SSR for dynamic routes
+export const prerender = false;
+
+const { type: typeSlug, location: locationSlug } = Astro.params;
+const t = useTranslations('fr');
+const lang: Lang = 'fr';
+
+// Map French URL slugs to database values and display names
+const propertyTypeMap: Record<string, { dbValue: string; singular: string; plural: string; icon: string }> = {
+  'maisons': { dbValue: 'casa', singular: 'Maison', plural: 'Maisons', icon: '🏠' },
+  'appartements': { dbValue: 'apartamento', singular: 'Appartement', plural: 'Appartements', icon: '🏢' },
+  'villas': { dbValue: 'villa', singular: 'Villa', plural: 'Villas', icon: '🏡' },
+  'penthouses': { dbValue: 'penthouse', singular: 'Penthouse', plural: 'Penthouses', icon: '🌆' },
+  'terrains': { dbValue: 'terreno', singular: 'Terrain', plural: 'Terrains', icon: '🌳' },
+  'commerces': { dbValue: 'local comercial', singular: 'Commerce', plural: 'Commerces', icon: '🏪' },
+  'bureaux': { dbValue: 'oficina', singular: 'Bureau', plural: 'Bureaux', icon: '🏛️' },
+  'entrepots': { dbValue: 'nave', singular: 'Entrepôt', plural: 'Entrepôts', icon: '🏭' },
+  'immeubles': { dbValue: 'edificio', singular: 'Immeuble', plural: 'Immeubles', icon: '🏗️' },
+};
+
+// Validate property type
+const typeInfo = propertyTypeMap[typeSlug?.toLowerCase() || ''];
+if (!typeInfo) {
+  return Astro.redirect('/fr/acheter');
+}
+
+// Format location name from slug
+const formatLocationName = (slug: string) => {
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const locationName = formatLocationName(locationSlug || '');
+
+// Pagination config
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+// Location data with sensible defaults
+let locationData: { name: string; province: string } = {
+  name: locationName,
+  province: 'République Dominicaine'
+};
+
+// Alternate URLs for SEO hreflang
+const alternateUrls = getAlternateUrls(`/fr/acheter/${typeSlug}/${locationSlug}`);
+
+// Fetch properties filtered by type and location via MeiliSearch
+let properties: Property[] = [];
+let totalCount = 0;
+
+try {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const result = await searchProperties({
+    operacion: 'venta',
+    tipo: typeInfo.dbValue,
+    query: locationSlug?.replace(/-/g, ' '),
+    limit: ITEMS_PER_PAGE,
+    offset
+  });
+
+  properties = result.properties;
+  totalCount = result.total;
+
+  // Update location data from the first property if available
+  if (properties.length > 0) {
+    const firstProp = properties[0];
+    if (firstProp.location.city) {
+      locationData.name = firstProp.location.city;
+    }
+    if (firstProp.location.province) {
+      locationData.province = firstProp.location.province;
+    }
+  }
+} catch (error) {
+  console.error('Error fetching properties:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+// Redirect if page is out of range
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect(`/fr/acheter/${typeSlug}/${locationSlug}`);
+}
+
+// Dynamic SEO titles and descriptions
+const pageTitle = `${typeInfo.plural} à Vendre à ${locationData.name} | République Dominicaine | Ubíkala`;
+const pageDescription = `Trouvez des ${typeInfo.plural.toLowerCase()} à vendre à ${locationData.name}, ${locationData.province}. ${totalCount} propriétés disponibles avec photos, prix et contact direct avec les agents.`;
+
+// SEO content specific to type+location combinations
+const seoContent: Record<string, Record<string, { intro: string; benefits: string[]; tips: string[] }>> = {
+  'apartamento': {
+    'default': {
+      intro: `Les appartements sont le choix le plus populaire pour les acheteurs recherchant confort, sécurité et équipements modernes. Ils offrent un entretien réduit et l'accès à des installations partagées telles que piscines, salles de sport et espaces communs.`,
+      benefits: [
+        'Sécurité 24h/24 et accès contrôlé',
+        'Équipements partagés (piscine, salle de sport, espaces verts)',
+        'Entretien réduit par rapport à une maison',
+        'Emplacements centraux avec accès facile aux services'
+      ],
+      tips: [
+        "Inspectez l'état du bâtiment et les parties communes",
+        'Renseignez-vous sur les charges mensuelles de copropriété',
+        "Considérez l'orientation du logement pour la lumière naturelle et la ventilation",
+        'Vérifiez le règlement de copropriété concernant les animaux et la location courte durée'
+      ]
+    },
+    'punta-cana': {
+      intro: `Les appartements à Punta Cana sont idéaux pour l'investissement locatif de vacances et les résidences secondaires. De nombreuses résidences proposent des programmes de gestion locative avec d'excellents rendements grâce à un flux constant de touristes toute l'année.`,
+      benefits: [
+        'Forte demande en location de vacances',
+        'Accès à des plages et complexes hôteliers de classe mondiale',
+        'Programmes de gestion hôtelière disponibles',
+        "Potentiel d'appréciation grâce au développement touristique continu"
+      ],
+      tips: [
+        'Envisagez un appartement avec programme de gestion locative pour des revenus passifs',
+        'Vérifiez la proximité de la plage et des équipements',
+        "Renseignez-vous sur l'historique d'occupation si vous achetez pour investir",
+        'Tenez compte des coûts d\'entretien en basse saison'
+      ]
+    },
+    'santo-domingo': {
+      intro: `Santo Domingo propose des appartements pour tous les budgets, des studios dans les quartiers animés aux penthouses de luxe à Piantini et Naco. La capitale possède le marché immobilier le plus actif du pays avec une forte demande locative à long terme.`,
+      benefits: [
+        'Marché le plus liquide pour l\'achat et la vente',
+        'Excellente connectivité et services',
+        'Large gamme de prix et de localisations',
+        'Forte demande locative à long terme'
+      ],
+      tips: [
+        'Tenez compte des embouteillages et de l\'accès au métro si vous travaillez en ville',
+        'Les quartiers comme Evaristo Morales et Bella Vista offrent un excellent rapport qualité-prix',
+        'Vérifiez la disponibilité du parking avant de vous engager',
+        'Renseignez-vous sur le niveau de sécurité du quartier'
+      ]
+    }
+  },
+  'casa': {
+    'default': {
+      intro: `Les maisons offrent plus d'espace, d'intimité et la liberté de personnaliser votre foyer. Elles sont parfaites pour les familles recherchant un jardin, un espace barbecue et de la place pour grandir.`,
+      benefits: [
+        "Plus d'espace intérieur et extérieur",
+        'Intimité totale sans voisins au-dessus ou en dessous',
+        'Liberté de rénover et d\'agrandir',
+        'Idéal pour les familles avec enfants ou animaux'
+      ],
+      tips: [
+        'Inspectez la toiture, la plomberie et les installations électriques',
+        "Tenez compte des coûts d'entretien du jardin",
+        'Évaluez la sécurité du quartier et les points d\'accès',
+        "Renseignez-vous sur d'éventuels problèmes d'inondation ou de structure"
+      ]
+    }
+  },
+  'villa': {
+    'default': {
+      intro: `Les villas représentent le summum du luxe résidentiel, avec des espaces de vie spacieux, des finitions haut de gamme et des équipements exclusifs tels que piscine privée, jardins paysagers et vues panoramiques.`,
+      benefits: [
+        'Finitions de luxe et design architectural unique',
+        'Piscine privée et jardins spacieux',
+        'Plus grande intimité et exclusivité',
+        'Fort potentiel de location de vacances haut de gamme'
+      ],
+      tips: [
+        "Prévoyez les coûts d'entretien de la piscine et du jardin",
+        'Envisagez un gestionnaire de propriété si vous la louez',
+        'Inspectez la qualité des finitions et des installations',
+        'Renseignez-vous sur les garanties de construction'
+      ]
+    }
+  },
+  'terreno': {
+    'default': {
+      intro: `L'achat d'un terrain vous donne la liberté de construire exactement ce que vous imaginez. C'est un investissement avec un fort potentiel d'appréciation, surtout dans les zones en développement.`,
+      benefits: [
+        'Liberté totale de concevoir votre projet',
+        "Potentiel d'appréciation à long terme",
+        "Investissement initial inférieur à une propriété construite",
+        'Possibilité de développer par phases'
+      ],
+      tips: [
+        'Vérifiez le plan cadastral et le certificat de titre',
+        "Vérifiez l'usage du sol autorisé (résidentiel, commercial, mixte)",
+        "Confirmez l'accès aux services publics (eau, électricité, assainissement)",
+        'Tenez compte des coûts de nivellement si le terrain est en pente'
+      ]
+    }
+  },
+  'local comercial': {
+    'default': {
+      intro: `Les espaces commerciaux en République Dominicaine répondent à une économie domestique en croissance et à une industrie touristique en plein essor. Que vous ayez besoin d'une vitrine, d'un espace de restauration ou d'un local commercial, il existe des options dans toutes les grandes villes.`,
+      benefits: [
+        'Revenus locatifs stables dans les zones commerciales établies',
+        'La croissance de l\'économie de consommation stimule la demande',
+        'Les zones touristiques offrent un fort passage piéton',
+        'Potentiel de baux commerciaux à long terme'
+      ],
+      tips: [
+        'Évaluez le flux piéton et la visibilité de l\'emplacement',
+        'Vérifiez le zonage et les activités commerciales autorisées',
+        'Renseignez-vous sur les baux existants et l\'historique des locataires',
+        'Vérifiez le parking et l\'accessibilité pour les clients'
+      ]
+    }
+  },
+  'oficina': {
+    'default': {
+      intro: `Les espaces de bureaux en République Dominicaine vont des suites modernes prêtes pour le coworking aux étages complets dans des tours d'affaires. L'environnement commercial en croissance fait des bureaux un investissement solide.`,
+      benefits: [
+        'Adresses professionnelles dans des emplacements de premier choix',
+        'Infrastructure moderne avec internet haut débit',
+        'Demande croissante des entreprises locales et internationales',
+        'Potentiel de baux stables à long terme'
+      ],
+      tips: [
+        'Évaluez les équipements du bâtiment et la qualité de la gestion',
+        "Vérifiez l'infrastructure internet et télécom",
+        'Considérez la proximité des banques, restaurants et transports',
+        'Vérifiez les places de parking incluses avec le local'
+      ]
+    }
+  },
+  'nave': {
+    'default': {
+      intro: `Les entrepôts et espaces industriels sont très demandés en République Dominicaine, notamment dans les zones franches et les corridors logistiques. Ils répondent aux besoins de fabrication, de distribution et de stockage.`,
+      benefits: [
+        'Emplacements stratégiques près des ports et autoroutes',
+        'Avantages des zones franches pour les entreprises éligibles',
+        'Grandes surfaces au sol pour un usage flexible',
+        'Demande croissante en logistique et e-commerce'
+      ],
+      tips: [
+        'Confirmez la hauteur sous plafond et les spécifications des quais de chargement',
+        'Vérifiez la capacité électrique pour vos opérations',
+        'Vérifiez la proximité des autoroutes principales et des ports',
+        'Examinez les réglementations et avantages des zones franches'
+      ]
+    }
+  },
+  'edificio': {
+    'default': {
+      intro: `Les immeubles complets représentent des opportunités d'investissement ou de développement significatives. Que vous recherchiez un portefeuille de revenus locatifs ou un projet de rénovation, l'achat d'un immeuble entier offre un contrôle maximal.`,
+      benefits: [
+        "Contrôle total sur l'actif et ses locataires",
+        'Revenus locatifs diversifiés provenant de plusieurs unités',
+        'Potentiel de rénovation et de valorisation',
+        "Économies d'échelle dans la gestion"
+      ],
+      tips: [
+        'Effectuez une vérification approfondie de tous les baux existants',
+        'Faites réaliser une inspection professionnelle de la structure et des installations',
+        "Analysez le taux de capitalisation et les charges d'exploitation",
+        "Vérifiez le zonage pour tout changement d'usage prévu"
+      ]
+    }
+  },
+  'penthouse': {
+    'default': {
+      intro: `Les penthouses offrent une expérience de vie unique alliant le prestige d'un appartement de luxe à des vues imprenables et des espaces exclusifs en toiture. Ils représentent le sommet de la vie urbaine en République Dominicaine.`,
+      benefits: [
+        'Vues panoramiques exceptionnelles',
+        'Espaces privés en toiture (terrasse, jacuzzi)',
+        'Finitions haut de gamme et grands volumes',
+        'Exclusivité et prestige'
+      ],
+      tips: [
+        "Vérifiez l'étanchéité et l'isolation de la toiture",
+        "Renseignez-vous sur l'accès exclusif à la terrasse",
+        'Évaluez l\'exposition au vent et au soleil',
+        'Vérifiez la pression de l\'eau aux étages supérieurs'
+      ]
+    }
+  }
+};
+
+// Get the specific or default SEO content
+const typeContent = seoContent[typeInfo.dbValue] || seoContent['apartamento'];
+const locationContent = typeContent[locationSlug || ''] || typeContent['default'];
+
+// Dynamic FAQs based on type and location
+const dynamicFAQs = [
+  {
+    question: `Combien coûte ${typeInfo.singular === 'Appartement' || typeInfo.singular === 'Immeuble' || typeInfo.singular === 'Entrepôt' ? 'un' : 'une'} ${typeInfo.singular.toLowerCase()} à ${locationData.name} ?`,
+    answer: `Les prix des ${typeInfo.plural.toLowerCase()} à ${locationData.name} varient selon l'emplacement exact, la taille et les équipements. Nous avons actuellement ${totalCount} options disponibles. Nous vous recommandons de parcourir les annonces et de contacter les agents pour les informations de prix les plus récentes.`
+  },
+  {
+    question: `Acheter ${typeInfo.singular === 'Appartement' || typeInfo.singular === 'Immeuble' || typeInfo.singular === 'Entrepôt' ? 'un' : 'une'} ${typeInfo.singular.toLowerCase()} à ${locationData.name} est-il un bon investissement ?`,
+    answer: `${locationData.name} est une zone avec une demande stable pour les ${typeInfo.plural.toLowerCase()}. Pour évaluer si c'est un bon investissement, prenez en compte des facteurs tels que l'appréciation historique, la demande locative, le développement des infrastructures et vos objectifs financiers. Un agent immobilier local peut vous fournir des informations spécifiques au marché.`
+  },
+  {
+    question: `Quels documents faut-il pour acheter ${typeInfo.singular === 'Appartement' || typeInfo.singular === 'Immeuble' || typeInfo.singular === 'Entrepôt' ? 'un' : 'une'} ${typeInfo.singular.toLowerCase()} ?`,
+    answer: `Pour acheter ${typeInfo.singular === 'Appartement' || typeInfo.singular === 'Immeuble' || typeInfo.singular === 'Entrepôt' ? 'un' : 'une'} ${typeInfo.singular.toLowerCase()} en République Dominicaine, vous avez besoin de : un passeport valide ou une cédula, une preuve de revenus ou des relevés bancaires, et un acompte (généralement 10 à 30 % de la valeur du bien). Le vendeur doit fournir un certificat de titre certifié, un plan cadastral et une attestation d'absence de charges.`
+  },
+  {
+    question: `Peut-on financer ${typeInfo.singular === 'Appartement' || typeInfo.singular === 'Immeuble' || typeInfo.singular === 'Entrepôt' ? 'un' : 'une'} ${typeInfo.singular.toLowerCase()} à ${locationData.name} ?`,
+    answer: `Oui, la plupart des ${typeInfo.plural.toLowerCase()} peuvent être financés par les banques dominicaines locales. Les taux d'intérêt actuels varient de 9 à 12 % par an pour des durées de 15 à 25 ans. Certains projets neufs offrent également un financement direct du promoteur avec des conditions plus flexibles.`
+  }
+];
+
+// Schema.org structured data
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `${typeInfo.plural} à Vendre à ${locationData.name}`,
+  description: pageDescription,
+  numberOfItems: totalCount,
+  itemListElement: properties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      description: property.description.substring(0, 160),
+      url: `https://ubikala.com/fr/propriete/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: dynamicFAQs.map(faq => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer
+    }
+  }))
+};
+
+// Related property types for suggestions
+const relatedTypes = Object.entries(propertyTypeMap)
+  .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue)
+  .slice(0, 4)
+  .map(([slug, info]) => ({ slug, ...info }));
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  keywords={`${typeInfo.plural.toLowerCase()} ${locationData.name.toLowerCase()}, acheter ${typeInfo.singular.toLowerCase()} ${locationData.name.toLowerCase()}, ${typeInfo.plural.toLowerCase()} à vendre ${locationData.name.toLowerCase()}`}
+  alternateLanguages={alternateUrls}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
+
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: t.nav.buy, href: '/fr/acheter' },
+    { label: typeInfo.plural, href: `/fr/acheter/${typeSlug}` },
+    { label: locationData.name }
+  ]} />
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        {typeInfo.plural} à Vendre à {locationData.name}
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        {totalCount > 0
+          ? `Parcourez ${totalCount} ${typeInfo.plural.toLowerCase()} disponibles à l'achat à ${locationData.name}, ${locationData.province}.`
+          : `Il n'y a actuellement aucun ${typeInfo.singular.toLowerCase()} disponible à ${locationData.name}. Explorez d'autres zones ou types de propriétés.`
+        }
+      </p>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="py-6 bg-white shadow-sm sticky top-16 z-40">
+    <div class="container-custom">
+      <SearchBox />
+    </div>
+  </section>
+
+  <!-- Results or Empty State -->
+  <section class="section">
+    <div class="container-custom">
+      {properties.length > 0 ? (
+        <>
+          <div class="flex items-center justify-between mb-8">
+            <p class="text-gray-600">
+              <span class="font-semibold text-gray-900">{totalCount}</span> {typeInfo.plural.toLowerCase()} à vendre
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard property={property} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div class="mt-12">
+              <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={`/fr/acheter/${typeSlug}/${locationSlug}`} />
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="text-center py-16">
+          <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">
+            Aucun {typeInfo.singular.toLowerCase()} trouvé à {locationData.name}
+          </h2>
+          <p class="text-gray-600 mb-8 max-w-md mx-auto">
+            Il n'y a actuellement aucun {typeInfo.singular.toLowerCase()} disponible dans cette zone. Essayez un autre emplacement ou type de propriété.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/fr/acheter" class="btn-primary">
+              Voir Toutes les Propriétés
+            </a>
+            <a href={`/fr/proprietes/${locationSlug}`} class="btn-outline">
+              Tout Voir à {locationData.name}
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- SEO Content Section -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
+          Acheter des {typeInfo.plural} à {locationData.name}
+        </h2>
+
+        <p class="text-gray-600 text-lg mb-8">
+          {locationContent.intro}
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <!-- Benefits -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Avantages des {typeInfo.plural}
+            </h3>
+            <ul class="space-y-3">
+              {locationContent.benefits.map((benefit) => (
+                <li class="flex items-start gap-2 text-gray-600">
+                  <svg class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <!-- Tips -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Conseils pour l'Achat
+            </h3>
+            <ul class="space-y-3">
+              {locationContent.tips.map((tip) => (
+                <li class="flex items-start gap-2 text-gray-600">
+                  <svg class="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQs -->
+  <section class="py-16">
+    <div class="container-custom">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4">
+        Questions Fréquemment Posées
+      </h2>
+      <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+        Réponses aux questions courantes sur l'achat de {typeInfo.plural.toLowerCase()} à {locationData.name}
+      </p>
+
+      <div class="max-w-3xl mx-auto space-y-4">
+        {dynamicFAQs.map((faq) => (
+          <details class="bg-white rounded-xl shadow-sm group">
+            <summary class="flex items-center justify-between p-6 cursor-pointer">
+              <span class="font-semibold text-gray-900 pr-4">{faq.question}</span>
+              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-6 pb-6 text-gray-600">
+              {faq.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Other Property Types -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        Autres Types de Propriétés à {locationData.name}
+      </h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {relatedTypes.map((type) => (
+          <a
+            href={`/fr/acheter/${type.slug}/${locationSlug}`}
+            class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-center group"
+          >
+            <span class="text-3xl block mb-2">{type.icon}</span>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">
+              {type.plural}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-gradient-to-r from-primary-600 to-primary-700">
+    <div class="container-custom">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="text-3xl font-bold text-white mb-4">
+          Besoin d'aide pour trouver votre {typeInfo.singular.toLowerCase()} ?
+        </h2>
+        <p class="text-primary-100 text-lg mb-8">
+          Nos agents connaissent {locationData.name} parfaitement et peuvent vous aider à trouver la propriété idéale selon votre budget et vos besoins.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/fr/agents" class="bg-white text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Contacter un Agent
+          </a>
+          <a href="/fr/contact" class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Nous Contacter
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Related Links -->
+  <section class="py-12">
+    <div class="container-custom">
+      <h2 class="text-xl font-bold text-gray-900 mb-6">Liens Connexes</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href={`/fr/proprietes/${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Tout à {locationData.name}</span>
+            <p class="text-sm text-gray-500">Toutes les propriétés</p>
+          </div>
+        </a>
+
+        <a href="/fr/louer" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Louer à {locationData.name}</span>
+            <p class="text-sm text-gray-500">Propriétés en location</p>
+          </div>
+        </a>
+
+        <a href="/fr/acheter" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Guide d'Achat</span>
+            <p class="text-sm text-gray-500">Étape par étape</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

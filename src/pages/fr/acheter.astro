@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
@@ -42,16 +43,10 @@ if (currentPage > totalPages && totalPages > 0) {
   keywords={t.meta.keywords}
   alternateLanguages={alternateUrls}
 >
-  <!-- Breadcrumb -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">{t.nav.buy}</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: t.nav.buy }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">

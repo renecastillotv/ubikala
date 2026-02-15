@@ -1,6 +1,7 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
 import Pagination from '../../../components/Pagination.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls, localizedUrl } from '../../../i18n';
 import { getLocationsWithStats } from '../../../lib/meilisearch';
 
@@ -31,16 +32,10 @@ const pageDescription = 'Explorez les propriétés à vendre et à louer dans le
   keywords="propriétés république dominicaine, immobilier par emplacement, maisons saint domingue, appartements punta cana, propriétés santiago"
   alternateLanguages={alternateUrls}
 >
-  <!-- Fil d'Ariane -->
-  <div class="bg-gray-100 py-4">
-    <div class="container-custom">
-      <nav class="flex text-sm text-gray-600">
-        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
-        <span class="mx-2">/</span>
-        <span class="text-gray-900 font-medium">Propriétés par Emplacement</span>
-      </nav>
-    </div>
-  </div>
+  <Breadcrumb items={[
+    { label: t.nav.home, href: '/fr' },
+    { label: 'Propriétés' }
+  ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
