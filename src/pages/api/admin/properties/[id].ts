@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUbikalaPropertyById, updateProperty, deleteProperty, logActivity } from '../../../../lib/ubikala-db';
 import { notifyPropertyChange } from '../../../../lib/search-engine-ping';
+import { syncPropertyToCRM } from '../../../../lib/crm-sync';
 
 // GET - Get single property
 export const GET: APIRoute = async ({ params }) => {
@@ -73,6 +74,9 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
       notifyPropertyChange(updatedProperty.slug).catch(() => {});
     }
 
+    // Sync to MeiliSearch via CRM API (non-blocking)
+    syncPropertyToCRM(params.id!, 'update').catch(() => {});
+
     return new Response(JSON.stringify({ property: updatedProperty }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -124,6 +128,9 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     }
 
     await deleteProperty(params.id!);
+
+    // Remove from MeiliSearch via CRM API (non-blocking)
+    syncPropertyToCRM(params.id!, 'delete').catch(() => {});
 
     await logActivity({
       user_id: user.id,

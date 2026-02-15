@@ -90,6 +90,8 @@ export interface MeiliPropertyDoc {
   portales: Record<string, boolean> | null;
   vistas: number;
   cocaptores: Array<{ perfil_asesor_id: string; nombre: string; slug: string; foto: string | null }>;
+  traducciones: Record<string, Record<string, any>> | null;
+  slug_traducciones: Record<string, string> | null;
   created_at: number;
   updated_at: number;
 }
@@ -206,9 +208,15 @@ async function meiliRequest(path: string, options: RequestInit = {}): Promise<an
 /**
  * Transform a MeiliSearch property document into Ubikala's Property interface.
  */
-export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = false): Property {
+export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = false, lang?: string): Property {
   const operacionLower = doc.operacion?.toLowerCase() || '';
   const isRentalContext = forceRental || operacionLower === 'renta' || operacionLower === 'alquiler';
+
+  // Apply translations for non-Spanish languages
+  const t = (lang && lang !== 'es' && doc.traducciones?.[lang]) || null;
+  const titulo = (t?.titulo as string) || doc.titulo;
+  const descripcion = (t?.descripcion as string) || doc.descripcion || '';
+  const slug = (lang && lang !== 'es' && doc.slug_traducciones?.[lang]) || doc.slug;
 
   const effectivePrice = (isRentalContext && doc.precio_alquiler)
     ? doc.precio_alquiler
@@ -222,18 +230,18 @@ export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = fa
   // Build images
   const images: PropertyImage[] = [];
   if (doc.imagen_principal) {
-    images.push({ url: doc.imagen_principal, alt: doc.titulo, isPrimary: true });
+    images.push({ url: doc.imagen_principal, alt: titulo, isPrimary: true });
   }
   if (doc.imagenes?.length) {
     for (let i = 0; i < doc.imagenes.length; i++) {
       const url = doc.imagenes[i];
       if (url && url !== doc.imagen_principal) {
-        images.push({ url, alt: `${doc.titulo} - ${i + 1}`, isPrimary: false });
+        images.push({ url, alt: `${titulo} - ${i + 1}`, isPrimary: false });
       }
     }
   }
   if (images.length === 0) {
-    images.push({ url: '/images/property-placeholder.svg', alt: doc.titulo, isPrimary: true });
+    images.push({ url: '/images/property-placeholder.svg', alt: titulo, isPrimary: true });
   }
 
   // Is new (< 30 days)
@@ -288,9 +296,9 @@ export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = fa
 
   return {
     id: doc.id,
-    slug: doc.slug,
-    title: doc.titulo,
-    description: doc.descripcion || '',
+    slug,
+    title: titulo,
+    description: descripcion,
     type: typeMap[doc.tipo?.toLowerCase()] || 'house',
     transactionType,
     status: doc.estado_propiedad === 'disponible' ? 'active'
@@ -402,6 +410,7 @@ export interface SearchOptions {
   limit?: number;
   offset?: number;
   facets?: string[];
+  lang?: string;
 }
 
 /**
@@ -419,7 +428,7 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
     precioMin, precioMax, habitacionesMin, banosMin,
     destacada, amenidades, agenteSlug, tenantId,
     sort = ['destacada:desc', 'updated_at:desc'],
-    limit = 20, offset = 0, facets,
+    limit = 20, offset = 0, facets, lang,
   } = options;
 
   const filters: string[] = [];
@@ -481,7 +490,7 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
   const isRental = operacion === 'renta';
 
   return {
-    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, isRental)),
+    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, isRental, lang)),
     total: result.estimatedTotalHits || result.totalHits || 0,
     facetDistribution: result.facetDistribution,
   };
@@ -490,24 +499,33 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
 /**
  * Get a single property by slug via MeiliSearch.
  */
-export async function getPropertyBySlug(slug: string): Promise<Property | null> {
+export async function getPropertyBySlug(slug: string, lang?: string): Promise<Property | null> {
+  // Search by slug or by translated slug
+  let filter = `slug = "${slug}" AND (${portalFilter()})`;
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
     method: 'POST',
-    body: JSON.stringify({
-      q: '',
-      filter: `slug = "${slug}" AND (${portalFilter()})`,
-      limit: 1,
-    }),
+    body: JSON.stringify({ q: '', filter, limit: 1 }),
   });
 
-  const hit = result.hits?.[0];
-  return hit ? meiliToProperty(hit) : null;
+  let hit = result.hits?.[0];
+
+  // If not found by main slug, try translated slug
+  if (!hit && lang && lang !== 'es') {
+    const altFilter = `slug_traducciones.${lang} = "${slug}" AND (${portalFilter()})`;
+    const altResult = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({ q: '', filter: altFilter, limit: 1 }),
+    });
+    hit = altResult.hits?.[0];
+  }
+
+  return hit ? meiliToProperty(hit, false, lang) : null;
 }
 
 /**
  * Get featured properties.
  */
-export async function getFeaturedProperties(limit: number = 12, pais?: string): Promise<Property[]> {
+export async function getFeaturedProperties(limit: number = 12, pais?: string, lang?: string): Promise<Property[]> {
   const filters = [`(${portalFilter()})`, 'destacada = true'];
   if (pais) filters.push(`pais = "${pais}"`);
 
@@ -521,13 +539,13 @@ export async function getFeaturedProperties(limit: number = 12, pais?: string): 
     }),
   });
 
-  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit));
+  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, false, lang));
 }
 
 /**
  * Get recent properties.
  */
-export async function getRecentProperties(limit: number = 12, pais?: string): Promise<Property[]> {
+export async function getRecentProperties(limit: number = 12, pais?: string, lang?: string): Promise<Property[]> {
   const filters = [`(${portalFilter()})`];
   if (pais) filters.push(`pais = "${pais}"`);
 
@@ -541,13 +559,13 @@ export async function getRecentProperties(limit: number = 12, pais?: string): Pr
     }),
   });
 
-  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit));
+  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, false, lang));
 }
 
 /**
  * Get properties by agent slug.
  */
-export async function getPropertiesByAgent(agentSlug: string, limit: number = 50): Promise<Property[]> {
+export async function getPropertiesByAgent(agentSlug: string, limit: number = 50, lang?: string): Promise<Property[]> {
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({
@@ -558,7 +576,7 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
     }),
   });
 
-  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit));
+  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, false, lang));
 }
 
 /**
@@ -566,9 +584,9 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
  */
 export async function getPropertiesByLocation(
   locationSlug: string,
-  options: { limit?: number; offset?: number; operacion?: string } = {}
+  options: { limit?: number; offset?: number; operacion?: string; lang?: string } = {}
 ): Promise<{ properties: Property[]; total: number }> {
-  const { limit = 20, offset = 0, operacion } = options;
+  const { limit = 20, offset = 0, operacion, lang } = options;
 
   // Normalize slug to match city/sector (replace hyphens with spaces for search)
   const locationName = locationSlug.replace(/-/g, ' ');
@@ -589,7 +607,7 @@ export async function getPropertiesByLocation(
   });
 
   return {
-    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, operacion === 'renta')),
+    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, operacion === 'renta', lang)),
     total: result.estimatedTotalHits || 0,
   };
 }
@@ -597,7 +615,7 @@ export async function getPropertiesByLocation(
 /**
  * Get similar properties (same city/type, excluding current).
  */
-export async function getSimilarProperties(property: Property, limit: number = 6): Promise<Property[]> {
+export async function getSimilarProperties(property: Property, limit: number = 6, lang?: string): Promise<Property[]> {
   const filters: string[] = [`(${portalFilter()})`, `id != "${property.id}"`];
   if (property.location.city) {
     filters.push(`ciudad = "${property.location.city}"`);
@@ -613,7 +631,7 @@ export async function getSimilarProperties(property: Property, limit: number = 6
     }),
   });
 
-  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit));
+  return (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, false, lang));
 }
 
 /**

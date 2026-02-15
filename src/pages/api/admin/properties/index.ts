@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUbikalaProperties, createProperty, logActivity, canUserPublish } from '../../../../lib/ubikala-db';
 import { notifyPropertyChange } from '../../../../lib/search-engine-ping';
+import { syncPropertyToCRM } from '../../../../lib/crm-sync';
 
 function generateSlug(titulo: string): string {
   return titulo
@@ -91,6 +92,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Notify search engines about new property (non-blocking)
     notifyPropertyChange(property.slug).catch(() => {});
+
+    // Sync to MeiliSearch via CRM API (non-blocking)
+    syncPropertyToCRM(property.id, 'create').catch(() => {});
 
     return new Response(JSON.stringify({ property }), {
       status: 201,
