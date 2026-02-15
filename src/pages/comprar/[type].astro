@@ -37,11 +37,16 @@ const typeNames: Record<string, string> = {
   'solares': 'Solares',
 };
 
+const { type: typeSlug } = Astro.params;
+const t = useTranslations('es');
+
+const pais = Astro.locals.country.name;
+
 const typeDescriptions: Record<string, string> = {
-  'casas': 'Encuentra casas en venta en República Dominicana. Desde residencias familiares hasta propiedades de lujo en las mejores zonas del país.',
+  'casas': `Encuentra casas en venta en ${pais}. Desde residencias familiares hasta propiedades de lujo en las mejores zonas del país.`,
   'apartamentos': 'Explora apartamentos en venta en Santo Domingo, Punta Cana, Santiago y más. Modernos, con amenidades y ubicaciones privilegiadas.',
   'villas': 'Descubre villas exclusivas frente al mar, en campos de golf y comunidades cerradas. El máximo lujo en el Caribe.',
-  'penthouses': 'Los penthouses más espectaculares de República Dominicana. Vistas panorámicas, terrazas privadas y acabados de primera.',
+  'penthouses': `Los penthouses más espectaculares de ${pais}. Vistas panorámicas, terrazas privadas y acabados de primera.`,
   'terrenos': 'Terrenos en venta para construir tu proyecto. Lotes residenciales, comerciales e industriales en ubicaciones estratégicas.',
   'locales-comerciales': 'Locales comerciales en las mejores zonas. Ideales para restaurantes, tiendas, oficinas y más.',
   'oficinas': 'Espacios de oficina en torres empresariales y edificios comerciales. Listos para tu negocio.',
@@ -50,14 +55,9 @@ const typeDescriptions: Record<string, string> = {
   'solares': 'Solares en venta para construir tu proyecto ideal.',
 };
 
-const { type: typeSlug } = Astro.params;
-const t = useTranslations('es');
-
 const dbType = slugToDbType[typeSlug || ''] || typeSlug;
 const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Propiedades';
-const typeDescription = typeDescriptions[typeSlug || ''] || `Encuentra ${typeName.toLowerCase()} en venta en República Dominicana.`;
-
-const pais = Astro.locals.country.name;
+const typeDescription = typeDescriptions[typeSlug || ''] || `Encuentra ${typeName.toLowerCase()} en venta en ${pais}.`;
 
 // Fetch properties from MeiliSearch
 let typeProperties: Property[] = [];
@@ -70,7 +70,7 @@ try {
   console.error('Error fetching properties by type:', error);
 }
 
-const pageTitle = `${typeName} en Venta en República Dominicana | Ubíkala.com`;
+const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
 ---
 
 <Layout
@@ -88,7 +88,7 @@ const pageTitle = `${typeName} en Venta en República Dominicana | Ubíkala.com`
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        {typeName} en Venta en República Dominicana
+        {typeName} en Venta en {pais}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         {typeDescription}
@@ -136,7 +136,7 @@ const pageTitle = `${typeName} en Venta en República Dominicana | Ubíkala.com`
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Comprar {typeName} en República Dominicana</h2>
+        <h2>Comprar {typeName} en {pais}</h2>
         <p>
           {typeDescription} En Ubikala.com, asesores inmobiliarios y propietarios publican
           {typeName.toLowerCase()} en todo el país. Contacta directamente al publicador para

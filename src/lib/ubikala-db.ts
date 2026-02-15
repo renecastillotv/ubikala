@@ -2629,3 +2629,400 @@ export async function deleteCountry(code: string): Promise<boolean> {
   await ubikalaDb`UPDATE ubikala_paises SET is_active = false, updated_at = NOW() WHERE code = ${code.toUpperCase()}`;
   return true;
 }
+
+// ============================================
+// SEO CONTENT (ubikala_seo_content)
+// ============================================
+
+export interface SeoContentRecord {
+  id?: string;
+  country_code: string;
+  lang: string;
+  section: string;
+  page: string | null;
+  content: any;
+  sort_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+let seoContentTableEnsured = false;
+
+export async function ensureSeoContentTable(): Promise<void> {
+  if (!ubikalaDb || seoContentTableEnsured) return;
+
+  await ubikalaDb`
+    CREATE TABLE IF NOT EXISTS ubikala_seo_content (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      country_code VARCHAR(5) NOT NULL,
+      lang VARCHAR(5) NOT NULL,
+      section VARCHAR(100) NOT NULL,
+      page VARCHAR(100),
+      content JSONB NOT NULL DEFAULT '[]',
+      sort_order INT NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(country_code, lang, section, page)
+    )
+  `;
+  seoContentTableEnsured = true;
+}
+
+export async function getSeoContentRow(
+  countryCode: string,
+  lang: string,
+  section: string,
+  page?: string | null
+): Promise<any | null> {
+  if (!ubikalaDb) return null;
+  await ensureSeoContentTable();
+
+  const rows = page
+    ? await ubikalaDb`
+        SELECT content FROM ubikala_seo_content
+        WHERE country_code = ${countryCode.toUpperCase()}
+          AND lang = ${lang}
+          AND section = ${section}
+          AND page = ${page}
+          AND is_active = true
+      `
+    : await ubikalaDb`
+        SELECT content FROM ubikala_seo_content
+        WHERE country_code = ${countryCode.toUpperCase()}
+          AND lang = ${lang}
+          AND section = ${section}
+          AND page IS NULL
+          AND is_active = true
+      `;
+
+  return rows[0]?.content || null;
+}
+
+export async function upsertSeoContent(
+  countryCode: string,
+  lang: string,
+  section: string,
+  page: string | null,
+  content: any
+): Promise<SeoContentRecord> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  await ensureSeoContentTable();
+
+  const rows = await ubikalaDb`
+    INSERT INTO ubikala_seo_content (country_code, lang, section, page, content)
+    VALUES (${countryCode.toUpperCase()}, ${lang}, ${section}, ${page}, ${JSON.stringify(content)})
+    ON CONFLICT (country_code, lang, section, page) DO UPDATE SET
+      content = ${JSON.stringify(content)},
+      updated_at = NOW()
+    RETURNING *
+  `;
+  return rows[0] as SeoContentRecord;
+}
+
+export async function getAllSeoContentForCountry(
+  countryCode: string,
+  lang: string
+): Promise<SeoContentRecord[]> {
+  if (!ubikalaDb) return [];
+  await ensureSeoContentTable();
+
+  const rows = await ubikalaDb`
+    SELECT * FROM ubikala_seo_content
+    WHERE country_code = ${countryCode.toUpperCase()}
+      AND lang = ${lang}
+      AND is_active = true
+    ORDER BY section, page, sort_order
+  `;
+  return rows as SeoContentRecord[];
+}
+
+export async function seedSeoContent(): Promise<void> {
+  if (!ubikalaDb) return;
+  await ensureSeoContentTable();
+
+  const existing = await ubikalaDb`SELECT COUNT(*) as count FROM ubikala_seo_content`;
+  if (Number(existing[0]?.count) > 0) return;
+
+  const insert = async (cc: string, lang: string, section: string, page: string | null, content: any) => {
+    await ubikalaDb!`
+      INSERT INTO ubikala_seo_content (country_code, lang, section, page, content)
+      VALUES (${cc}, ${lang}, ${section}, ${page}, ${JSON.stringify(content)})
+      ON CONFLICT (country_code, lang, section, page) DO NOTHING
+    `;
+  };
+
+  // === SPANISH (DO + es) ===
+
+  // Buy page
+  await insert('DO', 'es', 'hero', 'buy', { title: 'Propiedades en Venta en {pais}', description: 'Explora nuestra selección de casas, apartamentos, villas, terrenos y locales comerciales disponibles para compra en todo el país.' });
+  await insert('DO', 'es', 'guide_header', 'buy', { title: 'Tu Guía para Comprar en {pais}', subtitle: 'Todo lo que necesitas saber para invertir en bienes raíces' });
+  await insert('DO', 'es', 'popular_zones', 'buy', [
+    { name: 'Santo Domingo', description: 'Apartamentos en Piantini, Naco, Bella Vista', link: '/propiedades/santo-domingo', emoji: '🏙️', color: 'primary' },
+    { name: 'Punta Cana', description: 'Villas y condos con alto retorno', link: '/propiedades/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Precios accesibles, excelente calidad de vida', link: '/propiedades/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Las Terrenas', description: 'Paraíso bohemio frente al mar', link: '/propiedades/samana', emoji: '🌴', color: 'purple' }
+  ]);
+  await insert('DO', 'es', 'property_types', 'buy', [
+    { name: 'Apartamentos', description: 'Desde estudios hasta penthouses de lujo', link: '/comprar/apartamentos', letter: 'A', color: 'primary' },
+    { name: 'Casas', description: 'Residencias familiares con seguridad 24/7', link: '/comprar/casas', letter: 'C', color: 'emerald' },
+    { name: 'Villas', description: 'Propiedades exclusivas con piscina privada', link: '/comprar/villas', letter: 'V', color: 'purple' },
+    { name: 'Terrenos', description: 'Lotes para tu proyecto residencial o comercial', link: '/comprar/terrenos', letter: 'T', color: 'amber' }
+  ]);
+  await insert('DO', 'es', 'info_box', 'buy', { title: 'Compra Sin Restricciones para Extranjeros', text: 'Los extranjeros pueden comprar propiedades en {pais} con los mismos derechos que los nacionales. No necesitas residencia ni visa especial. Solo tu pasaporte y nuestros asesores verificados te guiarán en cada paso.' });
+  await insert('DO', 'es', 'faqs', 'buy', [
+    { question: '¿Qué es el Bono Primera Vivienda en República Dominicana?', answer: 'El Bono Primera Vivienda es un subsidio del gobierno dominicano que otorga hasta RD$1,500,000 (aproximadamente US$25,000) a compradores de primera vivienda. Este beneficio está disponible para ciudadanos dominicanos que nunca han sido propietarios y aplica para viviendas de bajo costo.' },
+    { question: '¿Cuáles son los requisitos para obtener el Bono Primera Vivienda?', answer: 'Los requisitos incluyen: ser dominicano o residente legal, mayor de 18 años, no haber sido propietario de vivienda anteriormente, tener ingresos familiares que no excedan RD$75,000 mensuales, y la vivienda debe estar valorada por debajo de cierto monto establecido por el programa.' },
+    { question: '¿Cuáles son los costos de cierre al comprar una propiedad?', answer: 'Los costos de cierre incluyen: Impuesto de Transferencia Inmobiliaria (3% del valor), gastos legales (1-2%), gastos de registro (0.5%), tasación (variable), y gastos bancarios si hay financiamiento. En total, debes presupuestar entre 5-7% adicional al precio de compra.' },
+    { question: '¿Qué es un Fideicomiso Inmobiliario?', answer: 'Un Fideicomiso Inmobiliario es un mecanismo legal donde un desarrollador transfiere la propiedad a una entidad fiduciaria (generalmente un banco) que administra los fondos y garantiza la construcción del proyecto. Esto protege tu inversión ya que el dinero solo se libera al constructor cuando cumple con los hitos de construcción.' },
+    { question: '¿Cuáles son las ventajas de comprar mediante Fideicomiso?', answer: 'Las ventajas incluyen: protección legal de tu inversión, supervisión bancaria del proyecto, liberación de fondos por avance de obra, posibilidad de financiamiento directo con el fideicomiso, precios más bajos que proyectos terminados, y mayor seguridad jurídica.' },
+    { question: '¿Pueden los extranjeros comprar propiedades?', answer: 'Sí, los extranjeros pueden comprar propiedades en {pais} con los mismos derechos que los nacionales. No hay restricciones para la compra de bienes raíces. Solo necesitas tu pasaporte vigente.' }
+  ]);
+  await insert('DO', 'es', 'educational_cards', 'buy', [
+    { title: 'Bono Primera Vivienda', description: '¿Comprando tu primera casa? Podrías recibir hasta RD$1,500,000 de subsidio del gobierno.', link: '/guias/bono-primera-vivienda', icon: 'money' },
+    { title: 'Compra en Fideicomiso', description: 'Compra segura en proyectos en construcción con tu inversión protegida por ley.', link: '/guias/fideicomiso-inmobiliario', icon: 'shield' },
+    { title: 'Compradores desde USA', description: 'Guía completa: impuestos, financiamiento y proceso de compra para estadounidenses.', link: '/guias/extranjeros-comprando-rd', icon: 'globe' }
+  ]);
+  await insert('DO', 'es', 'cta', 'buy', { title: '¿Listo para encontrar tu propiedad ideal?', description: 'Nuestros asesores verificados te ayudarán a encontrar la propiedad perfecta en {pais}.' });
+
+  // Rent page
+  await insert('DO', 'es', 'hero', 'rent', { title: 'Propiedades en Alquiler en {pais}', description: 'Encuentra apartamentos amueblados, casas familiares, oficinas y locales comerciales disponibles para alquiler.' });
+  await insert('DO', 'es', 'guide_header', 'rent', { title: 'Guía para Alquilar en {pais}', subtitle: 'Encuentra el espacio perfecto para vivir o trabajar' });
+  await insert('DO', 'es', 'popular_zones', 'rent', [
+    { name: 'Santo Domingo', description: 'Piantini, Naco, Bella Vista, Serralles', link: '/propiedades/santo-domingo', emoji: '🏙️', color: 'secondary' },
+    { name: 'Punta Cana', description: 'Cap Cana, Bávaro, Punta Cana Village', link: '/propiedades/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Cerros de Gurabo, Jardines Metropolitanos', link: '/propiedades/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Puerto Plata', description: 'Sosúa, Cabarete', link: '/propiedades/puerto-plata', emoji: '🌊', color: 'purple' }
+  ]);
+  await insert('DO', 'es', 'rental_requirements', 'rent', [
+    { title: 'Identificación', description: 'Cédula dominicana o pasaporte vigente' },
+    { title: 'Comprobante de ingresos', description: 'Carta de trabajo o estados financieros' },
+    { title: 'Depósito de seguridad', description: 'Generalmente 1-2 meses de alquiler' },
+    { title: 'Referencias', description: 'Personales o de empleador' }
+  ]);
+  await insert('DO', 'es', 'info_box', 'rent', { title: 'Extranjeros Pueden Alquilar Sin Restricciones', text: 'No necesitas residencia ni visa especial para alquilar en {pais}. Solo tu pasaporte vigente y cumplir con los requisitos del propietario. Nuestros asesores te ayudarán a encontrar la propiedad ideal.' });
+  await insert('DO', 'es', 'faqs', 'rent', [
+    { question: '¿Qué documentos necesito para alquilar una propiedad?', answer: 'Generalmente necesitas: cédula o pasaporte vigente, carta de trabajo o comprobante de ingresos, referencias personales o laborales, y depósito de seguridad (usualmente 1-2 meses de alquiler).' },
+    { question: '¿Cuánto es el depósito típico para alquilar?', answer: 'El depósito estándar es de 1 a 2 meses de alquiler, más el primer mes adelantado. En propiedades de lujo o amuebladas, puede ser de 2-3 meses.' },
+    { question: '¿Los alquileres incluyen servicios básicos?', answer: 'Depende del acuerdo. En apartamentos amueblados, a veces incluyen agua, internet y mantenimiento. La electricidad generalmente la paga el inquilino.' },
+    { question: '¿Puedo alquilar como extranjero?', answer: 'Sí, los extranjeros pueden alquilar sin restricciones. Solo necesitas pasaporte vigente y cumplir con los requisitos del propietario.' }
+  ]);
+  await insert('DO', 'es', 'cta', 'rent', { title: '¿Buscas un lugar para alquilar?', description: 'Nuestros asesores te ayudarán a encontrar el espacio perfecto para ti y tu familia.' });
+
+  // Home page
+  await insert('DO', 'es', 'hero', 'home', { title: 'Bienes Raíces en {pais}', description: 'Bienvenido a Ubíkala — tu puerta de entrada. Desde villas frente al mar hasta apartamentos en el corazón de la ciudad, descubre miles de propiedades verificadas en los destinos más codiciados de {pais}.' });
+  await insert('DO', 'es', 'benefits', null, [
+    { title: 'Abierto a Todos', description: 'Sin restricciones para extranjeros. Compra con los mismos derechos que los nacionales.', icon: 'globe' },
+    { title: 'Retorno Sólido', description: 'El mercado turístico en auge genera excelentes ingresos por alquiler.', icon: 'chart' },
+    { title: 'Precios Accesibles', description: 'Obtén más por tu inversión comparado con otros destinos de la región.', icon: 'money' },
+    { title: 'Paraíso Todo el Año', description: 'Disfruta del clima perfecto para tu casa vacacional o residencia permanente.', icon: 'sun' }
+  ]);
+  await insert('DO', 'es', 'destinations_header', null, { title: '¿Dónde Será tu Próximo Hogar?', subtitle: 'Cada rincón de {pais} cuenta una historia diferente. Encuentra la que va contigo.' });
+  await insert('DO', 'es', 'destinations', null, [
+    { name: 'Punta Cana', description: 'El destino turístico #1 del Caribe. Condominios frente a la playa, villas de lujo y alquileres vacacionales con ROI excepcional.', link: '/propiedades/punta-cana', emoji: '🏖️' },
+    { name: 'Santo Domingo', description: 'La capital vibrante. Apartamentos modernos en Piantini y Naco, casas familiares en Arroyo Hondo, opciones para todos los presupuestos.', link: '/propiedades/santo-domingo', emoji: '🏙️' },
+    { name: 'Santiago', description: 'El corazón cultural del Cibao. Precios accesibles, infraestructura en crecimiento y un estilo de vida comunitario cálido.', link: '/propiedades/santiago', emoji: '🏔️' },
+    { name: 'Las Terrenas', description: 'Paraíso bohemio en la península de Samaná. Propiedades a pasos de la playa y una comunidad internacional próspera.', link: '/propiedades/las-terrenas', emoji: '🌴' }
+  ]);
+
+  // Location FAQs ES
+  const locationFaqsES: Record<string, Array<{question: string; answer: string}>> = {
+    'santo-domingo': [
+      { question: '¿Cuáles son los mejores sectores para vivir en Santo Domingo?', answer: 'Los sectores más cotizados incluyen: Piantini y Naco (alta gama), Bella Vista y Evaristo Morales (excelente relación precio-calidad), Los Cacicazgos y Arroyo Hondo (familiares, tranquilos).' },
+      { question: '¿Cuánto cuesta un apartamento en Santo Domingo?', answer: 'En Piantini, desde US$2,500/m² hasta US$4,000/m². En Bella Vista, entre US$1,500-2,500/m². Un apartamento de 2 habitaciones puede costar desde US$80,000 hasta US$400,000+.' }
+    ],
+    'punta-cana': [
+      { question: '¿Es rentable comprar para alquiler vacacional en Punta Cana?', answer: 'Sí, retornos del 8-12% anual. Ocupación promedio 65-75%. Propiedades en Cap Cana, Bávaro y Cocotal tienen mayor demanda.' },
+      { question: '¿Cuáles son las mejores zonas de Punta Cana?', answer: 'Cap Cana (ultra lujo), Punta Cana Village (cerca del aeropuerto), Bávaro (mayor oferta). Presupuestos medios: Cocotal, Vista Cana, Los Corales.' }
+    ],
+    'santiago': [
+      { question: '¿Cómo es el mercado inmobiliario en Santiago?', answer: 'Segunda ciudad, precios 30-40% menores que Santo Domingo. Los Jardines, Cerros de Gurabo y Reparto Universitario tienen alta demanda.' },
+      { question: '¿Cuáles son los mejores sectores de Santiago?', answer: 'Los Jardines Metropolitanos (exclusivo), Cerros de Gurabo (vistas), Reparto Universitario (cerca de PUCMM), Jardines del Norte.' }
+    ],
+    'samana': [
+      { question: '¿Es buen momento para invertir en Samaná?', answer: 'Sí, desarrollo con aeropuerto El Catey. Las Terrenas tiene comunidad de expatriados establecida. Precios accesibles pero en alza.' },
+      { question: '¿Cuáles son las mejores zonas de Samaná?', answer: 'Las Terrenas (más desarrollado), Las Galeras (virgen, eco-turismo), pueblo de Samaná (Cayo Levantado, ballenas).' }
+    ],
+    'puerto-plata': [
+      { question: '¿Por qué considerar Puerto Plata?', answer: 'Precios hasta 50% menores que Punta Cana. Desarrollo turístico creciente, vuelos directos, proyectos en Playa Dorada y Cabarete.' },
+      { question: '¿Cómo es Cabarete y Sosúa?', answer: 'Cabarete: capital del kitesurf, comunidad internacional. Sosúa: expatriados establecidos, precios accesibles. Ambas con playa y servicios.' }
+    ],
+    'la-romana': [
+      { question: '¿Qué hace especial a Casa de Campo?', answer: 'Resort residencial más exclusivo del Caribe. Golf de clase mundial, marina, Altos de Chavón, playa privada y comunidad internacional.' },
+      { question: '¿Cuánto cuesta una propiedad en La Romana?', answer: 'Casa de Campo: villas desde US$500,000. Ciudad: apartamentos desde US$60,000, casas desde US$100,000. Bayahíbe: desde US$80,000.' }
+    ]
+  };
+  for (const [slug, faqs] of Object.entries(locationFaqsES)) {
+    await insert('DO', 'es', 'faqs', `location:${slug}`, faqs);
+  }
+
+  // === ENGLISH (DO + en) ===
+
+  await insert('DO', 'en', 'hero', 'buy', { title: 'Properties for Sale in {pais}', description: 'Explore our selection of houses, apartments, villas, land and commercial properties available for purchase throughout the country.' });
+  await insert('DO', 'en', 'guide_header', 'buy', { title: 'Your Guide to Buying in {pais}', subtitle: 'Everything you need to know about real estate investment' });
+  await insert('DO', 'en', 'popular_zones', 'buy', [
+    { name: 'Santo Domingo', description: 'Modern apartments in Piantini, Naco, Bella Vista', link: '/en/properties/santo-domingo', emoji: '🏙️', color: 'primary' },
+    { name: 'Punta Cana', description: 'Villas and condos with high rental returns', link: '/en/properties/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Affordable prices, excellent quality of life', link: '/en/properties/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Las Terrenas', description: 'Bohemian paradise with beachfront living', link: '/en/properties/samana', emoji: '🌴', color: 'purple' }
+  ]);
+  await insert('DO', 'en', 'property_types', 'buy', [
+    { name: 'Apartments', description: 'From studios to luxury penthouses', link: '/en/buy/apartments', letter: 'A', color: 'primary' },
+    { name: 'Houses', description: 'Family homes with 24/7 gated security', link: '/en/buy/houses', letter: 'H', color: 'emerald' },
+    { name: 'Villas', description: 'Exclusive properties with private pools', link: '/en/buy/villas', letter: 'V', color: 'purple' },
+    { name: 'Land', description: 'Lots for residential or commercial development', link: '/en/buy/land', letter: 'L', color: 'amber' }
+  ]);
+  await insert('DO', 'en', 'info_box', 'buy', { title: 'No Restrictions for Foreign Buyers', text: 'Foreigners can purchase property in {pais} with the exact same rights as nationals. You do not need residency or a special visa. Our verified agents will guide you through every step.' });
+  await insert('DO', 'en', 'faqs', 'buy', [
+    { question: 'What is the First-Time Buyer Subsidy?', answer: 'The Bono Primera Vivienda is a government subsidy of up to RD$1,500,000 (approx. US$25,000) for first-time homebuyers who have never owned property.' },
+    { question: 'What are the closing costs?', answer: 'Property Transfer Tax (3%), legal fees (1-2%), registration (0.5%), appraisal, and bank charges. Budget 5-7% extra.' },
+    { question: 'What is a Fideicomiso (Real Estate Trust)?', answer: 'A legal mechanism where a bank manages funds and oversees construction. The safest way to buy pre-construction property.' },
+    { question: 'Can foreigners buy property?', answer: 'Yes, with the same rights as nationals. No restrictions. A valid passport is all you need.' },
+    { question: 'Can I get a mortgage as a foreigner?', answer: 'Yes, several banks offer mortgages to foreigners with a valid visa, local bank account, apostilled financials, and 30-40% down payment.' },
+    { question: 'How long does the transfer process take?', answer: 'Typically 30-90 days depending on financing and document readiness.' }
+  ]);
+  await insert('DO', 'en', 'educational_cards', 'buy', [
+    { title: 'First-Time Buyer Subsidy', description: 'Buying your first home? You may qualify for up to RD$1,500,000 (US$25,000) in government subsidies.', link: '/en/guides/first-time-buyer', icon: 'money' },
+    { title: 'Trust Purchases (Fideicomiso)', description: 'Buy safely in pre-construction projects with your investment protected by law.', link: '/en/guides/fideicomiso', icon: 'shield' },
+    { title: 'US Buyers Guide', description: 'Complete guide: taxes, financing and buying process for Americans.', link: '/en/guides/us-buyers', icon: 'globe' }
+  ]);
+  await insert('DO', 'en', 'cta', 'buy', { title: 'Ready to find your ideal property?', description: 'Our verified agents will help you navigate the {pais} real estate market and find the perfect property.' });
+
+  await insert('DO', 'en', 'hero', 'rent', { title: 'Properties for Rent in {pais}', description: 'Find furnished apartments, family houses, offices and commercial spaces available for rent.' });
+  await insert('DO', 'en', 'guide_header', 'rent', { title: 'Your Guide to Renting in {pais}', subtitle: 'Find the perfect space to live or work' });
+  await insert('DO', 'en', 'popular_zones', 'rent', [
+    { name: 'Santo Domingo', description: 'Piantini, Naco, Bella Vista, Serralles', link: '/en/properties/santo-domingo', emoji: '🏙️', color: 'secondary' },
+    { name: 'Punta Cana', description: 'Cap Cana, Bavaro, Punta Cana Village', link: '/en/properties/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Cerros de Gurabo, Jardines Metropolitanos', link: '/en/properties/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Puerto Plata', description: 'Sosua, Cabarete', link: '/en/properties/puerto-plata', emoji: '🌊', color: 'purple' }
+  ]);
+  await insert('DO', 'en', 'rental_requirements', 'rent', [
+    { title: 'Identification', description: 'Valid ID or passport' },
+    { title: 'Proof of income', description: 'Employment letter or financial statements' },
+    { title: 'Security deposit', description: 'Usually 1-2 months rent' },
+    { title: 'References', description: 'Personal or employer references' }
+  ]);
+  await insert('DO', 'en', 'info_box', 'rent', { title: 'Foreigners Can Rent Without Restrictions', text: 'You do not need residency or a special visa to rent in {pais}. Just a valid passport and meeting the landlord\'s requirements.' });
+  await insert('DO', 'en', 'faqs', 'rent', [
+    { question: 'What documents do I need to rent?', answer: 'Valid ID or passport, proof of income (3x monthly rent), security deposit (1-2 months), and sometimes a co-signer.' },
+    { question: 'What is the typical security deposit?', answer: 'One to two months rent, paid upfront. Refundable at lease end minus damages.' },
+    { question: 'Are utilities included?', answer: 'Usually not. Tenants pay electricity, water, internet, gas. Some furnished units may include basics.' },
+    { question: 'Can foreigners rent?', answer: 'Yes, without restrictions. Valid passport and proof of income needed.' }
+  ]);
+  await insert('DO', 'en', 'cta', 'rent', { title: 'Looking for a place to rent?', description: 'Our agents will help you find the perfect space for you and your family.' });
+
+  await insert('DO', 'en', 'hero', 'home', { title: 'Real Estate in {pais}', description: 'Welcome to Ubíkala — your gateway to {pais}. From beachfront villas to city apartments, discover thousands of verified properties.' });
+  await insert('DO', 'en', 'benefits', null, [
+    { title: 'Open to Everyone', description: 'No restrictions for foreign buyers. Purchase with the same rights as nationals.', icon: 'globe' },
+    { title: 'Strong Returns', description: 'The booming tourism market drives excellent rental income.', icon: 'chart' },
+    { title: 'Affordable Prices', description: 'Get more for your investment compared to other destinations.', icon: 'money' },
+    { title: 'Year-Round Paradise', description: 'Enjoy the perfect climate for your vacation home or permanent residence.', icon: 'sun' }
+  ]);
+  await insert('DO', 'en', 'destinations_header', null, { title: 'Where Will You Call Home?', subtitle: 'Each corner of {pais} tells a different story. Find the one that matches yours.' });
+  await insert('DO', 'en', 'destinations', null, [
+    { name: 'Punta Cana', description: 'The #1 tourist destination. Beachfront condos, luxury villas and vacation rentals with exceptional ROI.', link: '/en/properties/punta-cana', emoji: '🏖️' },
+    { name: 'Santo Domingo', description: 'The vibrant capital. Modern apartments in Piantini and Naco, family homes, options for every budget.', link: '/en/properties/santo-domingo', emoji: '🏙️' },
+    { name: 'Santiago', description: 'The cultural heart. Affordable prices, growing infrastructure and a warm community lifestyle.', link: '/en/properties/santiago', emoji: '🏔️' },
+    { name: 'Las Terrenas', description: 'Bohemian paradise on Samana peninsula. Properties steps from the beach and a thriving international community.', link: '/en/properties/las-terrenas', emoji: '🌴' }
+  ]);
+
+  // EN Location FAQs
+  const locationFaqsEN: Record<string, Array<{question: string; answer: string}>> = {
+    'santo-domingo': [
+      { question: 'What are the best neighborhoods in Santo Domingo?', answer: 'Piantini and Naco (upscale), Bella Vista (great value), Los Cacicazgos (family-friendly), Gazcue (bohemian, historic).' },
+      { question: 'How much does an apartment cost?', answer: 'Piantini: US$2,500-4,000/m². Bella Vista: US$1,500-2,500/m². 2BR from US$80,000 to US$400,000+.' }
+    ],
+    'punta-cana': [
+      { question: 'Is rental property profitable in Punta Cana?', answer: 'Yes, 8-12% annual returns. 65-75% occupancy. Cap Cana, Bavaro and Cocotal have strongest demand.' },
+      { question: 'What are the best investment areas?', answer: 'Cap Cana (ultra-luxury), Punta Cana Village (near airport), Bavaro (most inventory). Mid-range: Cocotal, Vista Cana.' }
+    ],
+    'santiago': [
+      { question: 'What is the Santiago real estate market like?', answer: 'Second city, 30-40% cheaper than Santo Domingo. Los Jardines, Cerros de Gurabo, Reparto Universitario in high demand.' },
+      { question: 'Best neighborhoods in Santiago?', answer: 'Los Jardines Metropolitanos (exclusive), Cerros de Gurabo (scenic), Reparto Universitario (near PUCMM).' }
+    ],
+    'samana': [
+      { question: 'Is now a good time to invest in Samana?', answer: 'Yes, development with El Catey airport. Las Terrenas has established expat community. Prices rising but still accessible.' },
+      { question: 'Best areas in Samana?', answer: 'Las Terrenas (most developed), Las Galeras (eco-tourism), Samana town (whale watching).' }
+    ],
+    'puerto-plata': [
+      { question: 'Why consider Puerto Plata?', answer: 'Prices 50% lower than Punta Cana. Growing tourism, direct flights, projects in Playa Dorada and Cabarete.' },
+      { question: 'What about Cabarete and Sosua?', answer: 'Cabarete: kitesurfing capital, vibrant community. Sosua: established expats, affordable. Both with beaches and foreign services.' }
+    ],
+    'la-romana': [
+      { question: 'What makes Casa de Campo special?', answer: 'Most exclusive Caribbean resort. World-class golf, marina, Altos de Chavon, private beach, international community.' },
+      { question: 'Property costs in La Romana?', answer: 'Casa de Campo: villas from US$500K+. City: apartments from US$60K, houses from US$100K. Bayahibe: from US$80K.' }
+    ]
+  };
+  for (const [slug, faqs] of Object.entries(locationFaqsEN)) {
+    await insert('DO', 'en', 'faqs', `location:${slug}`, faqs);
+  }
+
+  // === FRENCH (DO + fr) ===
+
+  await insert('DO', 'fr', 'hero', 'buy', { title: 'Propriétés à Vendre en {pais}', description: 'Explorez notre sélection de maisons, appartements, villas, terrains et propriétés commerciales disponibles à l\'achat.' });
+  await insert('DO', 'fr', 'guide_header', 'buy', { title: 'Acheter une Propriété en {pais}', subtitle: 'Tout ce que vous devez savoir sur l\'investissement immobilier' });
+  await insert('DO', 'fr', 'popular_zones', 'buy', [
+    { name: 'Saint-Domingue', description: 'Appartements modernes à Piantini, Naco, Bella Vista', link: '/fr/proprietes/santo-domingo', emoji: '🏙️', color: 'primary' },
+    { name: 'Punta Cana', description: 'Villas et condos avec rendements locatifs élevés', link: '/fr/proprietes/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Prix abordables et excellente qualité de vie', link: '/fr/proprietes/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Las Terrenas', description: 'Paradis bohème face à la mer', link: '/fr/proprietes/samana', emoji: '🌴', color: 'purple' }
+  ]);
+  await insert('DO', 'fr', 'property_types', 'buy', [
+    { name: 'Appartements', description: 'Des studios aux penthouses de luxe', link: '/fr/acheter/appartements', letter: 'A', color: 'primary' },
+    { name: 'Maisons', description: 'Résidences familiales avec sécurité 24/7', link: '/fr/acheter/maisons', letter: 'M', color: 'emerald' },
+    { name: 'Villas', description: 'Propriétés exclusives avec piscine privée', link: '/fr/acheter/villas', letter: 'V', color: 'purple' },
+    { name: 'Terrains', description: 'Lots pour projets résidentiels ou commerciaux', link: '/fr/acheter/terrains', letter: 'T', color: 'amber' }
+  ]);
+  await insert('DO', 'fr', 'info_box', 'buy', { title: 'Aucune Restriction pour les Acheteurs Étrangers', text: 'Les étrangers peuvent acheter des propriétés en {pais} avec les mêmes droits que les nationaux. Aucune résidence ou visa spécial requis.' });
+  await insert('DO', 'fr', 'faqs', 'buy', [
+    { question: 'Quels sont les frais de clôture ?', answer: 'Taxe de transfert (3%), frais juridiques (1-2%), enregistrement (0,5%), évaluation, frais bancaires. Prévoyez 5-7% supplémentaires.' },
+    { question: 'Qu\'est-ce qu\'un Fidéicommis ?', answer: 'Un mécanisme légal où une banque gère les fonds et supervise la construction. La façon la plus sûre d\'acheter en pré-construction.' },
+    { question: 'Les étrangers peuvent-ils acheter ?', answer: 'Oui, avec les mêmes droits que les nationaux. Un passeport valide suffit.' },
+    { question: 'Combien de temps dure le transfert ?', answer: 'Généralement 30-90 jours selon le financement et les documents.' }
+  ]);
+  await insert('DO', 'fr', 'educational_cards', 'buy', [
+    { title: 'Subvention Premier Achat', description: 'Première maison ? Jusqu\'à RD$1,500,000 de subvention gouvernementale.', link: '/fr/guides/premier-achat', icon: 'money' },
+    { title: 'Achat en Fidéicommis', description: 'Achat sécurisé en pré-construction, investissement protégé par la loi.', link: '/fr/guides/fidecommis', icon: 'shield' },
+    { title: 'Guide Acheteurs Internationaux', description: 'Taxes, financement et processus d\'achat complet.', link: '/fr/guides/acheteurs-internationaux', icon: 'globe' }
+  ]);
+  await insert('DO', 'fr', 'cta', 'buy', { title: 'Prêt à trouver votre propriété idéale ?', description: 'Nos agents vérifiés vous aideront à trouver la propriété parfaite en {pais}.' });
+
+  await insert('DO', 'fr', 'hero', 'rent', { title: 'Propriétés à Louer en {pais}', description: 'Trouvez des appartements meublés, maisons familiales, bureaux et locaux commerciaux disponibles à la location.' });
+  await insert('DO', 'fr', 'guide_header', 'rent', { title: 'Louer une Propriété en {pais}', subtitle: 'Trouvez l\'espace parfait pour vivre ou travailler' });
+  await insert('DO', 'fr', 'popular_zones', 'rent', [
+    { name: 'Saint-Domingue', description: 'Piantini, Naco, Bella Vista, Serralles', link: '/fr/proprietes/santo-domingo', emoji: '🏙️', color: 'secondary' },
+    { name: 'Punta Cana', description: 'Cap Cana, Bávaro, Punta Cana Village', link: '/fr/proprietes/punta-cana', emoji: '🏖️', color: 'emerald' },
+    { name: 'Santiago', description: 'Cerros de Gurabo, Jardines Metropolitanos', link: '/fr/proprietes/santiago', emoji: '🏔️', color: 'amber' },
+    { name: 'Puerto Plata', description: 'Sosúa, Cabarete', link: '/fr/proprietes/puerto-plata', emoji: '🌊', color: 'purple' }
+  ]);
+  await insert('DO', 'fr', 'rental_requirements', 'rent', [
+    { title: 'Identification', description: 'Pièce d\'identité ou passeport valide' },
+    { title: 'Justificatif de revenus', description: 'Lettre d\'emploi ou états financiers' },
+    { title: 'Dépôt de garantie', description: 'Généralement 1-2 mois de loyer' },
+    { title: 'Références', description: 'Personnelles ou professionnelles' }
+  ]);
+  await insert('DO', 'fr', 'info_box', 'rent', { title: 'Les Étrangers Peuvent Louer Sans Restrictions', text: 'Aucune résidence ou visa spécial requis pour louer en {pais}. Un passeport valide suffit.' });
+  await insert('DO', 'fr', 'faqs', 'rent', [
+    { question: 'Quels documents pour louer ?', answer: 'Pièce d\'identité, justificatif de revenus, dépôt de garantie (1-2 mois), parfois un garant.' },
+    { question: 'Quel est le dépôt type ?', answer: '1-2 mois de loyer, payé d\'avance. Remboursable en fin de bail.' },
+    { question: 'Les charges sont-elles incluses ?', answer: 'En général non. Le locataire paie électricité, eau, internet. Certains meublés incluent les charges de base.' },
+    { question: 'Les étrangers peuvent-ils louer ?', answer: 'Oui, sans restriction. Passeport valide et justificatifs de revenus suffisent.' }
+  ]);
+  await insert('DO', 'fr', 'cta', 'rent', { title: 'Vous cherchez un logement à louer ?', description: 'Nos agents vous aideront à trouver l\'espace parfait pour vous et votre famille.' });
+
+  await insert('DO', 'fr', 'hero', 'home', { title: 'Immobilier en {pais}', description: 'Bienvenue sur Ubíkala — votre porte d\'entrée vers {pais}. Des villas en bord de mer aux appartements en centre-ville, découvrez des milliers de propriétés vérifiées.' });
+  await insert('DO', 'fr', 'benefits', null, [
+    { title: 'Ouvert à Tous', description: 'Aucune restriction pour les acheteurs étrangers. Mêmes droits que les nationaux.', icon: 'globe' },
+    { title: 'Rendement Solide', description: 'Le marché touristique génère d\'excellents revenus locatifs.', icon: 'chart' },
+    { title: 'Prix Accessibles', description: 'Plus pour votre investissement par rapport aux autres destinations.', icon: 'money' },
+    { title: 'Paradis Toute l\'Année', description: 'Climat parfait pour maison de vacances ou résidence permanente.', icon: 'sun' }
+  ]);
+  await insert('DO', 'fr', 'destinations_header', null, { title: 'Où Poserez-Vous Vos Valises ?', subtitle: 'Chaque coin de {pais} raconte une histoire différente. Trouvez celle qui vous correspond.' });
+  await insert('DO', 'fr', 'destinations', null, [
+    { name: 'Punta Cana', description: 'Destination #1 des Caraïbes. Condos face à la plage, villas de luxe et locations vacances avec ROI exceptionnel.', link: '/fr/proprietes/punta-cana', emoji: '🏖️' },
+    { name: 'Saint-Domingue', description: 'La capitale vibrante. Appartements modernes à Piantini et Naco, maisons familiales, tous les budgets.', link: '/fr/proprietes/santo-domingo', emoji: '🏙️' },
+    { name: 'Santiago', description: 'Le cœur culturel du Cibao. Prix abordables, infrastructure en croissance, style de vie communautaire.', link: '/fr/proprietes/santiago', emoji: '🏔️' },
+    { name: 'Las Terrenas', description: 'Paradis bohème sur la péninsule de Samaná. Propriétés à deux pas de la plage.', link: '/fr/proprietes/las-terrenas', emoji: '🌴' }
+  ]);
+}

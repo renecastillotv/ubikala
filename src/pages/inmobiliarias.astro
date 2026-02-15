@@ -13,6 +13,7 @@ import type { Agent } from '../data/types';
 export const prerender = false;
 
 const t = useTranslations('es');
+const pais = Astro.locals.country?.name;
 
 // Configuración de paginación
 const ITEMS_PER_PAGE = 24;
@@ -23,7 +24,7 @@ let inmobiliarias: Agent[] = [];
 let totalCount = 0;
 try {
   const [portalTenants, ubikalaRows] = await Promise.all([
-    getPortalInmobiliarias(),
+    getPortalInmobiliarias(pais),
     getUbikalaInmobiliarias({ limit: 100 }),
   ]);
 

@@ -10,6 +10,7 @@ export const prerender = false;
 
 const t = useTranslations('en');
 const alternateUrls = getAlternateUrls('/en/properties');
+const pais = Astro.locals.country.name;
 
 // Get all locations with counts
 let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
@@ -23,7 +24,7 @@ try {
 const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
 const pageTitle = 'Properties by Location | Ubíkala.com';
-const pageDescription = 'Explore properties for sale and rent in the main cities and areas of the Dominican Republic. Punta Cana, Santo Domingo, Santiago and more.';
+const pageDescription = `Explore properties for sale and rent in the main cities and areas of ${pais}. Punta Cana, Santo Domingo, Santiago and more.`;
 ---
 
 <Layout
@@ -44,7 +45,7 @@ const pageDescription = 'Explore properties for sale and rent in the main cities
         Properties by Location
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
-        Explore the main cities and areas of the Dominican Republic where we have properties available for you.
+        Explore the main cities and areas of {pais} where we have properties available for you.
       </p>
     </div>
   </section>
@@ -103,7 +104,7 @@ const pageDescription = 'Explore properties for sale and rent in the main cities
       <div class="prose prose-lg max-w-4xl mx-auto">
         <h2>Find Properties Across the Country</h2>
         <p>
-          The Dominican Republic offers a wide variety of locations for real estate investment.
+          {pais} offers a wide variety of locations for real estate investment.
           From the paradise beaches of Punta Cana to the vibrant capital Santo Domingo,
           each area has unique characteristics that suit different lifestyles and investment goals.
         </p>

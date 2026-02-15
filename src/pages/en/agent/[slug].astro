@@ -12,6 +12,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('en');
+const pais = Astro.locals.country.name;
 const alternateUrls = getAlternateUrls(`/en/agent/${slug}`);
 
 let agent: Agent | null = null;
@@ -44,14 +45,14 @@ if (!agent) {
     name: agent.name,
     url: `https://ubikala.com/en/agent/${agent.slug}`,
     image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
-    description: agent.bio || `Verified real estate agent in the Dominican Republic`,
+    description: agent.bio || `Verified real estate agent in ${pais}`,
     telephone: agent.phone,
     email: agent.email,
     jobTitle: 'Real Estate Agent',
     worksFor: agent.company ? { '@type': 'Organization', name: agent.company } : undefined,
     areaServed: agent.locations.length > 0
       ? agent.locations.map(loc => ({ '@type': 'City', name: loc }))
-      : { '@type': 'Country', name: 'Dominican Republic' },
+      : { '@type': 'Country', name: pais },
     knowsLanguage: agent.languages,
     aggregateRating: {
       '@type': 'AggregateRating',

@@ -13,6 +13,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('es');
+const pais = Astro.locals.country.name;
 
 // Buscar agente en la base de datos
 let agent: Agent | null = null;
@@ -57,7 +58,7 @@ if (!agent) {
     } : undefined,
     areaServed: agent.locations.length > 0
       ? agent.locations.map(loc => ({ '@type': 'City', name: loc }))
-      : { '@type': 'Country', name: 'Dominican Republic' },
+      : { '@type': 'Country', name: pais },
     knowsAbout: agent.specializations.map(spec => {
       const specNames: Record<string, string> = {
         'house': 'Casas', 'apartment': 'Apartamentos', 'villa': 'Villas',

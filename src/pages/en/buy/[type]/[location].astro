@@ -49,13 +49,14 @@ const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '
 // Location data with sensible defaults
 let locationData: { name: string; province: string } = {
   name: locationName,
-  province: 'Dominican Republic'
+  province: ''
 };
 
 // Alternate URLs for SEO hreflang
 const alternateUrls = getAlternateUrls(`/en/buy/${typeSlug}/${locationSlug}`);
 
 const pais = Astro.locals.country.name;
+locationData.province = pais;
 
 // Fetch properties filtered by type and location via MeiliSearch
 let properties: Property[] = [];
@@ -203,7 +204,7 @@ const seoContent: Record<string, Record<string, { intro: string; benefits: strin
   },
   'local comercial': {
     'default': {
-      intro: `Commercial spaces in the Dominican Republic cater to a growing domestic economy and booming tourism industry. Whether you need a storefront, restaurant space or retail location, there are options across every major city.`,
+      intro: `Commercial spaces in ${pais} cater to a growing domestic economy and booming tourism industry. Whether you need a storefront, restaurant space or retail location, there are options across every major city.`,
       benefits: [
         'Steady rental income from established commercial areas',
         'Growing consumer economy drives demand',
@@ -220,7 +221,7 @@ const seoContent: Record<string, Record<string, { intro: string; benefits: strin
   },
   'oficina': {
     'default': {
-      intro: `Office spaces in the Dominican Republic range from modern coworking-ready suites to full floors in corporate towers. The growing business environment makes offices a solid investment.`,
+      intro: `Office spaces in ${pais} range from modern coworking-ready suites to full floors in corporate towers. The growing business environment makes offices a solid investment.`,
       benefits: [
         'Professional business addresses in prime locations',
         'Modern infrastructure with high-speed internet',
@@ -237,7 +238,7 @@ const seoContent: Record<string, Record<string, { intro: string; benefits: strin
   },
   'nave': {
     'default': {
-      intro: `Warehouses and industrial spaces are in demand across the Dominican Republic, particularly in free-trade zones and logistics corridors. They serve manufacturing, distribution and storage needs.`,
+      intro: `Warehouses and industrial spaces are in demand across ${pais}, particularly in free-trade zones and logistics corridors. They serve manufacturing, distribution and storage needs.`,
       benefits: [
         'Strategic locations near ports and highways',
         'Free-trade zone benefits for eligible businesses',
@@ -287,7 +288,7 @@ const dynamicFAQs = [
   },
   {
     question: `What documents do I need to buy a ${typeInfo.singular.toLowerCase()}?`,
-    answer: `To purchase a ${typeInfo.singular.toLowerCase()} in the Dominican Republic you need: a valid passport or cedula, proof of income or bank statements, and a down payment (typically 10-30% of the property value). The seller must provide a certified title certificate, cadastral plan and no-lien certification.`
+    answer: `To purchase a ${typeInfo.singular.toLowerCase()} in ${pais} you need: a valid passport or cedula, proof of income or bank statements, and a down payment (typically 10-30% of the property value). The seller must provide a certified title certificate, cadastral plan and no-lien certification.`
   },
   {
     question: `Can I finance a ${typeInfo.singular.toLowerCase()} in ${locationData.name}?`,

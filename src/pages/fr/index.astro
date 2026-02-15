@@ -5,9 +5,19 @@ import FeaturedProperties from '../../components/FeaturedProperties.astro';
 import LocationsGrid from '../../components/LocationsGrid.astro';
 import CTASection from '../../components/CTASection.astro';
 import { useTranslations } from '../../i18n';
+import { getCitiesWithCounts } from '../../lib/meilisearch';
+import SEOBenefits from '../../components/SEOBenefits.astro';
+import { getBenefitsContent, getDestinations, getDestinationsHeader, getHeroContent } from '../../lib/seo-content-db';
 
 const t = useTranslations('fr');
-const pais = Astro.locals.country.name;
+const country = Astro.locals.country;
+const pais = country.name;
+
+const searchLocations = await getCitiesWithCounts(pais);
+const benefits = await getBenefitsContent(country.code, 'fr', pais);
+const destinations = await getDestinations(country.code, 'fr', pais);
+const destHeader = await getDestinationsHeader(country.code, 'fr', pais);
+const homeHero = await getHeroContent(country.code, 'fr', 'home', pais);
 ---
 
 <Layout
@@ -19,7 +29,7 @@ const pais = Astro.locals.country.name;
     { lang: 'en', url: 'https://ubikala.com/en/' }
   ]}
 >
-  <Hero pais={pais} />
+  <Hero pais={pais} locations={searchLocations} />
   <FeaturedProperties pais={pais} />
   <LocationsGrid pais={pais} />
 
@@ -78,109 +88,41 @@ const pais = Astro.locals.country.name;
   <!-- Pourquoi la République Dominicaine -->
   <section class="py-16 bg-white">
     <div class="container-custom">
-      <div class="text-center mb-12">
-        <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">Votre Prochaine Maison Vous Attend</span>
-        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">
-          Immobilier en R&eacute;publique Dominicaine
-        </h2>
-        <p class="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
-          Bienvenue sur Ub&iacute;kala — votre portail vers la vie cara&iacute;be. Des villas face &agrave; la mer ensoleill&eacute;e
-          aux appartements urbains vibrants, d&eacute;couvrez des milliers de propri&eacute;t&eacute;s v&eacute;rifi&eacute;es dans les destinations les plus recherch&eacute;es de R&eacute;publique Dominicaine.
-        </p>
-      </div>
+      {homeHero && (
+        <div class="text-center mb-12">
+          <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">Votre Prochaine Maison Vous Attend</span>
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">{homeHero.title}</h2>
+          <p class="text-lg text-gray-600 max-w-3xl mx-auto mt-4">{homeHero.description}</p>
+        </div>
+      )}
 
-      <!-- Avantages d'investissement -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-        <div class="bg-gradient-to-br from-primary-50 to-white rounded-2xl p-6 border border-primary-100">
-          <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
-            </svg>
+      {benefits.length > 0 && <div class="mb-16"><SEOBenefits benefits={benefits} /></div>}
+
+      {destinations.length > 0 && destHeader && (
+        <div class="bg-gray-50 rounded-3xl p-8 md:p-12">
+          <h3 class="text-2xl font-bold text-gray-900 mb-2">{destHeader.title}</h3>
+          {destHeader.subtitle && <p class="text-gray-600 mb-8">{destHeader.subtitle}</p>}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {destinations.map(dest => (
+              <a href={dest.link} class="flex items-start gap-4 group">
+                <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
+                  <span class="text-lg">{dest.emoji}</span>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{dest.name}</h4>
+                  <p class="text-sm text-gray-600">{dest.description}</p>
+                </div>
+              </a>
+            ))}
           </div>
-          <h3 class="font-bold text-gray-900 mb-2">Ouvert &agrave; Tous</h3>
-          <p class="text-sm text-gray-600">Aucune restriction pour les acheteurs &eacute;trangers. Achetez avec les m&ecirc;mes droits que les citoyens dominicains.</p>
-        </div>
-
-        <div class="bg-gradient-to-br from-secondary-50 to-white rounded-2xl p-6 border border-secondary-100">
-          <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
+          <div class="mt-8 text-center">
+            <a href="/fr/proprietes" class="text-primary-600 font-semibold hover:text-primary-700 inline-flex items-center gap-2">
+              Explorer tous les emplacements
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            </a>
           </div>
-          <h3 class="font-bold text-gray-900 mb-2">Rendements Solides</h3>
-          <p class="text-sm text-gray-600">Le march&eacute; touristique en plein essor g&eacute;n&egrave;re d'excellents revenus locatifs, notamment &agrave; Punta Cana.</p>
         </div>
-
-        <div class="bg-gradient-to-br from-accent-50 to-white rounded-2xl p-6 border border-accent-100">
-          <div class="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 class="font-bold text-gray-900 mb-2">Prix Accessibles</h3>
-          <p class="text-sm text-gray-600">Obtenez plus pour votre investissement compar&eacute; aux Bahamas, aux &Icirc;les Turques ou &agrave; d'autres destinations cara&iacute;bes.</p>
-        </div>
-
-        <div class="bg-gradient-to-br from-primary-50 to-white rounded-2xl p-6 border border-primary-100">
-          <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
-            </svg>
-          </div>
-          <h3 class="font-bold text-gray-900 mb-2">Paradis Toute l'Ann&eacute;e</h3>
-          <p class="text-sm text-gray-600">Profitez de plus de 300 jours de soleil par an. Le climat id&eacute;al pour votre r&eacute;sidence secondaire ou principale.</p>
-        </div>
-      </div>
-
-      <!-- Destinations populaires -->
-      <div class="bg-gray-50 rounded-3xl p-8 md:p-12">
-        <h3 class="text-2xl font-bold text-gray-900 mb-2">O&ugrave; Poserez-Vous Vos Valises ?</h3>
-        <p class="text-gray-600 mb-8">Chaque coin de la R&eacute;publique Dominicaine raconte une histoire diff&eacute;rente. Trouvez celle qui vous ressemble.</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <a href="/fr/proprietes/punta-cana" class="flex items-start gap-4 group">
-            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
-              <span class="text-lg">🏖️</span>
-            </div>
-            <div>
-              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Punta Cana</h4>
-              <p class="text-sm text-gray-600">La premi&egrave;re destination touristique des Cara&iacute;bes. Condos en bord de mer, villas de luxe et locations vacances avec un ROI exceptionnel.</p>
-            </div>
-          </a>
-          <a href="/fr/proprietes/santo-domingo" class="flex items-start gap-4 group">
-            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
-              <span class="text-lg">🏙️</span>
-            </div>
-            <div>
-              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Saint-Domingue</h4>
-              <p class="text-sm text-gray-600">La capitale vibrante. Appartements modernes &agrave; Piantini et Naco, maisons familiales &agrave; Arroyo Hondo, pour tous les budgets.</p>
-            </div>
-          </a>
-          <a href="/fr/proprietes/santiago" class="flex items-start gap-4 group">
-            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
-              <span class="text-lg">🏔️</span>
-            </div>
-            <div>
-              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Santiago</h4>
-              <p class="text-sm text-gray-600">Le c&oelig;ur culturel du Cibao. Prix abordables, infrastructures en croissance et un style de vie communautaire chaleureux.</p>
-            </div>
-          </a>
-          <a href="/fr/proprietes/las-terrenas" class="flex items-start gap-4 group">
-            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
-              <span class="text-lg">🌴</span>
-            </div>
-            <div>
-              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Las Terrenas</h4>
-              <p class="text-sm text-gray-600">Un paradis boh&egrave;me sur la p&eacute;ninsule de Saman&aacute;. Propri&eacute;t&eacute;s &agrave; deux pas de la plage et une communaut&eacute; internationale florissante.</p>
-            </div>
-          </a>
-        </div>
-        <div class="mt-8 text-center">
-          <a href="/fr/proprietes" class="text-primary-600 font-semibold hover:text-primary-700 inline-flex items-center gap-2">
-            Explorer tous les emplacements
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-          </a>
-        </div>
-      </div>
+      )}
     </div>
   </section>
 

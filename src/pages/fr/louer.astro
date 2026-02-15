@@ -8,6 +8,11 @@ import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties, getMarketStats } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
+import { getPageFAQs, getPopularZones, getRentalRequirements, getInfoBox, getGuideHeader, getCTAContent, getFAQSchema } from '../../lib/seo-content-db';
+import SEOPopularZones from '../../components/SEOPopularZones.astro';
+import SEORentalRequirements from '../../components/SEORentalRequirements.astro';
+import SEOInfoBox from '../../components/SEOInfoBox.astro';
+import SEOFAQSection from '../../components/SEOFAQSection.astro';
 
 // SSR pour pagination
 export const prerender = false;
@@ -37,6 +42,14 @@ const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
 let marketStats = null;
 try { marketStats = await getMarketStats(pais); } catch {}
+
+// DB-driven SEO content
+const faqs = await getPageFAQs(country.code, 'fr', 'rent', pais);
+const zones = await getPopularZones(country.code, 'fr', 'rent', pais);
+const requirements = await getRentalRequirements(country.code, 'fr', pais);
+const infoBox = await getInfoBox(country.code, 'fr', 'rent', pais);
+const guideHeader = await getGuideHeader(country.code, 'fr', 'rent', pais);
+const cta = await getCTAContent(country.code, 'fr', 'rent', pais);
 
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/fr/louer');
@@ -102,33 +115,80 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- Market Stats -->
-  {marketStats && (
-    <section class="py-12 bg-gradient-to-b from-white to-gray-50">
-      <div class="container-custom">
-        <MarketStatsBar stats={marketStats} operacion="renta" lang="fr" countryName={pais} />
+  <!-- SEO Content -->
+  <section class="py-16 bg-gradient-to-b from-white to-gray-50">
+    <div class="container-custom">
+      {guideHeader && (
+        <div class="text-center mb-12">
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{guideHeader.title}</h2>
+          {guideHeader.subtitle && <p class="text-lg text-gray-600 max-w-2xl mx-auto">{guideHeader.subtitle}</p>}
+        </div>
+      )}
+
+      {marketStats && <div class="mb-16"><MarketStatsBar stats={marketStats} operacion="renta" lang="fr" countryName={pais} /></div>}
+
+      {(zones.length > 0 || requirements.length > 0) && (
+        <div class="grid md:grid-cols-2 gap-12 mb-16">
+          {zones.length > 0 && <SEOPopularZones zones={zones} title="Zones Populaires pour Louer" colorScheme="secondary" />}
+          {requirements.length > 0 && <SEORentalRequirements items={requirements} title="Conditions de Location" />}
+        </div>
+      )}
+
+      {infoBox && <div class="mb-16"><SEOInfoBox title={infoBox.title} text={infoBox.text} color="blue" /></div>}
+    </div>
+  </section>
+
+  {faqs.length > 0 && <SEOFAQSection faqs={faqs} title="Questions Fréquentes sur la Location" />}
+
+  <!-- CTA -->
+  {cta ? (
+    <section class="py-12 bg-gradient-to-r from-secondary-600 to-secondary-700">
+      <div class="container-custom text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">{cta.title}</h2>
+        <p class="text-green-100 mb-6 max-w-xl mx-auto">{cta.description}</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/fr/agents" class="inline-flex items-center justify-center gap-2 bg-white text-secondary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Voir les Agents
+          </a>
+          <a href="/fr/contact" class="inline-flex items-center justify-center gap-2 bg-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Nous Contacter
+          </a>
+        </div>
+      </div>
+    </section>
+  ) : (
+    <section class="py-12 bg-gradient-to-r from-secondary-600 to-secondary-700">
+      <div class="container-custom text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
+          Vous cherchez un logement à louer ?
+        </h2>
+        <p class="text-green-100 mb-6 max-w-xl mx-auto">
+          Nos agents vous aideront à trouver l'espace parfait pour vous et votre famille.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/fr/agents" class="inline-flex items-center justify-center gap-2 bg-white text-secondary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Voir les Agents
+          </a>
+          <a href="/fr/contact" class="inline-flex items-center justify-center gap-2 bg-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Nous Contacter
+          </a>
+        </div>
       </div>
     </section>
   )}
 
-  <!-- SEO Content -->
-  <section class="py-12 bg-gray-50">
-    <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Louer une Propriété en {pais}</h2>
-        <p>
-          Que vous cherchiez un appartement meublé pour un court séjour,
-          une maison pour votre famille, ou un local commercial pour votre entreprise,
-          nous avons les meilleures options de location dans tout le pays.
-        </p>
-
-        <h3>Types de Locations Disponibles</h3>
-        <ul>
-          <li><strong>Location Résidentielle:</strong> Appartements et maisons pour des séjours de longue durée.</li>
-          <li><strong>Location Vacances:</strong> Propriétés meublées pour des courts séjours dans les destinations touristiques.</li>
-          <li><strong>Location Commerciale:</strong> Bureaux, locaux et entrepôts industriels pour votre entreprise.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
+  <!-- FAQ Schema -->
+  {faqs.length > 0 && <script is:inline type="application/ld+json" set:html={JSON.stringify(getFAQSchema(faqs))} />}
 </Layout>

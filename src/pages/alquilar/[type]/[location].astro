@@ -54,13 +54,13 @@ const locationName = formatLocationName(locationSlug || '');
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
+const pais = Astro.locals.country.name;
+
 // Intentar obtener info de ubicación
 let locationData: { name: string; province: string } = {
   name: locationName,
-  province: 'República Dominicana'
+  province: pais
 };
-
-const pais = Astro.locals.country.name;
 
 // Fetch properties con filtros de tipo y ubicación via MeiliSearch
 let properties: Property[] = [];
@@ -184,7 +184,7 @@ const dynamicFAQs = [
   },
   {
     question: `¿Puedo alquilar siendo extranjero en ${locationData.name}?`,
-    answer: `Sí, los extranjeros pueden alquilar propiedades en República Dominicana. Necesitarás tu pasaporte vigente, comprobante de ingresos o carta de trabajo, y posiblemente un depósito mayor o fiador local según el propietario.`
+    answer: `Sí, los extranjeros pueden alquilar propiedades en ${pais}. Necesitarás tu pasaporte vigente, comprobante de ingresos o carta de trabajo, y posiblemente un depósito mayor o fiador local según el propietario.`
   },
   {
     question: `¿Los servicios están incluidos en el alquiler?`,

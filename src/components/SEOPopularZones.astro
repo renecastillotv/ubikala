@@ -1,0 +1,68 @@
+---
+import type { Zone } from '../lib/seo-content-db';
+
+interface Props {
+  zones: Zone[];
+  title?: string;
+  colorScheme?: 'primary' | 'secondary';
+}
+
+const { zones, title = 'Zonas Populares', colorScheme = 'primary' } = Astro.props;
+
+// Color map for zone badges — Tailwind can't handle dynamic class names
+const colorMap: Record<string, { bg: string; text: string }> = {
+  primary:   { bg: 'bg-primary-100',   text: 'text-primary-600' },
+  secondary: { bg: 'bg-secondary-100', text: 'text-secondary-600' },
+  emerald:   { bg: 'bg-emerald-100',   text: 'text-emerald-600' },
+  amber:     { bg: 'bg-amber-100',     text: 'text-amber-600' },
+  purple:    { bg: 'bg-purple-100',     text: 'text-purple-600' },
+  red:       { bg: 'bg-red-100',        text: 'text-red-600' },
+  blue:      { bg: 'bg-blue-100',       text: 'text-blue-600' },
+  teal:      { bg: 'bg-teal-100',       text: 'text-teal-600' },
+  indigo:    { bg: 'bg-indigo-100',     text: 'text-indigo-600' },
+  pink:      { bg: 'bg-pink-100',       text: 'text-pink-600' },
+  rose:      { bg: 'bg-rose-100',       text: 'text-rose-600' },
+  cyan:      { bg: 'bg-cyan-100',       text: 'text-cyan-600' },
+  orange:    { bg: 'bg-orange-100',     text: 'text-orange-600' },
+};
+
+function getColorClasses(color: string) {
+  return colorMap[color] || colorMap.primary;
+}
+
+// Scheme-dependent classes
+const schemeBg = colorScheme === 'secondary' ? 'bg-secondary-100' : 'bg-primary-100';
+const schemeText = colorScheme === 'secondary' ? 'text-secondary-600' : 'text-primary-600';
+const hoverBg = colorScheme === 'secondary' ? 'hover:bg-secondary-50' : 'hover:bg-primary-50';
+const hoverText = colorScheme === 'secondary' ? 'group-hover:text-secondary-600' : 'group-hover:text-primary-600';
+const arrowHover = colorScheme === 'secondary' ? 'group-hover:text-secondary-600' : 'group-hover:text-primary-600';
+---
+
+<div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+  <div class="flex items-center gap-3 mb-6">
+    <div class={`w-12 h-12 ${schemeBg} rounded-xl flex items-center justify-center`}>
+      <svg class={`w-6 h-6 ${schemeText}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900">{title}</h3>
+  </div>
+  <div class="space-y-4">
+    {zones.map((zone) => {
+      const colors = getColorClasses(zone.color);
+      return (
+        <a href={zone.link} class={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg ${hoverBg} transition-colors group`}>
+          <span class={`w-8 h-8 ${colors.bg} rounded-lg flex items-center justify-center ${colors.text} text-lg`}>{zone.emoji}</span>
+          <div class="flex-1">
+            <span class={`font-medium text-gray-900 ${hoverText}`}>{zone.name}</span>
+            <p class="text-sm text-gray-500">{zone.description}</p>
+          </div>
+          <svg class={`w-5 h-5 text-gray-400 ${arrowHover}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+      );
+    })}
+  </div>
+</div>

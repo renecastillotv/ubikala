@@ -5,9 +5,10 @@ import { getPlatformStats } from '../lib/meilisearch';
 
 interface Props {
   pais?: string;
+  locations?: Array<{ name: string; slug: string; count: number }>;
 }
 
-const { pais } = Astro.props;
+const { pais, locations = [] } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
@@ -45,7 +46,7 @@ try {
 
     <!-- Search Box -->
     <div class="max-w-5xl mx-auto animate-slideUp">
-      <SearchBox variant="hero" />
+      <SearchBox variant="hero" locations={locations} />
     </div>
 
     <!-- Stats -->

@@ -7,6 +7,8 @@ import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls, localizedUrl, type Lang } from '../../../i18n';
 import { getPropertiesByLocation } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
+import { getPageFAQs, getFAQSchema } from '../../../lib/seo-content-db';
+import SEOFAQSection from '../../../components/SEOFAQSection.astro';
 
 export const prerender = false;
 
@@ -18,16 +20,16 @@ const alternateUrls = getAlternateUrls(`/fr/proprietes/${locationSlug}`);
 const PROPERTIES_PER_PAGE = 48;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
+const pais = Astro.locals.country.name;
+
 let locationProperties: Property[] = [];
 let heroImages: string[] = [];
 let locationData = {
   slug: locationSlug || '',
   name: locationSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '',
-  province: 'Republique Dominicaine',
+  province: pais,
   propertyCount: 0
 };
-
-const pais = Astro.locals.country.name;
 
 try {
   const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, lang: 'fr', pais });
@@ -40,7 +42,7 @@ try {
     locationData = {
       slug: locationSlug || '',
       name: cityName,
-      province: firstProp.location.province || 'Republique Dominicaine',
+      province: firstProp.location.province || pais,
       propertyCount: totalPropertyCount
     };
   }
@@ -62,9 +64,14 @@ const endIndex = startIndex + PROPERTIES_PER_PAGE;
 const paginatedProperties = locationProperties.slice(startIndex, endIndex);
 
 const pageTitle = `Proprietes a ${locationData.name} | Ubikala`;
-const pageDescription = `Decouvrez ${locationData.propertyCount} proprietes a ${locationData.name}, Republique Dominicaine. Maisons, appartements, villas et plus.`;
+const pageDescription = `Decouvrez ${locationData.propertyCount} proprietes a ${locationData.name}, ${pais}. Maisons, appartements, villas et plus.`;
 
 const preserveParams: Record<string, string> = {};
+
+// DB-driven FAQs for this location
+const slugLower = (locationSlug || '').toLowerCase();
+const country = Astro.locals.country;
+const faqs = await getPageFAQs(country.code, 'fr', `location:${slugLower}`, pais);
 ---
 
 <Layout
@@ -99,7 +106,7 @@ const preserveParams: Record<string, string> = {};
         Proprietes a {locationData.name}
       </h1>
       <p class="text-xl text-gray-200 max-w-2xl">
-        {locationData.province}, Republique Dominicaine
+        {locationData.province}, {pais}
       </p>
       <div class="mt-4">
         <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full">
@@ -162,6 +169,10 @@ const preserveParams: Record<string, string> = {};
       )}
     </div>
   </section>
+
+  <!-- FAQ Section - DB driven -->
+  {faqs.length > 0 && <SEOFAQSection faqs={faqs} title={`Questions fr\u00e9quentes sur ${locationData.name}`} />}
+  {faqs.length > 0 && <script type="application/ld+json" set:html={JSON.stringify(getFAQSchema(faqs))} />}
 
   <!-- Explore Other Locations -->
   <section class="py-12 bg-gray-50">

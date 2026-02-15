@@ -1,0 +1,55 @@
+---
+import type { PropertyType } from '../lib/seo-content-db';
+
+interface Props {
+  types: PropertyType[];
+}
+
+const { types } = Astro.props;
+
+// Color map for letter badges — Tailwind can't handle dynamic class names
+const colorMap: Record<string, { bg: string; text: string }> = {
+  primary:   { bg: 'bg-primary-100',   text: 'text-primary-600' },
+  secondary: { bg: 'bg-secondary-100', text: 'text-secondary-600' },
+  emerald:   { bg: 'bg-emerald-100',   text: 'text-emerald-600' },
+  amber:     { bg: 'bg-amber-100',     text: 'text-amber-600' },
+  purple:    { bg: 'bg-purple-100',     text: 'text-purple-600' },
+  red:       { bg: 'bg-red-100',        text: 'text-red-600' },
+  blue:      { bg: 'bg-blue-100',       text: 'text-blue-600' },
+  teal:      { bg: 'bg-teal-100',       text: 'text-teal-600' },
+  indigo:    { bg: 'bg-indigo-100',     text: 'text-indigo-600' },
+  pink:      { bg: 'bg-pink-100',       text: 'text-pink-600' },
+  rose:      { bg: 'bg-rose-100',       text: 'text-rose-600' },
+  cyan:      { bg: 'bg-cyan-100',       text: 'text-cyan-600' },
+  orange:    { bg: 'bg-orange-100',     text: 'text-orange-600' },
+};
+
+function getColorClasses(color: string) {
+  return colorMap[color] || colorMap.primary;
+}
+---
+
+<div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center">
+      <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900">Tipos de Propiedades</h3>
+  </div>
+  <div class="space-y-4">
+    {types.map((type) => {
+      const colors = getColorClasses(type.color);
+      return (
+        <a href={type.link} class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+          <span class={`w-8 h-8 ${colors.bg} rounded-lg flex items-center justify-center ${colors.text} text-sm font-bold`}>{type.letter}</span>
+          <div class="flex-1">
+            <span class="font-medium text-gray-900 group-hover:text-primary-600">{type.name}</span>
+            <p class="text-sm text-gray-500">{type.description}</p>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+</div>

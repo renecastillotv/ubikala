@@ -7,7 +7,6 @@ import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations } from '../../../i18n';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
-import { firstTimeBuyerFAQs, financingFAQs } from '../../../lib/seo-content';
 
 // SSR para rutas dinámicas
 export const prerender = false;
@@ -60,13 +59,14 @@ const locationName = formatLocationName(locationSlug || '');
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
+const pais = Astro.locals.country.name;
+const country = Astro.locals.country;
+
 // Intentar obtener info de ubicación
 let locationData: { name: string; province: string } = {
   name: locationName,
-  province: 'República Dominicana'
+  province: pais
 };
-
-const pais = Astro.locals.country.name;
 
 // Fetch properties con filtros de tipo y ubicación via MeiliSearch
 let properties: Property[] = [];
@@ -230,7 +230,7 @@ const dynamicFAQs = [
   },
   {
     question: `¿Qué documentos necesito para comprar un ${typeInfo.singular.toLowerCase()}?`,
-    answer: `Para comprar un ${typeInfo.singular.toLowerCase()} en República Dominicana necesitas: cédula o pasaporte, constancia de ingresos o estados de cuenta, y el inicial (generalmente 10-30% del valor). El vendedor debe proveer título de propiedad certificado, plano catastral y certificación de no gravamen.`
+    answer: `Para comprar un ${typeInfo.singular.toLowerCase()} en ${pais} necesitas: cédula o pasaporte, constancia de ingresos o estados de cuenta, y el inicial (generalmente 10-30% del valor). El vendedor debe proveer título de propiedad certificado, plano catastral y certificación de no gravamen.`
   },
   {
     question: `¿Puedo financiar un ${typeInfo.singular.toLowerCase()} en ${locationData.name}?`,

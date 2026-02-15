@@ -3,9 +3,10 @@ import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
 
 interface Props {
   variant?: 'hero' | 'inline' | 'compact';
+  locations?: Array<{ name: string; slug: string; count: number }>;
 }
 
-const { variant = 'hero' } = Astro.props;
+const { variant = 'hero', locations = [] } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
@@ -36,13 +37,22 @@ const containerClass = {
         <option value="land">{t.propertyTypes.land}</option>
         <option value="commercial">{t.propertyTypes.commercial}</option>
       </select>
-      <select name="location" class="select py-2 text-sm flex-1">
-        <option value="">{t.filters.location}</option>
-        <option value="santo-domingo">Santo Domingo</option>
-        <option value="punta-cana">Punta Cana</option>
-        <option value="santiago">Santiago</option>
-        <option value="bavaro">Bávaro</option>
-      </select>
+      {locations.length > 0 ? (
+        <select name="location" class="select py-2 text-sm flex-1">
+          <option value="">{t.filters.location}</option>
+          {locations.map(loc => (
+            <option value={loc.name}>{loc.name}</option>
+          ))}
+        </select>
+      ) : (
+        <select name="location" class="select py-2 text-sm flex-1">
+          <option value="">{t.filters.location}</option>
+          <option value="santo-domingo">Santo Domingo</option>
+          <option value="punta-cana">Punta Cana</option>
+          <option value="santiago">Santiago</option>
+          <option value="bavaro">Bávaro</option>
+        </select>
+      )}
       <button type="submit" class="btn-primary py-2 px-4 text-sm whitespace-nowrap">
         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -92,19 +102,28 @@ const containerClass = {
       <label for="location" class="block text-sm font-medium text-gray-700 mb-2">
         {t.filters.location}
       </label>
-      <select id="location" name="location" class="select">
-        <option value="">{t.filters.allLocations}</option>
-        <option value="santo-domingo">Santo Domingo</option>
-        <option value="punta-cana">Punta Cana</option>
-        <option value="santiago">Santiago</option>
-        <option value="las-terrenas">Las Terrenas</option>
-        <option value="cabarete">Cabarete</option>
-        <option value="sosua">Sosúa</option>
-        <option value="bavaro">Bávaro</option>
-        <option value="jarabacoa">Jarabacoa</option>
-        <option value="la-romana">La Romana</option>
-        <option value="puerto-plata">Puerto Plata</option>
-      </select>
+      {locations.length > 0 ? (
+        <select id="location" name="location" class="select">
+          <option value="">{t.filters.allLocations}</option>
+          {locations.map(loc => (
+            <option value={loc.name}>{loc.name}</option>
+          ))}
+        </select>
+      ) : (
+        <select id="location" name="location" class="select">
+          <option value="">{t.filters.allLocations}</option>
+          <option value="santo-domingo">Santo Domingo</option>
+          <option value="punta-cana">Punta Cana</option>
+          <option value="santiago">Santiago</option>
+          <option value="las-terrenas">Las Terrenas</option>
+          <option value="cabarete">Cabarete</option>
+          <option value="sosua">Sosúa</option>
+          <option value="bavaro">Bávaro</option>
+          <option value="jarabacoa">Jarabacoa</option>
+          <option value="la-romana">La Romana</option>
+          <option value="puerto-plata">Puerto Plata</option>
+        </select>
+      )}
     </div>
 
     <!-- Price Range -->

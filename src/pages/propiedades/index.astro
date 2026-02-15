@@ -9,6 +9,7 @@ import { getLocationsWithStats } from '../../lib/meilisearch';
 export const prerender = false;
 
 const t = useTranslations('es');
+const pais = Astro.locals.country.name;
 
 // Obtener todas las ubicaciones con conteos
 let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
@@ -22,7 +23,7 @@ try {
 const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
 const pageTitle = 'Propiedades por Ubicación | Ubíkala.com';
-const pageDescription = 'Explora propiedades en venta y alquiler en las principales ciudades y zonas de República Dominicana. Punta Cana, Santo Domingo, Santiago y más.';
+const pageDescription = `Explora propiedades en venta y alquiler en las principales ciudades y zonas de ${pais}. Punta Cana, Santo Domingo, Santiago y más.`;
 ---
 
 <Layout
@@ -42,7 +43,7 @@ const pageDescription = 'Explora propiedades en venta y alquiler en las principa
         Propiedades por Ubicación
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
-        Explora las principales ciudades y zonas de República Dominicana donde tenemos propiedades disponibles para ti.
+        Explora las principales ciudades y zonas de {pais} donde tenemos propiedades disponibles para ti.
       </p>
     </div>
   </section>
@@ -101,7 +102,7 @@ const pageDescription = 'Explora propiedades en venta y alquiler en las principa
       <div class="prose prose-lg max-w-4xl mx-auto">
         <h2>Encuentra Propiedades en Todo el País</h2>
         <p>
-          República Dominicana ofrece una amplia variedad de ubicaciones para invertir en bienes raíces.
+          {pais} ofrece una amplia variedad de ubicaciones para invertir en bienes raíces.
           Desde las playas paradisíacas de Punta Cana hasta la vibrante capital Santo Domingo,
           cada zona tiene características únicas que se adaptan a diferentes estilos de vida y objetivos de inversión.
         </p>

@@ -13,6 +13,7 @@ import type { Agent } from '../data/types';
 export const prerender = false;
 
 const t = useTranslations('es');
+const pais = Astro.locals.country?.name;
 
 // Configuración de paginación
 const ITEMS_PER_PAGE = 24;
@@ -24,7 +25,7 @@ let totalCount = 0;
 try {
   // Fetch all agents from both sources
   const [meiliResult, ubikalaAgentRows] = await Promise.all([
-    searchAgents({ limit: 100 }),
+    searchAgents({ limit: 100, pais }),
     getUbikalaAgents({ limit: 100 })
   ]);
   const clicAgents = meiliResult.agents;
@@ -63,7 +64,7 @@ if (currentPage > totalPages && totalPages > 0) {
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Asesores Inmobiliarios en República Dominicana
+        Asesores Inmobiliarios en {pais}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         Conecta con profesionales verificados que te ayudarán a encontrar la propiedad perfecta o vender tu inmueble al mejor precio.

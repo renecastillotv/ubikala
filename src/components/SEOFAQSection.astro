@@ -1,0 +1,33 @@
+---
+import type { FAQ } from '../lib/seo-content-db';
+
+interface Props {
+  faqs: FAQ[];
+  title: string;
+}
+
+const { faqs, title } = Astro.props;
+---
+
+{faqs.length > 0 && (
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">{title}</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        {faqs.map((faq) => (
+          <details class="group bg-gray-50 rounded-lg">
+            <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+              <span class="font-medium text-gray-900 pr-4">{faq.question}</span>
+              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-4 pb-4 text-gray-600">
+              {faq.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+)}

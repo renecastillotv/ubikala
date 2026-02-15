@@ -15,6 +15,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('fr');
+const pais = Astro.locals.country.name;
 const alternateUrls = getAlternateUrls(`/fr/utilisateur/${slug}`);
 
 function slugify(text: string): string {
@@ -132,12 +133,12 @@ if (user) {
       '@type': 'Organization',
       name: user.company_name,
     } : undefined,
-    areaServed: { '@type': 'Country', name: 'Dominican Republic' },
+    areaServed: { '@type': 'Country', name: pais },
   };
 
   pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
   pageDescription = user.bio
-    ? `${user.bio.substring(0, 150)}... Contactez ${user.name} pour des proprietes en Republique Dominicaine.`
+    ? `${user.bio.substring(0, 150)}... Contactez ${user.name} pour des proprietes en ${pais}.`
     : `${user.name} - ${displayLabel}. ${totalProperties} proprietes actives. Contactez maintenant.`;
 }
 ---

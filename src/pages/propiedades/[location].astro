@@ -6,7 +6,8 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, type Lang } from '../../i18n';
 import { getPropertiesByLocation } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
-import { locationFAQs, firstTimeBuyerFAQs, financingFAQs } from '../../lib/seo-content';
+import { getPageFAQs, getFAQSchema } from '../../lib/seo-content-db';
+import SEOFAQSection from '../../components/SEOFAQSection.astro';
 
 // SSR for dynamic location pages
 export const prerender = false;
@@ -19,20 +20,20 @@ const t = useTranslations(lang);
 const PROPERTIES_PER_PAGE = 48;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('pagina') || '1'));
 
+const pais = Astro.locals.country.name;
+
 // Fetch location and properties from database
 let locationProperties: Property[] = [];
 let heroImages: string[] = [];
 let locationData = {
   slug: locationSlug || '',
   name: locationSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '',
-  province: 'República Dominicana',
+  province: pais,
   title: { es: '', en: '', fr: '' },
   description: { es: '', en: '', fr: '' },
   image: '/images/locations/default.jpg',
   propertyCount: 0
 };
-
-const pais = Astro.locals.country.name;
 
 try {
   // Get properties for this location via MeiliSearch
@@ -47,16 +48,16 @@ try {
     locationData = {
       slug: locationSlug || '',
       name: cityName,
-      province: firstProp.location.province || 'República Dominicana',
+      province: firstProp.location.province || pais,
       title: {
         es: `Propiedades en ${cityName}`,
         en: `Properties in ${cityName}`,
         fr: `Propriétés à ${cityName}`
       },
       description: {
-        es: `Encuentra las mejores propiedades en ${cityName}, República Dominicana.`,
-        en: `Find the best properties in ${cityName}, Dominican Republic.`,
-        fr: `Trouvez les meilleures propriétés à ${cityName}, République Dominicaine.`
+        es: `Encuentra las mejores propiedades en ${cityName}, ${pais}.`,
+        en: `Find the best properties in ${cityName}, ${pais}.`,
+        fr: `Trouvez les meilleures propriétés à ${cityName}, ${pais}.`
       },
       image: firstProp.images[0]?.url || '/images/locations/default.jpg',
       propertyCount: totalPropertyCount
@@ -105,7 +106,7 @@ const getPageNumbers = () => {
 };
 
 const pageTitle = locationData.title[lang] || `Propiedades en ${locationData.name}`;
-const pageDescription = locationData.description[lang] || `Encuentra propiedades en ${locationData.name}, República Dominicana.`;
+const pageDescription = locationData.description[lang] || `Encuentra propiedades en ${locationData.name}, ${pais}.`;
 
 // Location-specific SEO content
 type LocationInfo = {
@@ -215,6 +216,10 @@ const locationSchema = {
     },
   })),
 };
+
+// DB-driven FAQs for this location
+const country = Astro.locals.country;
+const faqs = await getPageFAQs(country.code, 'es', `location:${slugLower}`, pais);
 ---
 
 <Layout
@@ -256,7 +261,7 @@ const locationSchema = {
         Propiedades en {locationData.name}
       </h1>
       <p class="text-xl text-gray-200 max-w-2xl">
-        {locationData.province}, República Dominicana
+        {locationData.province}, {pais}
       </p>
       <div class="mt-6">
         <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full">
@@ -532,31 +537,8 @@ const locationSchema = {
     </div>
   </section>
 
-  <!-- FAQ Section - Visible -->
-  <section class="py-12 bg-white">
-    <div class="container-custom">
-      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Preguntas Frecuentes sobre {locationData.name}</h2>
-      <div class="max-w-3xl mx-auto space-y-4">
-        {(() => {
-          const locFaqs = locationFAQs[slugLower] || [];
-          const allFaqs = [...locFaqs, ...firstTimeBuyerFAQs.slice(0, 2), ...financingFAQs.slice(0, 1)];
-          return allFaqs.map((faq) => (
-            <details class="group bg-gray-50 rounded-lg">
-              <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
-                <span class="font-medium text-gray-900">{faq.question}</span>
-                <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </summary>
-              <div class="px-4 pb-4 text-gray-600">
-                {faq.answer}
-              </div>
-            </details>
-          ));
-        })()}
-      </div>
-    </div>
-  </section>
+  <!-- FAQ Section - DB driven -->
+  {faqs.length > 0 && <SEOFAQSection faqs={faqs} title={`Preguntas Frecuentes sobre ${locationData.name}`} />}
 
   <!-- Educational Content & Internal Linking -->
   <section class="py-12 bg-gray-50">
@@ -656,20 +638,5 @@ const locationSchema = {
   </section>
 
   <!-- FAQ Schema for location -->
-  <script is:inline type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      ...(locationFAQs[slugLower] || []),
-      ...firstTimeBuyerFAQs.slice(0, 2),
-      ...financingFAQs.slice(0, 1)
-    ].map(faq => ({
-      "@type": "Question",
-      "name": faq.question,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.answer
-      }
-    }))
-  })} />
+  {faqs.length > 0 && <script type="application/ld+json" set:html={JSON.stringify(getFAQSchema(faqs))} />}
 </Layout>

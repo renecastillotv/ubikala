@@ -7,7 +7,10 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 import { useTranslations } from '../i18n';
 import { searchProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
-import { firstTimeBuyerFAQs, financingFAQs, usBuyerFAQs } from '../lib/seo-content';
+import { getPageFAQs, getEducationalCards, getFAQSchema } from '../lib/seo-content-db';
+import { getCitiesWithCounts } from '../lib/meilisearch';
+import SEOEducationalCards from '../components/SEOEducationalCards.astro';
+import SEOFAQSection from '../components/SEOFAQSection.astro';
 
 // SSR para búsqueda dinámica
 export const prerender = false;
@@ -46,6 +49,12 @@ const filters = {
 };
 
 const pais = Astro.locals.country.name;
+const country = Astro.locals.country;
+
+// DB-driven content
+const faqs = await getPageFAQs(country.code, 'es', 'search', pais);
+const eduCards = await getEducationalCards(country.code, 'es', pais);
+const searchLocations = await getCitiesWithCounts(pais);
 
 // Buscar propiedades via MeiliSearch
 let results: Property[] = [];
@@ -115,7 +124,7 @@ if (filters.propertyType && filters.propertyType !== 'all') {
 }
 
 const fullTitle = `${pageTitle} | Ubíkala.com`;
-const description = `Encuentra ${totalCount} propiedades disponibles. Busca casas, apartamentos, villas y más en República Dominicana.`;
+const description = `Encuentra ${totalCount} propiedades disponibles. Busca casas, apartamentos, villas y más en ${pais}.`;
 ---
 
 <Layout
@@ -147,9 +156,9 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           </select>
           <select name="location" class="select py-1.5 px-3 text-sm w-auto hidden sm:block" onchange="this.form.submit()">
             <option value="">Ubicación</option>
-            <option value="santo-domingo" selected={filters.location === 'santo-domingo'}>Santo Domingo</option>
-            <option value="punta-cana" selected={filters.location === 'punta-cana'}>Punta Cana</option>
-            <option value="santiago" selected={filters.location === 'santiago'}>Santiago</option>
+            {searchLocations.map(loc => (
+              <option value={loc.slug} selected={filters.location === loc.slug}>{loc.name}</option>
+            ))}
           </select>
           <noscript><button type="submit" class="btn-primary py-1.5 px-3 text-sm">Filtrar</button></noscript>
         </form>
@@ -162,7 +171,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
     <div class="container-custom">
       <h1 class="text-2xl md:text-3xl font-bold text-gray-900">{pageTitle}</h1>
       <p class="text-gray-600 mt-1">
-        {totalCount} {totalCount === 1 ? 'propiedad disponible' : 'propiedades disponibles'} en República Dominicana
+        {totalCount} {totalCount === 1 ? 'propiedad disponible' : 'propiedades disponibles'} en {pais}
       </p>
     </div>
   </div>
@@ -248,14 +257,14 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
       <div class="prose prose-lg max-w-4xl mx-auto">
         {filters.location ? (
           <>
-            <h2>Propiedades en {filters.location}, República Dominicana</h2>
+            <h2>Propiedades en {filters.location}, {pais}</h2>
             <p>
               Explora nuestra selección de {totalCount} propiedades disponibles en {filters.location}.
               Ya sea que busques una casa familiar, un apartamento moderno, una villa de lujo o un terreno
               para construir, en Ubikala.com encontrarás opciones verificadas por asesores inmobiliarios profesionales.
             </p>
             <p>
-              {filters.location} es una de las zonas más buscadas de República Dominicana,
+              {filters.location} es una de las zonas más buscadas de {pais},
               conocida por su {filters.location.toLowerCase().includes('punta') ? 'cercanía a las playas y atractivo turístico' :
               filters.location.toLowerCase().includes('santiago') ? 'desarrollo comercial y calidad de vida' :
               'excelente ubicación y conectividad'}.
@@ -264,14 +273,14 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           </>
         ) : filters.propertyType !== 'all' ? (
           <>
-            <h2>{pageTitle} en República Dominicana</h2>
+            <h2>{pageTitle} en {pais}</h2>
             <p>
-              Descubre {totalCount} {pageTitle.toLowerCase()} disponibles en las mejores ubicaciones de República Dominicana.
+              Descubre {totalCount} {pageTitle.toLowerCase()} disponibles en las mejores ubicaciones de {pais}.
               Nuestros asesores inmobiliarios verificados te ofrecen propiedades con información detallada,
               fotografías profesionales y asesoría personalizada.
             </p>
             <p>
-              {filters.propertyType === 'house' ? 'Las casas en República Dominicana ofrecen espacios amplios, jardines y privacidad para tu familia.' :
+              {filters.propertyType === 'house' ? `Las casas en ${pais} ofrecen espacios amplios, jardines y privacidad para tu familia.` :
                filters.propertyType === 'apartment' ? 'Los apartamentos son ideales para quienes buscan comodidad, seguridad y amenidades modernas.' :
                filters.propertyType === 'villa' ? 'Las villas de lujo combinan exclusividad, diseño arquitectónico y las mejores vistas del Caribe.' :
                filters.propertyType === 'land' ? 'Los terrenos representan una excelente oportunidad de inversión para construir tu proyecto ideal.' :
@@ -280,7 +289,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           </>
         ) : (
           <>
-            <h2>Buscar Propiedades en República Dominicana</h2>
+            <h2>Buscar Propiedades en {pais}</h2>
             <p>
               En Ubikala.com, asesores inmobiliarios verificados y agencias publican sus propiedades
               para que puedas encontrar exactamente lo que buscas. Actualmente tenemos {totalCount} propiedades
@@ -306,112 +315,34 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
   </section>
 
   <!-- Educational Content & Internal Linking -->
-  <section class="py-12 bg-gray-50">
-    <div class="container-custom">
-      <div class="grid md:grid-cols-3 gap-8">
-        <!-- Bono Primera Vivienda -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Bono Primera Vivienda</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            ¿Comprando tu primera casa? Podrías recibir hasta RD$1,500,000 de subsidio del gobierno.
-          </p>
-          <a href="/guias/bono-primera-vivienda" class="text-primary-600 font-medium text-sm hover:underline">
-            Conoce los requisitos →
-          </a>
-        </div>
+  {eduCards.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <SEOEducationalCards cards={eduCards} />
+      </div>
+    </section>
+  )}
 
-        <!-- Fideicomiso -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-          <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
+  <!-- Internal Links - Ubicaciones Populares -->
+  {searchLocations.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <div class="mt-12">
+          <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Explora por Ubicación</h3>
+          <div class="flex flex-wrap justify-center gap-3">
+            {searchLocations.slice(0, 10).map(loc => (
+              <a href={`/propiedades/${loc.slug}`} class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
+                {loc.name}
+              </a>
+            ))}
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Compra en Fideicomiso</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            La forma más segura de comprar en proyectos en construcción. Tu inversión protegida.
-          </p>
-          <a href="/guias/fideicomiso-inmobiliario" class="text-primary-600 font-medium text-sm hover:underline">
-            Aprende cómo funciona →
-          </a>
-        </div>
-
-        <!-- Para compradores USA -->
-        <div class="bg-white rounded-xl p-6 shadow-sm">
-          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Compradores desde USA</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Guía completa para estadounidenses: impuestos, financiamiento y proceso de compra.
-          </p>
-          <a href="/guias/comprar-desde-usa" class="text-primary-600 font-medium text-sm hover:underline">
-            Ver guía completa →
-          </a>
         </div>
       </div>
-
-      <!-- Internal Links - Ubicaciones Populares -->
-      <div class="mt-12">
-        <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Explora por Ubicación</h3>
-        <div class="flex flex-wrap justify-center gap-3">
-          <a href="/propiedades/santo-domingo" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Santo Domingo
-          </a>
-          <a href="/propiedades/punta-cana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Punta Cana
-          </a>
-          <a href="/propiedades/santiago" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Santiago
-          </a>
-          <a href="/propiedades/la-romana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            La Romana
-          </a>
-          <a href="/propiedades/puerto-plata" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Puerto Plata
-          </a>
-          <a href="/propiedades/samana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Samaná
-          </a>
-          <a href="/propiedades/santo-domingo-este" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Santo Domingo Este
-          </a>
-          <a href="/propiedades/santo-domingo-norte" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-            Santo Domingo Norte
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
+  )}
 
   <!-- FAQ Section - Visible -->
-  <section class="py-12 bg-white">
-    <div class="container-custom">
-      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Preguntas Frecuentes</h2>
-      <div class="max-w-3xl mx-auto space-y-4">
-        {[...firstTimeBuyerFAQs.slice(0, 2), ...financingFAQs.slice(0, 2), ...usBuyerFAQs.slice(0, 2)].map((faq) => (
-          <details class="group bg-gray-50 rounded-lg">
-            <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
-              <span class="font-medium text-gray-900">{faq.question}</span>
-              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </summary>
-            <div class="px-4 pb-4 text-gray-600">
-              {faq.answer}
-            </div>
-          </details>
-        ))}
-      </div>
-    </div>
-  </section>
+  {faqs.length > 0 && <SEOFAQSection faqs={faqs} title="Preguntas Frecuentes" />}
 
   <!-- Schema.org ItemList for SEO -->
   <script is:inline type="application/ld+json" set:html={JSON.stringify({
@@ -439,27 +370,12 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           "@type": "PostalAddress",
           "addressLocality": property.location.city,
           "addressRegion": property.location.sector,
-          "addressCountry": "DO"
+          "addressCountry": country.code
         }
       }
     }))
   })} />
 
   <!-- FAQ Schema for common questions -->
-  <script is:inline type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      ...firstTimeBuyerFAQs.slice(0, 2),
-      ...financingFAQs.slice(0, 2),
-      ...usBuyerFAQs.slice(0, 2)
-    ].map(faq => ({
-      "@type": "Question",
-      "name": faq.question,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.answer
-      }
-    }))
-  })} />
+  {faqs.length > 0 && <script is:inline type="application/ld+json" set:html={JSON.stringify(getFAQSchema(faqs))} />}
 </Layout>

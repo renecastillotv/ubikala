@@ -8,6 +8,12 @@ import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties, getMarketStats } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
+import { getPageFAQs, getPopularZones, getPropertyTypes, getInfoBox, getEducationalCards, getGuideHeader, getCTAContent, getFAQSchema } from '../../lib/seo-content-db';
+import SEOPopularZones from '../../components/SEOPopularZones.astro';
+import SEOPropertyTypes from '../../components/SEOPropertyTypes.astro';
+import SEOInfoBox from '../../components/SEOInfoBox.astro';
+import SEOEducationalCards from '../../components/SEOEducationalCards.astro';
+import SEOFAQSection from '../../components/SEOFAQSection.astro';
 
 // SSR pour pagination
 export const prerender = false;
@@ -37,6 +43,15 @@ const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
 let marketStats = null;
 try { marketStats = await getMarketStats(pais); } catch {}
+
+// DB-driven SEO content
+const faqs = await getPageFAQs(country.code, 'fr', 'buy', pais);
+const zones = await getPopularZones(country.code, 'fr', 'buy', pais);
+const propertyTypes = await getPropertyTypes(country.code, 'fr', pais);
+const infoBox = await getInfoBox(country.code, 'fr', 'buy', pais);
+const eduCards = await getEducationalCards(country.code, 'fr', pais);
+const guideHeader = await getGuideHeader(country.code, 'fr', 'buy', pais);
+const cta = await getCTAContent(country.code, 'fr', 'buy', pais);
 
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/fr/acheter');
@@ -102,42 +117,88 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- Market Stats -->
-  {marketStats && (
-    <section class="py-12 bg-gradient-to-b from-white to-gray-50">
+  <!-- SEO Content -->
+  <section class="py-16 bg-gradient-to-b from-white to-gray-50">
+    <div class="container-custom">
+      {guideHeader && (
+        <div class="text-center mb-12">
+          <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{guideHeader.title}</h2>
+          {guideHeader.subtitle && <p class="text-lg text-gray-600 max-w-2xl mx-auto">{guideHeader.subtitle}</p>}
+        </div>
+      )}
+
+      {marketStats && <div class="mb-16"><MarketStatsBar stats={marketStats} operacion="venta" lang="fr" countryName={pais} /></div>}
+
+      {(zones.length > 0 || propertyTypes.length > 0) && (
+        <div class="grid md:grid-cols-2 gap-12 mb-16">
+          {zones.length > 0 && <SEOPopularZones zones={zones} title="Zones Populaires pour Acheter" />}
+          {propertyTypes.length > 0 && <SEOPropertyTypes types={propertyTypes} />}
+        </div>
+      )}
+
+      {infoBox && <div class="mb-16"><SEOInfoBox title={infoBox.title} text={infoBox.text} color="green" /></div>}
+    </div>
+  </section>
+
+  {faqs.length > 0 && <SEOFAQSection faqs={faqs} title="Questions Fréquentes sur l'Achat" />}
+
+  {eduCards.length > 0 && (
+    <section class="py-12 bg-gray-50">
       <div class="container-custom">
-        <MarketStatsBar stats={marketStats} operacion="venta" lang="fr" countryName={pais} />
+        <SEOEducationalCards cards={eduCards} />
       </div>
     </section>
   )}
 
-  <!-- SEO Content -->
-  <section class="py-12 bg-gray-50">
-    <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Acheter une Propriété en {pais}</h2>
-        <p>
-          {pais} offre d'excellentes opportunités d'investissement immobilier dans les Caraïbes.
-          Que vous recherchiez une maison familiale à Saint-Domingue, un appartement d'investissement à Punta Cana,
-          une villa de luxe face à la mer à Las Terrenas ou un terrain à Santiago,
-          notre portail vous connecte avec les meilleures options du marché.
-        </p>
-
-        <h3>Zones Populaires pour Acheter</h3>
-        <ul>
-          <li><strong>Saint-Domingue:</strong> La capitale offre des appartements modernes à Piantini et Naco jusqu'aux grandes maisons à Arroyo Hondo.</li>
-          <li><strong>Punta Cana:</strong> La destination touristique #1 des Caraïbes avec d'excellents rendements locatifs.</li>
-          <li><strong>Santiago:</strong> Prix plus abordables et excellente qualité de vie dans la région du Cibao.</li>
-          <li><strong>Las Terrenas:</strong> Paradis bohème avec des propriétés uniques face à la mer.</li>
-        </ul>
-
-        <h3>Processus d'Achat pour les Étrangers</h3>
-        <p>
-          Les étrangers peuvent acheter des propriétés en {pais} sans restrictions.
-          Le processus est simple et les agents vérifiés sur notre portail peuvent vous guider
-          à chaque étape, de la recherche à la conclusion.
-        </p>
+  <!-- CTA -->
+  {cta ? (
+    <section class="py-12 bg-gradient-to-r from-primary-600 to-primary-700">
+      <div class="container-custom text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">{cta.title}</h2>
+        <p class="text-primary-100 mb-6 max-w-xl mx-auto">{cta.description}</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/fr/agents" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Voir les Agents
+          </a>
+          <a href="/fr/contact" class="inline-flex items-center justify-center gap-2 bg-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Nous Contacter
+          </a>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  ) : (
+    <section class="py-12 bg-gradient-to-r from-primary-600 to-primary-700">
+      <div class="container-custom text-center">
+        <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
+          Prêt à trouver votre propriété idéale ?
+        </h2>
+        <p class="text-primary-100 mb-6 max-w-xl mx-auto">
+          Nos agents vérifiés vous aideront à trouver la meilleure option pour vous.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/fr/agents" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Voir les Agents
+          </a>
+          <a href="/fr/contact" class="inline-flex items-center justify-center gap-2 bg-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Nous Contacter
+          </a>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- FAQ Schema -->
+  {faqs.length > 0 && <script is:inline type="application/ld+json" set:html={JSON.stringify(getFAQSchema(faqs))} />}
 </Layout>

@@ -12,6 +12,7 @@ export const prerender = false;
 
 const t = useTranslations('en');
 const alternateUrls = getAlternateUrls('/en/agents');
+const pais = Astro.locals.country?.name;
 
 // Pagination config
 const ITEMS_PER_PAGE = 24;
@@ -22,7 +23,7 @@ let agents: Agent[] = [];
 let totalCount = 0;
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const result = await searchAgents({ limit: ITEMS_PER_PAGE, offset });
+  const result = await searchAgents({ limit: ITEMS_PER_PAGE, offset, pais });
   agents = result.agents;
   totalCount = result.total;
 } catch (error) {
@@ -51,7 +52,7 @@ if (currentPage > totalPages && totalPages > 0) {
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Real Estate Agents in the Dominican Republic
+        Real Estate Agents in {pais}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         Connect with verified professionals ready to help you find your ideal property or sell your real estate.

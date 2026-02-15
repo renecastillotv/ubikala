@@ -744,13 +744,18 @@ export async function searchAgents(options: {
   limit?: number;
   offset?: number;
   sort?: string[];
+  pais?: string;
 } = {}): Promise<{ agents: Agent[]; total: number }> {
-  const { query = '', limit = 50, offset = 0, sort = ['nombre_completo:asc'] } = options;
+  const { query = '', limit = 50, offset = 0, sort = ['nombre_completo:asc'], pais } = options;
+
+  // When pais is provided but no explicit query, use country name as query
+  // to bias results toward agents in that country's locations (best-effort)
+  const effectiveQuery = query || (pais ? pais : '');
 
   const result = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({
-      q: query,
+      q: effectiveQuery,
       filter: 'visible_en_web = true',
       sort,
       limit,
@@ -829,12 +834,12 @@ export async function getPlatformStats(pais?: string): Promise<{
  * Get unique inmobiliarias (tenants) that have portal properties.
  * Each tenant with at least one en_portal_ubikala=true property appears as an inmobiliaria.
  */
-export async function getPortalInmobiliarias(): Promise<Agent[]> {
+export async function getPortalInmobiliarias(pais?: string): Promise<Agent[]> {
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({
       q: '',
-      filter: portalFilter(),
+      filter: pais ? `${portalFilter()} AND pais = "${pais}"` : portalFilter(),
       facets: ['tenant_id'],
       limit: 300,
       attributesToRetrieve: ['tenant_id', 'tenant_nombre', 'tenant_logo', 'agente_slug'],

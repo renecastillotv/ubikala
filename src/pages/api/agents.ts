@@ -5,7 +5,7 @@ import { searchAgents } from '../../lib/meilisearch';
 export const prerender = false;
 
 // Solo GET permitido
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
 
@@ -13,8 +13,9 @@ export const GET: APIRoute = async ({ request }) => {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
     const offset = parseInt(url.searchParams.get('offset') || '0');
     const query = url.searchParams.get('zona') || url.searchParams.get('q') || '';
+    const pais = (locals as any).country?.name;
 
-    const result = await searchAgents({ limit, offset, query });
+    const result = await searchAgents({ limit, offset, query, pais });
 
     return new Response(JSON.stringify({
       success: true,

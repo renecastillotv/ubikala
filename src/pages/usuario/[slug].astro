@@ -16,6 +16,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('es');
+const pais = Astro.locals.country.name;
 
 // Helper to generate slug from name
 function slugify(text: string): string {
@@ -169,7 +170,7 @@ if (user) {
       '@type': 'Organization',
       name: user.company_name,
     } : undefined,
-    areaServed: { '@type': 'Country', name: 'Dominican Republic' },
+    areaServed: { '@type': 'Country', name: pais },
   };
 
   pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
