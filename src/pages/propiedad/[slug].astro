@@ -6,7 +6,8 @@ import PropertyMap from '../../components/PropertyMap.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, localizedUrl, getAlternateUrls } from '../../i18n';
-import { getPropertyBySlug, getSimilarProperties, getAgentBySlug } from '../../lib/meilisearch';
+import { getPropertyBySlug, getSimilarProperties, getAgentBySlug, getFeaturedProperties } from '../../lib/meilisearch';
+import PropertyNotFound from '../../components/PropertyNotFound.astro';
 import { getLocationCoordinates, hasValidCoordinates } from '../../lib/location-coordinates';
 import type { Property, Agent } from '../../data/types';
 
@@ -41,76 +42,85 @@ try {
 // Use full agent if available, otherwise use embedded agent from property
 const agent = fullAgent || property?.agent;
 
+let fallbackProperties: Property[] = [];
+let mapCoordinates: { lat: number; lng: number; zoom?: number } = { lat: 0, lng: 0, zoom: 10 };
+let primaryImage: { url: string; alt: string; isPrimary?: boolean } = { url: '', alt: '', isPrimary: true };
+let pageTitle = 'Propiedad No Disponible | Ubíkala';
+let pageDescription = 'Esta propiedad ya no está disponible.';
+let propertySchema = {};
+let propertyHasCoords = false;
+let formatPrice = (_price: number, _currency: string, _isRent: boolean): string => '';
+
 if (!property) {
-  return Astro.redirect('/404');
+  try { fallbackProperties = await getFeaturedProperties(6); } catch {}
+} else {
+  // Determine map coordinates - use property coords if valid, otherwise fallback to location coords
+  propertyHasCoords = hasValidCoordinates(property.location.latitude, property.location.longitude);
+  mapCoordinates = propertyHasCoords
+    ? { lat: property.location.latitude, lng: property.location.longitude, zoom: 15 }
+    : getLocationCoordinates(property.location.sector, property.location.city, property.location.province);
+
+  primaryImage = property.images.find(img => img.isPrimary) || property.images[0];
+
+  formatPrice = (price: number, currency: string, isRent: boolean): string => {
+    // Use explicit currency symbols for clarity
+    const currencySymbol = currency === 'DOP' ? 'RD$' : 'US$';
+    const formatted = `${currencySymbol} ${price.toLocaleString('en-US')}`;
+    return isRent ? `${formatted}${t.property.pricePerMonth}` : formatted;
+  };
+
+  // Schema para propiedad individual (SEO)
+  propertySchema = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.title,
+    description: property.description,
+    url: `https://ubikala.com/propiedad/${property.slug}`,
+    image: property.images.map(img => img.url),
+    datePosted: property.createdAt,
+    dateModified: property.updatedAt,
+    offers: {
+      '@type': 'Offer',
+      price: property.price,
+      priceCurrency: property.currency,
+      availability: property.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
+    },
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: property.location.city,
+      addressRegion: property.location.province,
+      addressCountry: 'DO',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: property.location.latitude,
+      longitude: property.location.longitude,
+    },
+    numberOfRooms: property.bedrooms,
+    numberOfBathroomsTotal: property.bathrooms,
+    floorSize: {
+      '@type': 'QuantitativeValue',
+      value: property.area,
+      unitCode: 'MTK',
+    },
+    ...(agent ? {
+      'broker': {
+        '@type': 'RealEstateAgent',
+        'name': agent.name,
+        ...(agent.photo && !agent.photo.includes('placeholder') ? { 'image': agent.photo } : {}),
+        ...(agent.phone ? { 'telephone': agent.phone } : {}),
+        ...(agent.email ? { 'email': agent.email } : {}),
+      }
+    } : {}),
+  };
+
+  // Strip HTML tags for meta description
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  const cleanDescription = stripHtml(property.description);
+
+  pageTitle = `${property.title} | ${property.transactionType === 'sale' ? 'En Venta' : 'En Alquiler'} - Ubíkala.com`;
+  pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bedrooms ? property.bedrooms + ' habitaciones, ' : ''}${property.bathrooms ? property.bathrooms + ' baños, ' : ''}${property.area} m² en ${property.location.city}.`;
 }
-
-// Determine map coordinates - use property coords if valid, otherwise fallback to location coords
-const propertyHasCoords = hasValidCoordinates(property.location.latitude, property.location.longitude);
-const mapCoordinates = propertyHasCoords
-  ? { lat: property.location.latitude, lng: property.location.longitude, zoom: 15 }
-  : getLocationCoordinates(property.location.sector, property.location.city, property.location.province);
-
-const primaryImage = property.images.find(img => img.isPrimary) || property.images[0];
-
-function formatPrice(price: number, currency: string, isRent: boolean): string {
-  // Use explicit currency symbols for clarity
-  const currencySymbol = currency === 'DOP' ? 'RD$' : 'US$';
-  const formatted = `${currencySymbol} ${price.toLocaleString('en-US')}`;
-  return isRent ? `${formatted}${t.property.pricePerMonth}` : formatted;
-}
-
-// Schema para propiedad individual (SEO)
-const propertySchema = {
-  '@context': 'https://schema.org',
-  '@type': 'RealEstateListing',
-  name: property.title,
-  description: property.description,
-  url: `https://ubikala.com/propiedad/${property.slug}`,
-  image: property.images.map(img => img.url),
-  datePosted: property.createdAt,
-  dateModified: property.updatedAt,
-  offers: {
-    '@type': 'Offer',
-    price: property.price,
-    priceCurrency: property.currency,
-    availability: property.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
-  },
-  address: {
-    '@type': 'PostalAddress',
-    addressLocality: property.location.city,
-    addressRegion: property.location.province,
-    addressCountry: 'DO',
-  },
-  geo: {
-    '@type': 'GeoCoordinates',
-    latitude: property.location.latitude,
-    longitude: property.location.longitude,
-  },
-  numberOfRooms: property.bedrooms,
-  numberOfBathroomsTotal: property.bathrooms,
-  floorSize: {
-    '@type': 'QuantitativeValue',
-    value: property.area,
-    unitCode: 'MTK',
-  },
-  ...(agent ? {
-    'broker': {
-      '@type': 'RealEstateAgent',
-      'name': agent.name,
-      ...(agent.photo && !agent.photo.includes('placeholder') ? { 'image': agent.photo } : {}),
-      ...(agent.phone ? { 'telephone': agent.phone } : {}),
-      ...(agent.email ? { 'email': agent.email } : {}),
-    }
-  } : {}),
-};
-
-// Strip HTML tags for meta description
-const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-const cleanDescription = stripHtml(property.description);
-
-const pageTitle = `${property.title} | ${property.transactionType === 'sale' ? 'En Venta' : 'En Alquiler'} - Ubíkala.com`;
-const pageDescription = `${cleanDescription.substring(0, 155)}... ${property.bedrooms ? property.bedrooms + ' habitaciones, ' : ''}${property.bathrooms ? property.bathrooms + ' baños, ' : ''}${property.area} m² en ${property.location.city}.`;
 ---
 
 <Layout

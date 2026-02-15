@@ -7,6 +7,7 @@ import CTASection from '../../components/CTASection.astro';
 import { useTranslations } from '../../i18n';
 
 const t = useTranslations('en');
+const pais = Astro.locals.country.name;
 ---
 
 <Layout
@@ -18,9 +19,9 @@ const t = useTranslations('en');
     { lang: 'fr', url: 'https://ubikala.com/fr/' }
   ]}
 >
-  <Hero />
-  <FeaturedProperties />
-  <LocationsGrid />
+  <Hero pais={pais} />
+  <FeaturedProperties pais={pais} />
+  <LocationsGrid pais={pais} />
 
   <!-- Why Choose Us -->
   <section class="section bg-gray-50">

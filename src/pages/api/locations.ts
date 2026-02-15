@@ -5,9 +5,10 @@ import { getCitiesWithCounts } from '../../lib/meilisearch';
 export const prerender = false;
 
 // Solo GET permitido
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
-    const locations = await getCitiesWithCounts();
+    const pais = (locals as any).country?.name;
+    const locations = await getCitiesWithCounts(pais);
 
     return new Response(JSON.stringify({
       success: true,

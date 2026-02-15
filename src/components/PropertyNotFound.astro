@@ -1,0 +1,92 @@
+---
+import PropertyCard from './PropertyCard.astro';
+import Breadcrumb from './Breadcrumb.astro';
+import SearchBox from './SearchBox.astro';
+import type { Property } from '../data/types';
+
+interface Props {
+  lang?: 'es' | 'en' | 'fr';
+  properties: Property[];
+}
+
+const { lang = 'es', properties } = Astro.props;
+
+const text = {
+  es: {
+    title: 'Propiedad No Disponible',
+    heading: 'Esta propiedad ya no está disponible',
+    description: 'Es posible que haya sido vendida, alquilada o retirada del mercado. No te preocupes, tenemos muchas más opciones para ti.',
+    searchLabel: 'Busca entre nuestras propiedades disponibles:',
+    altTitle: 'Propiedades que podrían interesarte',
+    viewAll: 'Ver todas las propiedades',
+    buyLink: '/comprar',
+    homeLabel: 'Inicio',
+    homeLink: '/',
+    buyLabel: 'Comprar',
+  },
+  en: {
+    title: 'Property Not Available',
+    heading: 'This property is no longer available',
+    description: 'It may have been sold, rented, or removed from the market. Don\'t worry, we have many more options for you.',
+    searchLabel: 'Search among our available properties:',
+    altTitle: 'Properties you might like',
+    viewAll: 'View all properties',
+    buyLink: '/en/buy',
+    homeLabel: 'Home',
+    homeLink: '/en',
+    buyLabel: 'Buy',
+  },
+  fr: {
+    title: 'Propriété Non Disponible',
+    heading: 'Cette propriété n\'est plus disponible',
+    description: 'Elle a peut-être été vendue, louée ou retirée du marché. Ne vous inquiétez pas, nous avons de nombreuses autres options pour vous.',
+    searchLabel: 'Recherchez parmi nos propriétés disponibles:',
+    altTitle: 'Propriétés qui pourraient vous intéresser',
+    viewAll: 'Voir toutes les propriétés',
+    buyLink: '/fr/acheter',
+    homeLabel: 'Accueil',
+    homeLink: '/fr',
+    buyLabel: 'Acheter',
+  },
+};
+
+const t = text[lang];
+---
+
+<Breadcrumb items={[
+  { label: t.homeLabel, href: t.homeLink },
+  { label: t.buyLabel, href: t.buyLink },
+  { label: t.title }
+]} />
+
+<section class="py-16 bg-gray-50">
+  <div class="container-custom text-center">
+    <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <svg class="w-10 h-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    </div>
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t.heading}</h1>
+    <p class="text-lg text-gray-600 max-w-2xl mx-auto mb-8">{t.description}</p>
+    <p class="text-sm text-gray-500 mb-4">{t.searchLabel}</p>
+    <div class="max-w-2xl mx-auto">
+      <SearchBox variant="inline" />
+    </div>
+  </div>
+</section>
+
+{properties.length > 0 && (
+  <section class="section">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-8">{t.altTitle}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {properties.map((prop) => (
+          <PropertyCard property={prop} />
+        ))}
+      </div>
+      <div class="text-center mt-8">
+        <a href={t.buyLink} class="btn-primary">{t.viewAll}</a>
+      </div>
+    </div>
+  </section>
+)}

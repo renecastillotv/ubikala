@@ -2,6 +2,7 @@
 import Layout from '../../../layouts/Layout.astro';
 import PropertyCard from '../../../components/PropertyCard.astro';
 import Pagination from '../../../components/Pagination.astro';
+import AgencyNotFound from '../../../components/AgencyNotFound.astro';
 import { useTranslations, getAlternateUrls } from '../../../i18n';
 import { getPortalInmobiliarias, searchProperties } from '../../../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../../../lib/ubikala-db';
@@ -47,13 +48,24 @@ try {
   console.error('Error fetching real estate agency:', error);
 }
 
+let fallbackAgencies: Agent[] = [];
 if (!inmobiliaria) {
-  return Astro.redirect('/en/real-estate');
+  try {
+    const [portalTenants, ubikalaRows] = await Promise.all([
+      getPortalInmobiliarias(),
+      getUbikalaInmobiliarias({ limit: 100 }),
+    ]);
+    const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
+    fallbackAgencies = [...portalTenants, ...ubikalaInmobiliarias].slice(0, 6);
+  } catch (_) {
+    fallbackAgencies = [];
+  }
 }
 
-const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+const totalPages = inmobiliaria ? Math.ceil(totalCount / ITEMS_PER_PAGE) : 0;
 ---
 
+{inmobiliaria ? (
 <Layout
   title={`${inmobiliaria.name} - Real Estate Agency | Ubíkala`}
   description={`${inmobiliaria.name}: ${totalCount} properties available. Find houses, apartments and more with this verified real estate agency.`}
@@ -147,3 +159,8 @@ const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
     </div>
   </section>
 </Layout>
+) : (
+<Layout title="Agency Not Available | Ubíkala" description="This real estate agency is not available right now.">
+  <AgencyNotFound lang="en" agencies={fallbackAgencies} />
+</Layout>
+)}

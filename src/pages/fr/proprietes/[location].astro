@@ -27,8 +27,10 @@ let locationData = {
   propertyCount: 0
 };
 
+const pais = Astro.locals.country.name;
+
 try {
-  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, lang: 'fr' });
+  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, lang: 'fr', pais });
   locationProperties = result.properties;
   const totalPropertyCount = result.total;
 

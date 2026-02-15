@@ -75,11 +75,13 @@ if (!dbType) {
 const spanishSlug = englishToSpanishSlug[typeSlug || ''] || typeSlug;
 const alternateUrls = getAlternateUrls(`/en/buy/${typeSlug}`);
 
+const pais = Astro.locals.country.name;
+
 // Fetch properties from MeiliSearch
 let typeProperties: Property[] = [];
 let totalCount = 0;
 try {
-  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24 });
+  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24, pais });
   typeProperties = result.properties;
   totalCount = result.total;
 } catch (error) {

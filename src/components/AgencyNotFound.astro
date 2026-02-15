@@ -1,0 +1,98 @@
+---
+import Breadcrumb from './Breadcrumb.astro';
+import type { Agent } from '../data/types';
+
+interface Props {
+  lang?: 'es' | 'en' | 'fr';
+  agencies: Agent[];
+}
+
+const { lang = 'es', agencies } = Astro.props;
+
+const text = {
+  es: {
+    title: 'Inmobiliaria No Disponible',
+    heading: 'Esta inmobiliaria no está disponible en este momento',
+    description: 'Es posible que haya cambiado de plan o se encuentre temporalmente inactiva. Aquí tienes otras inmobiliarias vigentes en Ubíkala.',
+    altTitle: 'Otras inmobiliarias en Ubíkala',
+    viewAll: 'Ver todas las inmobiliarias',
+    agenciesLink: '/inmobiliarias',
+    homeLabel: 'Inicio',
+    homeLink: '/',
+    agenciesLabel: 'Inmobiliarias',
+    properties: 'propiedades',
+  },
+  en: {
+    title: 'Agency Not Available',
+    heading: 'This real estate agency is not available right now',
+    description: 'They may have changed their plan or are temporarily inactive. Here are other active agencies on Ubíkala.',
+    altTitle: 'Other agencies on Ubíkala',
+    viewAll: 'View all agencies',
+    agenciesLink: '/en/real-estate',
+    homeLabel: 'Home',
+    homeLink: '/en',
+    agenciesLabel: 'Real Estate',
+    properties: 'properties',
+  },
+  fr: {
+    title: 'Agence Non Disponible',
+    heading: 'Cette agence immobilière n\'est pas disponible pour le moment',
+    description: 'Elle a peut-être changé de plan ou est temporairement inactive. Voici d\'autres agences actives sur Ubíkala.',
+    altTitle: 'Autres agences sur Ubíkala',
+    viewAll: 'Voir toutes les agences',
+    agenciesLink: '/fr/immobilieres',
+    homeLabel: 'Accueil',
+    homeLink: '/fr',
+    agenciesLabel: 'Agences',
+    properties: 'propriétés',
+  },
+};
+
+const t = text[lang];
+---
+
+<Breadcrumb items={[
+  { label: t.homeLabel, href: t.homeLink },
+  { label: t.agenciesLabel, href: t.agenciesLink },
+  { label: t.title }
+]} />
+
+<section class="py-16 bg-gray-50">
+  <div class="container-custom text-center">
+    <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <svg class="w-10 h-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      </svg>
+    </div>
+    <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{t.heading}</h1>
+    <p class="text-lg text-gray-600 max-w-2xl mx-auto">{t.description}</p>
+  </div>
+</section>
+
+{agencies.length > 0 && (
+  <section class="section">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-8">{t.altTitle}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {agencies.map((agency) => {
+          const agencyHref = lang === 'es' ? `/inmobiliarias/${agency.slug}` : lang === 'en' ? `/en/real-estate/${agency.slug}` : `/fr/immobilieres/${agency.slug}`;
+          return (
+            <a href={agencyHref} class="card p-6 hover:shadow-lg transition-shadow block text-center">
+              <img
+                src={agency.photo || '/images/agent-placeholder.svg'}
+                alt={agency.name}
+                class="w-20 h-20 rounded-full object-cover mx-auto mb-3"
+                loading="lazy"
+              />
+              <h3 class="font-semibold text-gray-900 mb-1">{agency.name}</h3>
+              <p class="text-sm text-gray-500">{agency.propertiesCount} {t.properties}</p>
+            </a>
+          );
+        })}
+      </div>
+      <div class="text-center mt-8">
+        <a href={t.agenciesLink} class="btn-primary">{t.viewAll}</a>
+      </div>
+    </div>
+  </section>
+)}

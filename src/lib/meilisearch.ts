@@ -584,15 +584,16 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
  */
 export async function getPropertiesByLocation(
   locationSlug: string,
-  options: { limit?: number; offset?: number; operacion?: string; lang?: string } = {}
+  options: { limit?: number; offset?: number; operacion?: string; lang?: string; pais?: string } = {}
 ): Promise<{ properties: Property[]; total: number }> {
-  const { limit = 20, offset = 0, operacion, lang } = options;
+  const { limit = 20, offset = 0, operacion, lang, pais } = options;
 
   // Normalize slug to match city/sector (replace hyphens with spaces for search)
   const locationName = locationSlug.replace(/-/g, ' ');
 
   const filters = [`(${portalFilter()})`];
   if (operacion) filters.push(`operaciones = "${operacion}"`);
+  if (pais) filters.push(`pais = "${pais}"`);
 
   // Search by city or sector text
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -886,4 +887,227 @@ export async function getPortalInmobiliarias(): Promise<Agent[]> {
       };
     })
     .sort((a, b) => b.propertiesCount - a.propertiesCount);
+}
+
+// ============================================================================
+// MARKET STATS (real data from MeiliSearch for SEO content)
+// ============================================================================
+
+export interface MarketStats {
+  totalProperties: number;
+  totalForSale: number;
+  totalForRent: number;
+  totalAgents: number;
+  totalCities: number;
+  avgPriceSaleUSD: number | null;
+  avgPriceRentUSD: number | null;
+  avgM2Construction: number | null;
+  avgM2Land: number | null;
+  avgBedrooms: number | null;
+  avgBathrooms: number | null;
+  typeDistribution: Record<string, number>;
+  cityDistribution: Record<string, number>;
+  topCities: Array<{ name: string; count: number; avgPrice: number | null }>;
+}
+
+export interface CityMarketStats {
+  city: string;
+  totalProperties: number;
+  forSale: number;
+  forRent: number;
+  avgPriceSaleUSD: number | null;
+  avgPriceRentUSD: number | null;
+  avgM2: number | null;
+  avgBedrooms: number | null;
+  types: Record<string, number>;
+}
+
+/**
+ * Compute real market statistics from MeiliSearch propiedades index.
+ * Read-only queries — does not modify any data or affect tenants.
+ * Results are cached in-memory for 15 minutes.
+ */
+const marketStatsCacheMap = new Map<string, { data: MarketStats; timestamp: number }>();
+const MARKET_CACHE_TTL = 15 * 60 * 1000;
+
+export async function getMarketStats(pais?: string): Promise<MarketStats> {
+  const cacheKey = pais || '__global__';
+  const cached = marketStatsCacheMap.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < MARKET_CACHE_TTL) {
+    return cached.data;
+  }
+
+  const paisFilter = pais ? ` AND pais = "${pais}"` : '';
+
+  // Fetch a large batch with facets to compute stats
+  const [saleResult, rentResult, agentResult] = await Promise.all([
+    meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: '',
+        filter: `(${portalFilter()})${paisFilter} AND operaciones = "venta"`,
+        facets: ['tipo', 'ciudad'],
+        sort: ['updated_at:desc'],
+        limit: 500,
+        attributesToRetrieve: ['precio_venta', 'precio', 'moneda', 'm2_construccion', 'm2_terreno', 'habitaciones', 'banos', 'ciudad', 'tipo'],
+      }),
+    }),
+    meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: '',
+        filter: `(${portalFilter()})${paisFilter} AND operaciones = "renta"`,
+        facets: ['tipo', 'ciudad'],
+        limit: 500,
+        attributesToRetrieve: ['precio_alquiler', 'precio', 'moneda', 'm2_construccion', 'habitaciones', 'banos', 'ciudad', 'tipo'],
+      }),
+    }),
+    meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({ q: '', filter: 'visible_en_web = true', limit: 0 }),
+    }),
+  ]);
+
+  const saleHits: MeiliPropertyDoc[] = saleResult.hits || [];
+  const rentHits: MeiliPropertyDoc[] = rentResult.hits || [];
+  const totalForSale = saleResult.estimatedTotalHits || 0;
+  const totalForRent = rentResult.estimatedTotalHits || 0;
+
+  // Compute sale price average (USD only for consistency)
+  const salePrices = saleHits
+    .map(h => h.precio_venta || h.precio)
+    .filter((p): p is number => p != null && p > 0);
+  const avgPriceSaleUSD = salePrices.length > 0
+    ? Math.round(salePrices.reduce((a, b) => a + b, 0) / salePrices.length)
+    : null;
+
+  // Compute rent price average
+  const rentPrices = rentHits
+    .map(h => h.precio_alquiler || h.precio)
+    .filter((p): p is number => p != null && p > 0);
+  const avgPriceRentUSD = rentPrices.length > 0
+    ? Math.round(rentPrices.reduce((a, b) => a + b, 0) / rentPrices.length)
+    : null;
+
+  // Compute m2 averages from all properties
+  const allHits = [...saleHits, ...rentHits];
+  const m2Vals = allHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
+  const m2LandVals = allHits.map(h => h.m2_terreno).filter((v): v is number => v != null && v > 0);
+  const bedVals = allHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
+  const bathVals = allHits.map(h => h.banos).filter((v): v is number => v != null && v > 0);
+
+  const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+  // Merge type and city distributions from sale + rent
+  const typeDistribution: Record<string, number> = { ...(saleResult.facetDistribution?.tipo || {}) };
+  for (const [k, v] of Object.entries(rentResult.facetDistribution?.tipo || {})) {
+    typeDistribution[k] = (typeDistribution[k] || 0) + (v as number);
+  }
+
+  const cityDistribution: Record<string, number> = { ...(saleResult.facetDistribution?.ciudad || {}) };
+  for (const [k, v] of Object.entries(rentResult.facetDistribution?.ciudad || {})) {
+    cityDistribution[k] = (cityDistribution[k] || 0) + (v as number);
+  }
+
+  // Top cities with avg price
+  const cityPrices = new Map<string, number[]>();
+  for (const h of saleHits) {
+    if (h.ciudad && (h.precio_venta || h.precio)) {
+      if (!cityPrices.has(h.ciudad)) cityPrices.set(h.ciudad, []);
+      cityPrices.get(h.ciudad)!.push(h.precio_venta || h.precio || 0);
+    }
+  }
+
+  const topCities = Object.entries(cityDistribution)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([name, count]) => {
+      const prices = cityPrices.get(name);
+      return {
+        name,
+        count,
+        avgPrice: prices && prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null,
+      };
+    });
+
+  const data: MarketStats = {
+    totalProperties: totalForSale + totalForRent,
+    totalForSale,
+    totalForRent,
+    totalAgents: agentResult.estimatedTotalHits || 0,
+    totalCities: Object.keys(cityDistribution).length,
+    avgPriceSaleUSD,
+    avgPriceRentUSD,
+    avgM2Construction: avg(m2Vals),
+    avgM2Land: avg(m2LandVals),
+    avgBedrooms: avg(bedVals),
+    avgBathrooms: avg(bathVals),
+    typeDistribution,
+    cityDistribution,
+    topCities,
+  };
+
+  marketStatsCacheMap.set(cacheKey, { data, timestamp: Date.now() });
+  return data;
+}
+
+/**
+ * Get market stats for a specific city.
+ */
+export async function getCityMarketStats(city: string, pais?: string): Promise<CityMarketStats | null> {
+  const paisFilter = pais ? ` AND pais = "${pais}"` : '';
+  const [saleResult, rentResult] = await Promise.all([
+    meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: '',
+        filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "venta"`,
+        facets: ['tipo'],
+        limit: 200,
+        attributesToRetrieve: ['precio_venta', 'precio', 'm2_construccion', 'habitaciones'],
+      }),
+    }),
+    meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: '',
+        filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "renta"`,
+        facets: ['tipo'],
+        limit: 200,
+        attributesToRetrieve: ['precio_alquiler', 'precio', 'm2_construccion', 'habitaciones'],
+      }),
+    }),
+  ]);
+
+  const forSale = saleResult.estimatedTotalHits || 0;
+  const forRent = rentResult.estimatedTotalHits || 0;
+  if (forSale === 0 && forRent === 0) return null;
+
+  const saleHits: MeiliPropertyDoc[] = saleResult.hits || [];
+  const rentHits: MeiliPropertyDoc[] = rentResult.hits || [];
+
+  const salePrices = saleHits.map(h => h.precio_venta || h.precio).filter((p): p is number => p != null && p > 0);
+  const rentPrices = rentHits.map(h => h.precio_alquiler || h.precio).filter((p): p is number => p != null && p > 0);
+  const allHits = [...saleHits, ...rentHits];
+  const m2Vals = allHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
+  const bedVals = allHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
+
+  const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+  const types: Record<string, number> = { ...(saleResult.facetDistribution?.tipo || {}) };
+  for (const [k, v] of Object.entries(rentResult.facetDistribution?.tipo || {})) {
+    types[k] = (types[k] || 0) + (v as number);
+  }
+
+  return {
+    city,
+    totalProperties: forSale + forRent,
+    forSale,
+    forRent,
+    avgPriceSaleUSD: avg(salePrices),
+    avgPriceRentUSD: avg(rentPrices),
+    avgM2: avg(m2Vals),
+    avgBedrooms: avg(bedVals),
+    types,
+  };
 }

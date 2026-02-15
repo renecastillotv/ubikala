@@ -45,6 +45,8 @@ const filters = {
   tenantId: params.get('tenant_id') || undefined,
 };
 
+const pais = Astro.locals.country.name;
+
 // Buscar propiedades via MeiliSearch
 let results: Property[] = [];
 let totalCount = 0;
@@ -70,6 +72,7 @@ try {
     tenantId: filters.tenantId,
     limit: ITEMS_PER_PAGE,
     offset,
+    pais,
   });
 
   results = searchResult.properties;

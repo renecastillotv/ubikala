@@ -2,21 +2,14 @@
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { useTranslations, localizedUrl } from '../i18n';
-import { getPlatformStats } from '../lib/meilisearch';
-
-const t = useTranslations('es');
+import { getPlatformStats, formatStatNumber } from '../lib/platform-stats';
 
 let stats = { totalProperties: 0, totalAgents: 0, cities: 0 };
 try {
-  const ms = await getPlatformStats();
-  stats = { totalProperties: ms.totalProperties, totalAgents: ms.totalAgents, cities: ms.totalCities };
+  const platformStats = await getPlatformStats();
+  stats = { totalProperties: platformStats.totalProperties, totalAgents: platformStats.totalAgents, cities: platformStats.cities };
 } catch (error) {
   console.error('Error fetching platform stats:', error);
-}
-
-function formatStatNumber(n: number): string {
-  return n.toLocaleString('es-DO');
 }
 ---
 

@@ -41,6 +41,8 @@ const filters = {
   tenantId: params.get('tenant_id') || undefined,
 };
 
+const pais = Astro.locals.country.name;
+
 let results: Property[] = [];
 let totalCount = 0;
 
@@ -66,6 +68,7 @@ try {
     limit: ITEMS_PER_PAGE,
     offset,
     lang: 'fr',
+    pais,
   });
 
   results = searchResult.properties;

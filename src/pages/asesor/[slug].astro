@@ -4,7 +4,8 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, localizedUrl } from '../../i18n';
-import { getAgentBySlug, getPropertiesByAgent } from '../../lib/meilisearch';
+import { getAgentBySlug, getPropertiesByAgent, searchAgents } from '../../lib/meilisearch';
+import AgentNotFound from '../../components/AgentNotFound.astro';
 import type { Agent, Property } from '../../data/types';
 
 // SSR para páginas dinámicas
@@ -27,62 +28,71 @@ try {
   console.error('Error fetching agent:', error);
 }
 
+let fallbackAgents: Agent[] = [];
+let agentSchema = {};
+let actualPropertyCount = 0;
+let pageTitle = 'Asesor No Disponible | Ubíkala';
+let pageDescription = 'Este asesor no está activo en este momento.';
+let hasValidPhoto = false;
+let agentInitials = '';
+
 if (!agent) {
-  return Astro.redirect('/404');
+  try { const result = await searchAgents({ limit: 6 }); fallbackAgents = result.agents; } catch {}
+} else {
+  // Schema para asesor (SEO) - Enhanced Person + RealEstateAgent
+  agentSchema = {
+    '@context': 'https://schema.org',
+    '@type': ['Person', 'RealEstateAgent'],
+    '@id': `https://ubikala.com/asesor/${agent.slug}#agent`,
+    name: agent.name,
+    url: `https://ubikala.com/asesor/${agent.slug}`,
+    image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
+    description: agent.bio || `Asesor inmobiliario verificado en Republica Dominicana`,
+    telephone: agent.phone,
+    email: agent.email,
+    jobTitle: 'Asesor Inmobiliario',
+    worksFor: agent.company ? {
+      '@type': 'Organization',
+      name: agent.company,
+    } : undefined,
+    areaServed: agent.locations.length > 0
+      ? agent.locations.map(loc => ({ '@type': 'City', name: loc }))
+      : { '@type': 'Country', name: 'Dominican Republic' },
+    knowsAbout: agent.specializations.map(spec => {
+      const specNames: Record<string, string> = {
+        'house': 'Casas', 'apartment': 'Apartamentos', 'villa': 'Villas',
+        'land': 'Terrenos', 'commercial': 'Comercial', 'office': 'Oficinas'
+      };
+      return specNames[spec] || spec;
+    }),
+    knowsLanguage: agent.languages,
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: agent.rating || 5,
+      bestRating: 5,
+      worstRating: 1,
+      reviewCount: agent.reviewCount || 1,
+      ratingCount: agent.reviewCount || 1
+    }
+  };
+
+  // Use actual property count from query, not from stats
+  actualPropertyCount = agentProperties.length;
+
+  pageTitle = `${agent.name} - ${agent.company || 'Asesor Inmobiliario'} | Ubíkala.com`;
+  pageDescription = agent.bio
+    ? `${agent.bio.substring(0, 150)}... Contacta a ${agent.name} para propiedades en ${agent.locations.slice(0, 3).join(', ')}.`
+    : `${agent.name} - Asesor inmobiliario verificado. ${actualPropertyCount} propiedades activas. Contacta ahora.`;
+
+  // Check if agent has valid photo
+  hasValidPhoto = !!(agent.photo &&
+    agent.photo !== '/images/agent-placeholder.svg' &&
+    !agent.photo.includes('placeholder'));
+  agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
 }
-
-// Schema para asesor (SEO) - Enhanced Person + RealEstateAgent
-const agentSchema = {
-  '@context': 'https://schema.org',
-  '@type': ['Person', 'RealEstateAgent'],
-  '@id': `https://ubikala.com/asesor/${agent.slug}#agent`,
-  name: agent.name,
-  url: `https://ubikala.com/asesor/${agent.slug}`,
-  image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
-  description: agent.bio || `Asesor inmobiliario verificado en Republica Dominicana`,
-  telephone: agent.phone,
-  email: agent.email,
-  jobTitle: 'Asesor Inmobiliario',
-  worksFor: agent.company ? {
-    '@type': 'Organization',
-    name: agent.company,
-  } : undefined,
-  areaServed: agent.locations.length > 0
-    ? agent.locations.map(loc => ({ '@type': 'City', name: loc }))
-    : { '@type': 'Country', name: 'Dominican Republic' },
-  knowsAbout: agent.specializations.map(spec => {
-    const specNames: Record<string, string> = {
-      'house': 'Casas', 'apartment': 'Apartamentos', 'villa': 'Villas',
-      'land': 'Terrenos', 'commercial': 'Comercial', 'office': 'Oficinas'
-    };
-    return specNames[spec] || spec;
-  }),
-  knowsLanguage: agent.languages,
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: agent.rating || 5,
-    bestRating: 5,
-    worstRating: 1,
-    reviewCount: agent.reviewCount || 1,
-    ratingCount: agent.reviewCount || 1
-  }
-};
-
-// Use actual property count from query, not from stats
-const actualPropertyCount = agentProperties.length;
-
-const pageTitle = `${agent.name} - ${agent.company || 'Asesor Inmobiliario'} | Ubíkala.com`;
-const pageDescription = agent.bio
-  ? `${agent.bio.substring(0, 150)}... Contacta a ${agent.name} para propiedades en ${agent.locations.slice(0, 3).join(', ')}.`
-  : `${agent.name} - Asesor inmobiliario verificado. ${actualPropertyCount} propiedades activas. Contacta ahora.`;
-
-// Check if agent has valid photo
-const hasValidPhoto = agent.photo &&
-  agent.photo !== '/images/agent-placeholder.svg' &&
-  !agent.photo.includes('placeholder');
-const agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
 ---
 
+{agent ? (
 <Layout
   title={pageTitle}
   description={pageDescription}
@@ -309,3 +319,8 @@ const agentInitials = agent.name.split(' ').map(n => n[0]).slice(0, 2).join('');
     </div>
   </section>
 </Layout>
+) : (
+<Layout title="Asesor No Disponible | Ubíkala" description="Este asesor no está activo en este momento.">
+  <AgentNotFound lang="es" agents={fallbackAgents} />
+</Layout>
+)}

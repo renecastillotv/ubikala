@@ -1,0 +1,110 @@
+---
+import type { MarketStats } from '../lib/meilisearch';
+
+interface Props {
+  stats: MarketStats;
+  operacion?: 'venta' | 'renta';
+  lang?: 'es' | 'en' | 'fr';
+  countryName?: string;
+}
+
+const { stats, operacion = 'venta', lang = 'es', countryName } = Astro.props;
+
+const text = {
+  es: {
+    activeProperties: 'Propiedades Activas',
+    avgPrice: operacion === 'renta' ? 'Alquiler Promedio' : 'Precio Promedio',
+    avgArea: 'Área Promedio',
+    cities: 'Ciudades',
+    topCities: 'Ciudades Principales',
+    props: 'propiedades',
+    locationBase: '/propiedades',
+  },
+  en: {
+    activeProperties: 'Active Properties',
+    avgPrice: operacion === 'renta' ? 'Avg. Rent' : 'Avg. Price',
+    avgArea: 'Avg. Area',
+    cities: 'Cities',
+    topCities: 'Top Cities',
+    props: 'properties',
+    locationBase: '/en/properties',
+  },
+  fr: {
+    activeProperties: 'Propriétés Actives',
+    avgPrice: operacion === 'renta' ? 'Loyer Moyen' : 'Prix Moyen',
+    avgArea: 'Surface Moyenne',
+    cities: 'Villes',
+    topCities: 'Villes Principales',
+    props: 'propriétés',
+    locationBase: '/fr/proprietes',
+  },
+};
+
+const t = text[lang];
+
+function formatPrice(price: number | null): string {
+  if (!price) return '-';
+  if (price >= 1_000_000) return `US$${(price / 1_000_000).toFixed(1)}M`;
+  if (price >= 1_000) return `US$${Math.round(price / 1_000)}K`;
+  return `US$${price.toLocaleString('en-US')}`;
+}
+
+function slugify(name: string): string {
+  return name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+const displayPrice = operacion === 'renta' ? stats.avgPriceRentUSD : stats.avgPriceSaleUSD;
+---
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="bg-primary-50 rounded-xl p-5 text-center border border-primary-100">
+    <div class="text-2xl md:text-3xl font-bold text-primary-700">
+      {stats.totalProperties.toLocaleString('en-US')}
+    </div>
+    <span class="text-sm text-gray-600">{t.activeProperties}</span>
+  </div>
+  <div class="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100">
+    <div class="text-2xl md:text-3xl font-bold text-emerald-700">
+      {formatPrice(displayPrice)}
+    </div>
+    <span class="text-sm text-gray-600">{t.avgPrice}</span>
+  </div>
+  <div class="bg-amber-50 rounded-xl p-5 text-center border border-amber-100">
+    <div class="text-2xl md:text-3xl font-bold text-amber-700">
+      {stats.avgM2Construction ? `${stats.avgM2Construction} m²` : '-'}
+    </div>
+    <span class="text-sm text-gray-600">{t.avgArea}</span>
+  </div>
+  <div class="bg-purple-50 rounded-xl p-5 text-center border border-purple-100">
+    <div class="text-2xl md:text-3xl font-bold text-purple-700">
+      {stats.totalCities}
+    </div>
+    <span class="text-sm text-gray-600">{t.cities}</span>
+  </div>
+</div>
+
+{stats.topCities.length > 0 && (
+  <div class="mt-6 bg-white rounded-xl border border-gray-100 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 border-b">
+      <h3 class="font-semibold text-gray-900 text-sm">
+        {t.topCities}{countryName ? ` — ${countryName}` : ''}
+      </h3>
+    </div>
+    <div class="divide-y divide-gray-100">
+      {stats.topCities.slice(0, 5).map(city => (
+        <a href={`${t.locationBase}/${slugify(city.name)}`}
+           class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors">
+          <span class="text-sm font-medium text-gray-900 hover:text-primary-600">
+            {city.name}
+          </span>
+          <div class="flex items-center gap-4 text-sm text-gray-500">
+            <span>{city.count} {t.props}</span>
+            {city.avgPrice && <span class="text-gray-700 font-medium">{formatPrice(city.avgPrice)}</span>}
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+)}

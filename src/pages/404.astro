@@ -1,0 +1,30 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBox from '../components/SearchBox.astro';
+---
+
+<Layout
+  title="Página No Encontrada | Ubíkala"
+  description="La página que buscas no existe o ha sido movida."
+>
+  <section class="py-20">
+    <div class="container-custom text-center">
+      <div class="text-8xl font-bold text-primary-200 mb-4">404</div>
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        Página no encontrada
+      </h1>
+      <p class="text-lg text-gray-600 max-w-xl mx-auto mb-8">
+        Lo sentimos, la página que buscas no existe o ha sido movida.
+        Prueba buscando lo que necesitas:
+      </p>
+      <div class="max-w-2xl mx-auto mb-8">
+        <SearchBox variant="inline" />
+      </div>
+      <div class="flex flex-wrap gap-4 justify-center">
+        <a href="/" class="btn-primary">Ir al Inicio</a>
+        <a href="/comprar" class="btn-outline">Ver Propiedades</a>
+        <a href="/asesores" class="btn-outline">Ver Asesores</a>
+      </div>
+    </div>
+  </section>
+</Layout>

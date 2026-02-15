@@ -2,13 +2,18 @@
 import { getLangFromUrl, useTranslations, localizedUrl, type Lang } from '../i18n';
 import { getLocationsWithStats } from '../lib/meilisearch';
 
+interface Props {
+  pais?: string;
+}
+
+const { pais } = Astro.props;
 const lang = getLangFromUrl(Astro.url) as Lang;
 const t = useTranslations(lang);
 
 // Obtener ubicaciones populares desde MeiliSearch
 let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
 try {
-  locations = await getLocationsWithStats();
+  locations = await getLocationsWithStats(pais);
 } catch (error) {
   console.error('Error fetching location stats:', error);
 }

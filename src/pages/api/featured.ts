@@ -5,18 +5,19 @@ import { getFeaturedProperties, getRecentProperties } from '../../lib/meilisearc
 export const prerender = false;
 
 // Solo GET permitido - Propiedades destacadas y recientes
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'featured'; // 'featured' | 'recent'
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '6'), 24);
+    const pais = (locals as any).country?.name;
 
     let properties;
 
     if (type === 'recent') {
-      properties = await getRecentProperties(limit);
+      properties = await getRecentProperties(limit, pais);
     } else {
-      properties = await getFeaturedProperties(limit);
+      properties = await getFeaturedProperties(limit, pais);
     }
 
     return new Response(JSON.stringify({

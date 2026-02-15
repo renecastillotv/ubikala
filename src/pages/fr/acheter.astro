@@ -5,13 +5,16 @@ import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
-import { searchProperties } from '../../lib/meilisearch';
+import { searchProperties, getMarketStats } from '../../lib/meilisearch';
+import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
 
 // SSR pour pagination
 export const prerender = false;
 
 const t = useTranslations('fr');
+const country = Astro.locals.country;
+const pais = country.name;
 const alternateUrls = getAlternateUrls('/fr/acheter');
 
 // Config pagination
@@ -23,7 +26,7 @@ let properties: Property[] = [];
 let totalCount = 0;
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const result = await searchProperties({ operacion: 'venta', limit: ITEMS_PER_PAGE, offset });
+  const result = await searchProperties({ operacion: 'venta', limit: ITEMS_PER_PAGE, offset, pais });
   properties = result.properties;
   totalCount = result.total;
 } catch (error) {
@@ -31,6 +34,9 @@ try {
 }
 
 const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+let marketStats = null;
+try { marketStats = await getMarketStats(pais); } catch {}
 
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/fr/acheter');
@@ -52,7 +58,7 @@ if (currentPage > totalPages && totalPages > 0) {
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Propriétés à Vendre en République Dominicaine
+        Propriétés à Vendre en {pais}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         Explorez notre sélection de maisons, appartements, villas, terrains et propriétés commerciales disponibles à l'achat dans tout le pays.
@@ -96,13 +102,22 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
+  <!-- Market Stats -->
+  {marketStats && (
+    <section class="py-12 bg-gradient-to-b from-white to-gray-50">
+      <div class="container-custom">
+        <MarketStatsBar stats={marketStats} operacion="venta" lang="fr" countryName={pais} />
+      </div>
+    </section>
+  )}
+
   <!-- SEO Content -->
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Acheter une Propriété en République Dominicaine</h2>
+        <h2>Acheter une Propriété en {pais}</h2>
         <p>
-          La République Dominicaine offre d'excellentes opportunités d'investissement immobilier dans les Caraïbes.
+          {pais} offre d'excellentes opportunités d'investissement immobilier dans les Caraïbes.
           Que vous recherchiez une maison familiale à Saint-Domingue, un appartement d'investissement à Punta Cana,
           une villa de luxe face à la mer à Las Terrenas ou un terrain à Santiago,
           notre portail vous connecte avec les meilleures options du marché.
@@ -118,7 +133,7 @@ if (currentPage > totalPages && totalPages > 0) {
 
         <h3>Processus d'Achat pour les Étrangers</h3>
         <p>
-          Les étrangers peuvent acheter des propriétés en République Dominicaine sans restrictions.
+          Les étrangers peuvent acheter des propriétés en {pais} sans restrictions.
           Le processus est simple et les agents vérifiés sur notre portail peuvent vous guider
           à chaque étape, de la recherche à la conclusion.
         </p>

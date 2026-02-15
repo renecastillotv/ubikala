@@ -5,7 +5,8 @@ import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations } from '../../i18n';
-import { searchProperties } from '../../lib/meilisearch';
+import { searchProperties, getMarketStats } from '../../lib/meilisearch';
+import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
 import { generalFAQs } from '../../lib/seo-content';
 
@@ -33,6 +34,8 @@ const rentalFAQs = [
 export const prerender = false;
 
 const t = useTranslations('es');
+const country = Astro.locals.country;
+const pais = country.name;
 
 // Configuración de paginación
 const ITEMS_PER_PAGE = 24;
@@ -43,7 +46,7 @@ let properties: Property[] = [];
 let totalCount = 0;
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const result = await searchProperties({ operacion: 'renta', limit: ITEMS_PER_PAGE, offset });
+  const result = await searchProperties({ operacion: 'renta', limit: ITEMS_PER_PAGE, offset, pais });
   properties = result.properties;
   totalCount = result.total;
 } catch (error) {
@@ -51,6 +54,9 @@ try {
 }
 
 const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+let marketStats = null;
+try { marketStats = await getMarketStats(pais); } catch {}
 
 // Redirect if page is out of bounds
 if (currentPage > totalPages && totalPages > 0) {
@@ -64,7 +70,7 @@ const pageDescription = t.pages.rent.description;
 const listingSchema = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: 'Propiedades en Alquiler en República Dominicana',
+  name: `Propiedades en Alquiler en ${pais}`,
   description: pageDescription,
   numberOfItems: totalCount,
   itemListElement: properties.slice(0, 10).map((property, index) => ({
@@ -102,7 +108,7 @@ const listingSchema = {
   <section class="bg-gradient-to-r from-secondary-600 to-secondary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Propiedades en Alquiler en República Dominicana
+        Propiedades en Alquiler en {pais}
       </h1>
       <p class="text-green-100 text-lg max-w-3xl">
         Encuentra apartamentos amueblados, casas familiares, oficinas y locales comerciales disponibles para alquiler.
@@ -175,48 +181,15 @@ const listingSchema = {
       <!-- Header -->
       <div class="text-center mb-12">
         <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          Guía para Alquilar en República Dominicana
+          Guía para Alquilar en {pais}
         </h2>
         <p class="text-lg text-gray-600 max-w-2xl mx-auto">
           Encuentra el espacio perfecto para vivir o trabajar
         </p>
       </div>
 
-      <!-- Rental Types Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
-        <div class="bg-secondary-50 rounded-xl p-5 text-center border border-secondary-100">
-          <div class="w-10 h-10 bg-secondary-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <span class="text-sm font-medium text-gray-800">Apartamentos amueblados</span>
-        </div>
-        <div class="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100">
-          <div class="w-10 h-10 bg-emerald-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </div>
-          <span class="text-sm font-medium text-gray-800">Casas familiares</span>
-        </div>
-        <div class="bg-amber-50 rounded-xl p-5 text-center border border-amber-100">
-          <div class="w-10 h-10 bg-amber-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span class="text-sm font-medium text-gray-800">Oficinas y locales</span>
-        </div>
-        <div class="bg-purple-50 rounded-xl p-5 text-center border border-purple-100">
-          <div class="w-10 h-10 bg-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
-          </div>
-          <span class="text-sm font-medium text-gray-800">Villas vacacionales</span>
-        </div>
-      </div>
+      <!-- Market Stats -->
+      {marketStats && <div class="mb-16"><MarketStatsBar stats={marketStats} operacion="renta" lang="es" countryName={pais} /></div>}
 
       <!-- Two Column Layout -->
       <div class="grid md:grid-cols-2 gap-12 mb-16">
@@ -337,7 +310,7 @@ const listingSchema = {
           <div>
             <h3 class="font-semibold text-blue-800 mb-2">Extranjeros Pueden Alquilar Sin Restricciones</h3>
             <p class="text-blue-700">
-              No necesitas residencia ni visa especial para alquilar en República Dominicana.
+              No necesitas residencia ni visa especial para alquilar en {pais}.
               Solo tu pasaporte vigente y cumplir con los requisitos del propietario. Nuestros asesores te ayudarán a encontrar la propiedad ideal.
             </p>
           </div>

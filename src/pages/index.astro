@@ -12,6 +12,8 @@ import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
 
 const t = useTranslations('es');
+const country = Astro.locals.country;
+const pais = country.name;
 
 // Fetch agents from both databases and merge
 let featuredAgents: Agent[] = [];
@@ -57,12 +59,12 @@ const organizationSchema = {
   description: t.meta.siteDescription,
   address: {
     '@type': 'PostalAddress',
-    addressCountry: 'DO',
-    addressRegion: 'República Dominicana'
+    addressCountry: country.code,
+    addressRegion: pais
   },
   areaServed: {
     '@type': 'Country',
-    name: 'República Dominicana'
+    name: pais
   },
   sameAs: [
     'https://www.facebook.com/ubikala',
@@ -81,13 +83,13 @@ const organizationSchema = {
   <script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema)} slot="head" />
 
   <!-- Hero with Search -->
-  <Hero />
+  <Hero pais={pais} />
 
   <!-- Featured Properties -->
-  <FeaturedProperties />
+  <FeaturedProperties pais={pais} />
 
   <!-- Locations Grid -->
-  <LocationsGrid />
+  <LocationsGrid pais={pais} />
 
   <!-- Property Types Section -->
   <section class="section bg-gray-50">
@@ -251,11 +253,11 @@ const organizationSchema = {
       <div class="text-center mb-12">
         <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">Tu Próximo Hogar te Espera</span>
         <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">
-          Bienes Raíces en República Dominicana
+          Bienes Raíces en {pais}
         </h2>
         <p class="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
           Bienvenido a Ubíkala — tu puerta al Caribe. Desde villas frente al mar hasta apartamentos en el corazón de la ciudad,
-          descubre miles de propiedades verificadas en los destinos más codiciados de República Dominicana.
+          descubre miles de propiedades verificadas en los destinos más codiciados de {pais}.
         </p>
       </div>
 
@@ -305,7 +307,7 @@ const organizationSchema = {
       <!-- Destinos populares -->
       <div class="bg-gray-50 rounded-3xl p-8 md:p-12">
         <h3 class="text-2xl font-bold text-gray-900 mb-2">¿Dónde Será tu Próximo Hogar?</h3>
-        <p class="text-gray-600 mb-8">Cada rincón de República Dominicana cuenta una historia diferente. Encuentra la que va contigo.</p>
+        <p class="text-gray-600 mb-8">Cada rincón de {pais} cuenta una historia diferente. Encuentra la que va contigo.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <a href="/propiedades/punta-cana" class="flex items-start gap-4 group">
             <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">

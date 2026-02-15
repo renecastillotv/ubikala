@@ -3,10 +3,12 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
+import AgentNotFound from '../../components/AgentNotFound.astro';
 import { useTranslations } from '../../i18n';
 import { getUserBySlug, getPropertiesByUser, getParentCompanyInfo, getTeamMembers, getRoleLabel, type UbikalaUser, type UbikalaProperty } from '../../lib/ubikala-db';
 import { ubikalaToProperty } from '../../lib/db';
 import { transformProperty, type DBProperty } from '../../lib/transformers';
+import { searchAgents } from '../../lib/meilisearch';
 import type { Agent, Property } from '../../data/types';
 
 // SSR for dynamic pages
@@ -46,125 +48,138 @@ try {
   console.error('Error fetching user:', error);
 }
 
+let fallbackAgents: Agent[] = [];
 if (!user) {
-  return Astro.redirect('/404');
+  try { const result = await searchAgents({ limit: 6 }); fallbackAgents = result.agents; } catch {}
 }
 
 // Fetch hierarchy data
 let parentCompanyInfo: Awaited<ReturnType<typeof getParentCompanyInfo>> = null;
 let teamMembers: UbikalaUser[] = [];
 let teamProperties: Property[] = [];
+let totalProperties = 0;
+let allProperties: Property[] = [];
+let displayLabel = '';
+let parentSlug: string | null = null;
+let hasValidPhoto = false;
+let userInitials = '';
+let userSchema: Record<string, any> = {};
+let pageTitle = '';
+let pageDescription = '';
 
-try {
-  // For affiliated agents: get parent company info
-  if (user.parent_user_id) {
-    parentCompanyInfo = await getParentCompanyInfo(user.id);
-  }
-
-  // For inmobiliarias: get team members and their properties
-  if (user.role === 'inmobiliaria') {
-    teamMembers = await getTeamMembers(user.id);
-    for (const member of teamMembers) {
-      const memberProps = await getPropertiesByUser(member.id, { limit: 50, activo: true });
-      const transformed = memberProps.map(p => {
-        const legacyProp = ubikalaToProperty(p as UbikalaProperty);
-        return transformProperty(legacyProp as unknown as DBProperty);
-      });
-      teamProperties.push(...transformed);
+if (user) {
+  try {
+    // For affiliated agents: get parent company info
+    if (user.parent_user_id) {
+      parentCompanyInfo = await getParentCompanyInfo(user.id);
     }
+
+    // For inmobiliarias: get team members and their properties
+    if (user.role === 'inmobiliaria') {
+      teamMembers = await getTeamMembers(user.id);
+      for (const member of teamMembers) {
+        const memberProps = await getPropertiesByUser(member.id, { limit: 50, activo: true });
+        const transformed = memberProps.map(p => {
+          const legacyProp = ubikalaToProperty(p as UbikalaProperty);
+          return transformProperty(legacyProp as unknown as DBProperty);
+        });
+        teamProperties.push(...transformed);
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching hierarchy data:', error);
   }
-} catch (error) {
-  console.error('Error fetching hierarchy data:', error);
+
+  // Calculate total properties (own + team for inmobiliarias)
+  totalProperties = user.role === 'inmobiliaria'
+    ? userProperties.length + teamProperties.length
+    : userProperties.length;
+
+  // All properties combined for inmobiliarias
+  allProperties = user.role === 'inmobiliaria'
+    ? [...userProperties, ...teamProperties]
+    : userProperties;
+
+  // Generate display label based on role and hierarchy
+  function getDisplayLabel(): string {
+    if (user!.parent_user_id && parentCompanyInfo?.company_name) {
+      return `Asesor Inmobiliario de ${parentCompanyInfo.company_name}`;
+    }
+    if (user!.role === 'inmobiliaria') {
+      return user!.company_name || 'Inmobiliaria';
+    }
+    if (user!.role === 'asesor_independiente') {
+      return 'Asesor Independiente';
+    }
+    return 'Propietario';
+  }
+
+  displayLabel = getDisplayLabel();
+
+  // Generate parent slug for link
+  parentSlug = parentCompanyInfo && user.parent_user_id
+    ? `ubk-${slugify(parentCompanyInfo.parent_name || 'inmobiliaria')}-${user.parent_user_id.substring(0, 8)}`
+    : null;
+
+  // Convert to agent-like format for display
+  const agent: Partial<Agent> = {
+    id: user.id,
+    slug: slug || '',
+    name: user.name,
+    email: user.email,
+    phone: user.phone || '',
+    whatsapp: user.phone || '',
+    photo: user.avatar_url || '/images/agent-placeholder.svg',
+    company: user.company_name || undefined,
+    userType: user.role === 'inmobiliaria' ? 'agent' : user.role === 'asesor_independiente' ? 'independent' : 'owner',
+    verified: user.is_verified,
+    bio: user.bio || '',
+    propertiesCount: totalProperties,
+    responseTime: 'menos de 1 hora',
+    rating: 5,
+    reviewCount: 0,
+    experienceYears: 0,
+    languages: ['Espanol'],
+    specializations: [],
+    locations: [],
+  };
+
+  // Check if user has valid photo
+  hasValidPhoto = !!(user.avatar_url &&
+    user.avatar_url !== '/images/agent-placeholder.svg' &&
+    !user.avatar_url.includes('placeholder'));
+  userInitials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('');
+
+  // Schema for SEO
+  userSchema = {
+    '@context': 'https://schema.org',
+    '@type': user.role === 'inmobiliaria' ? 'RealEstateAgent' : ['Person', 'RealEstateAgent'],
+    '@id': `https://ubikala.com/usuario/${slug}#user`,
+    name: user.name,
+    url: `https://ubikala.com/usuario/${slug}`,
+    image: hasValidPhoto ? user.avatar_url : undefined,
+    description: user.bio || `${displayLabel} en Ubíkala`,
+    telephone: user.phone,
+    email: user.email,
+    jobTitle: displayLabel,
+    worksFor: parentCompanyInfo?.company_name ? {
+      '@type': 'Organization',
+      name: parentCompanyInfo.company_name,
+    } : user.company_name ? {
+      '@type': 'Organization',
+      name: user.company_name,
+    } : undefined,
+    areaServed: { '@type': 'Country', name: 'Dominican Republic' },
+  };
+
+  pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
+  pageDescription = user.bio
+    ? `${user.bio.substring(0, 150)}... Contacta a ${user.name} para propiedades en Republica Dominicana.`
+    : `${user.name} - ${displayLabel}. ${totalProperties} propiedades activas. Contacta ahora.`;
 }
-
-// Calculate total properties (own + team for inmobiliarias)
-const totalProperties = user.role === 'inmobiliaria'
-  ? userProperties.length + teamProperties.length
-  : userProperties.length;
-
-// All properties combined for inmobiliarias
-const allProperties = user.role === 'inmobiliaria'
-  ? [...userProperties, ...teamProperties]
-  : userProperties;
-
-// Generate display label based on role and hierarchy
-function getDisplayLabel(): string {
-  if (user!.parent_user_id && parentCompanyInfo?.company_name) {
-    return `Asesor Inmobiliario de ${parentCompanyInfo.company_name}`;
-  }
-  if (user!.role === 'inmobiliaria') {
-    return user!.company_name || 'Inmobiliaria';
-  }
-  if (user!.role === 'asesor_independiente') {
-    return 'Asesor Independiente';
-  }
-  return 'Propietario';
-}
-
-const displayLabel = getDisplayLabel();
-
-// Generate parent slug for link
-const parentSlug = parentCompanyInfo && user.parent_user_id
-  ? `ubk-${slugify(parentCompanyInfo.parent_name || 'inmobiliaria')}-${user.parent_user_id.substring(0, 8)}`
-  : null;
-
-// Convert to agent-like format for display
-const agent: Partial<Agent> = {
-  id: user.id,
-  slug: slug || '',
-  name: user.name,
-  email: user.email,
-  phone: user.phone || '',
-  whatsapp: user.phone || '',
-  photo: user.avatar_url || '/images/agent-placeholder.svg',
-  company: user.company_name || undefined,
-  userType: user.role === 'inmobiliaria' ? 'agent' : user.role === 'asesor_independiente' ? 'independent' : 'owner',
-  verified: user.is_verified,
-  bio: user.bio || '',
-  propertiesCount: totalProperties,
-  responseTime: 'menos de 1 hora',
-  rating: 5,
-  reviewCount: 0,
-  experienceYears: 0,
-  languages: ['Espanol'],
-  specializations: [],
-  locations: [],
-};
-
-// Check if user has valid photo
-const hasValidPhoto = user.avatar_url &&
-  user.avatar_url !== '/images/agent-placeholder.svg' &&
-  !user.avatar_url.includes('placeholder');
-const userInitials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('');
-
-// Schema for SEO
-const userSchema = {
-  '@context': 'https://schema.org',
-  '@type': user.role === 'inmobiliaria' ? 'RealEstateAgent' : ['Person', 'RealEstateAgent'],
-  '@id': `https://ubikala.com/usuario/${slug}#user`,
-  name: user.name,
-  url: `https://ubikala.com/usuario/${slug}`,
-  image: hasValidPhoto ? user.avatar_url : undefined,
-  description: user.bio || `${displayLabel} en Ubíkala`,
-  telephone: user.phone,
-  email: user.email,
-  jobTitle: displayLabel,
-  worksFor: parentCompanyInfo?.company_name ? {
-    '@type': 'Organization',
-    name: parentCompanyInfo.company_name,
-  } : user.company_name ? {
-    '@type': 'Organization',
-    name: user.company_name,
-  } : undefined,
-  areaServed: { '@type': 'Country', name: 'Dominican Republic' },
-};
-
-const pageTitle = `${user.name} - ${displayLabel} | Ubíkala`;
-const pageDescription = user.bio
-  ? `${user.bio.substring(0, 150)}... Contacta a ${user.name} para propiedades en Republica Dominicana.`
-  : `${user.name} - ${displayLabel}. ${totalProperties} propiedades activas. Contacta ahora.`;
 ---
 
+{user ? (
 <Layout
   title={pageTitle}
   description={pageDescription}
@@ -424,3 +439,8 @@ const pageDescription = user.bio
     </div>
   </section>
 </Layout>
+) : (
+<Layout title="Usuario No Disponible | Ubíkala" description="Este usuario no está activo en este momento.">
+  <AgentNotFound lang="es" agents={fallbackAgents} />
+</Layout>
+)}

@@ -66,6 +66,8 @@ let locationData: { name: string; province: string } = {
   province: 'República Dominicana'
 };
 
+const pais = Astro.locals.country.name;
+
 // Fetch properties con filtros de tipo y ubicación via MeiliSearch
 let properties: Property[] = [];
 let totalCount = 0;
@@ -78,7 +80,8 @@ try {
     tipo: typeInfo.dbValue,
     query: locationSlug?.replace(/-/g, ' '),
     limit: ITEMS_PER_PAGE,
-    offset
+    offset,
+    pais,
   });
 
   properties = result.properties;

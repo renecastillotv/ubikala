@@ -1,0 +1,368 @@
+---
+import { getTokenFromRequest, getCurrentUser } from '../../lib/auth';
+import type { UserRole } from '../../lib/ubikala-db';
+
+// Si déjà connecté, rediriger vers le tableau de bord
+const token = getTokenFromRequest(Astro.request);
+if (token) {
+  const user = await getCurrentUser(token);
+  if (user) {
+    return Astro.redirect('/admin/dashboard');
+  }
+}
+
+// Mapper les types URL français aux types internes
+const typeParam = Astro.url.searchParams.get('type') || 'agent';
+const typeMapping: Record<string, string> = {
+  agence: 'inmobiliaria',
+  agency: 'inmobiliaria',
+  agent: 'asesor',
+  independent: 'asesor',
+  proprietaire: 'propietario',
+  owner: 'propietario',
+};
+const registrationType = typeMapping[typeParam] || 'asesor';
+
+// Mapper les rôles
+const typeToRole: Record<string, UserRole> = {
+  inmobiliaria: 'inmobiliaria',
+  asesor: 'asesor_independiente',
+  propietario: 'propietario'
+};
+const role = typeToRole[registrationType];
+
+// Contenu spécifique au type en français
+const typeContent: Record<string, { title: string; description: string; showCompany: boolean }> = {
+  inmobiliaria: {
+    title: 'Inscrire une Agence',
+    description: 'Créez un compte pour votre agence immobilière.',
+    showCompany: true
+  },
+  asesor: {
+    title: 'Inscription Agent',
+    description: 'Rejoignez en tant qu\'agent immobilier indépendant.',
+    showCompany: false
+  },
+  propietario: {
+    title: 'Inscription Propriétaire',
+    description: 'Publiez votre propriété directement. Première annonce GRATUITE.',
+    showCompany: false
+  }
+};
+const content = typeContent[registrationType];
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{content.title} | Ubíkala</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block" rel="stylesheet" />
+    <style>
+      :root {
+        --ubikala-olive: #5C6B3C;
+        --ubikala-olive-dark: #4A5730;
+        --ubikala-sand: #D4C4A8;
+        --ubikala-sand-light: #E8DFD0;
+        --ubikala-ivory-pure: #FFFEF9;
+        --ubikala-warm-gray: #6B6660;
+        --ubikala-warm-gray-dark: #4A4642;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, var(--ubikala-olive) 0%, var(--ubikala-olive-dark) 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+      }
+      .register-container {
+        background: var(--ubikala-ivory-pure);
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px -12px rgba(74, 87, 48, 0.35);
+        width: 100%;
+        max-width: 560px;
+        padding: 1.75rem 2rem;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .logo-isotipo { width: 36px; height: 36px; object-fit: contain; }
+      .logo h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--ubikala-olive);
+      }
+      .page-header {
+        text-align: center;
+        margin-bottom: 1.25rem;
+      }
+      .page-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--ubikala-warm-gray-dark);
+      }
+      .page-description {
+        color: var(--ubikala-warm-gray);
+        font-size: 0.8125rem;
+        margin-top: 0.25rem;
+      }
+      .type-tabs {
+        display: flex;
+        gap: 0.375rem;
+        margin-bottom: 1.25rem;
+        background: var(--ubikala-sand-light);
+        padding: 0.25rem;
+        border-radius: 0.5rem;
+      }
+      .type-tab {
+        flex: 1;
+        padding: 0.5rem;
+        border: none;
+        background: transparent;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--ubikala-warm-gray);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        text-align: center;
+      }
+      .type-tab:hover { color: var(--ubikala-olive); }
+      .type-tab.active {
+        background: white;
+        color: var(--ubikala-olive);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+      }
+      .form-group { margin-bottom: 0.75rem; }
+      .form-group.full { grid-column: 1 / -1; }
+      label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--ubikala-warm-gray-dark);
+        margin-bottom: 0.25rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--ubikala-sand);
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        background: white;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      input:focus {
+        outline: none;
+        border-color: var(--ubikala-olive);
+        box-shadow: 0 0 0 2px rgba(92, 107, 60, 0.15);
+      }
+      .btn {
+        width: 100%;
+        padding: 0.625rem;
+        background: var(--ubikala-olive);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 0.5rem;
+      }
+      .btn:hover {
+        background: var(--ubikala-olive-dark);
+        transform: translateY(-1px);
+      }
+      .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+      .message {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.8125rem;
+        margin-bottom: 0.75rem;
+        display: none;
+      }
+      .error-message { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+      .success-message { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+      .links {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1rem;
+        font-size: 0.8125rem;
+      }
+      .link {
+        color: var(--ubikala-warm-gray);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .link:hover { color: var(--ubikala-olive); }
+      .link-highlight { color: var(--ubikala-olive); font-weight: 500; }
+      .terms-text {
+        font-size: 0.6875rem;
+        color: var(--ubikala-warm-gray);
+        text-align: center;
+        margin-top: 0.75rem;
+      }
+      .terms-text a { color: var(--ubikala-olive); text-decoration: none; }
+      .terms-text a:hover { text-decoration: underline; }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="register-container">
+      <div class="logo">
+        <img src="/images/ubikala-isotipo.png" alt="Ubikala" class="logo-isotipo" />
+        <h1>Ubíkala</h1>
+      </div>
+
+      <div class="page-header">
+        <h2 class="page-title">{content.title}</h2>
+        <p class="page-description">{content.description}</p>
+      </div>
+
+      <div class="type-tabs">
+        <a href="/fr/inscription?type=agence" class:list={['type-tab', { active: registrationType === 'inmobiliaria' }]}>Agence</a>
+        <a href="/fr/inscription?type=agent" class:list={['type-tab', { active: registrationType === 'asesor' }]}>Agent</a>
+        <a href="/fr/inscription?type=proprietaire" class:list={['type-tab', { active: registrationType === 'propietario' }]}>Propriétaire</a>
+      </div>
+
+      <div id="error-message" class="message error-message"></div>
+      <div id="success-message" class="message success-message"></div>
+
+      <form id="register-form">
+        <input type="hidden" name="role" value={role} />
+
+        <!-- Nom de l'entreprise pour les agences -->
+        <div class:list={['form-group', { hidden: !content.showCompany }]} id="company-field">
+          <label for="company_name">Nom de l'Entreprise</label>
+          <input type="text" id="company_name" name="company_name" placeholder="Immobilière XYZ" autocomplete="organization" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Nom Complet</label>
+            <input type="text" id="name" name="name" required placeholder="Jean Dupont" autocomplete="name" />
+          </div>
+          <div class="form-group">
+            <label for="phone">Téléphone</label>
+            <input type="tel" id="phone" name="phone" placeholder="809-555-1234" autocomplete="tel" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Adresse E-mail</label>
+          <input type="email" id="email" name="email" required placeholder="email@exemple.com" autocomplete="email" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="password">Mot de Passe</label>
+            <input type="password" id="password" name="password" required placeholder="Minimum 8 caractères" minlength="8" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label for="password_confirm">Confirmer</label>
+            <input type="password" id="password_confirm" name="password_confirm" required placeholder="Répéter le mot de passe" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <button type="submit" class="btn" id="submit-btn">Créer un Compte</button>
+
+        <p class="terms-text">
+          En vous inscrivant, vous acceptez nos <a href="/fr/conditions">Conditions</a> et notre <a href="/fr/confidentialite">Politique de Confidentialité</a>.
+        </p>
+      </form>
+
+      <div class="links">
+        <a href="/fr" class="link">&larr; Retour au portail</a>
+        <a href="/admin/login" class="link">Déjà un compte? <span class="link-highlight">Se Connecter</span></a>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById('register-form') as HTMLFormElement;
+      const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+      const successMessage = document.getElementById('success-message') as HTMLDivElement;
+      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const name = formData.get('name') as string;
+        const email = formData.get('email') as string;
+        const phone = formData.get('phone') as string;
+        const password = formData.get('password') as string;
+        const passwordConfirm = formData.get('password_confirm') as string;
+        const role = formData.get('role') as string;
+        const companyName = formData.get('company_name') as string;
+
+        if (password !== passwordConfirm) {
+          errorMessage.textContent = 'Les mots de passe ne correspondent pas';
+          errorMessage.style.display = 'block';
+          successMessage.style.display = 'none';
+          return;
+        }
+
+        if (password.length < 8) {
+          errorMessage.textContent = 'Le mot de passe doit contenir au moins 8 caractères';
+          errorMessage.style.display = 'block';
+          successMessage.style.display = 'none';
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Création du compte...';
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+
+        try {
+          const response = await fetch('/api/admin/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name,
+              email,
+              phone,
+              password,
+              role,
+              company_name: companyName || undefined
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de la création du compte');
+          }
+
+          successMessage.textContent = 'Compte créé! Redirection...';
+          successMessage.style.display = 'block';
+
+          setTimeout(() => {
+            window.location.href = '/admin/dashboard';
+          }, 1000);
+        } catch (error: any) {
+          errorMessage.textContent = error.message;
+          errorMessage.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Créer un Compte';
+        }
+      });
+    </script>
+  </body>
+</html>

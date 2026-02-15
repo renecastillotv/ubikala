@@ -5,13 +5,16 @@ import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
-import { searchProperties } from '../../lib/meilisearch';
+import { searchProperties, getMarketStats } from '../../lib/meilisearch';
+import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
 
 // SSR pour pagination
 export const prerender = false;
 
 const t = useTranslations('fr');
+const country = Astro.locals.country;
+const pais = country.name;
 const alternateUrls = getAlternateUrls('/fr/louer');
 
 // Config pagination
@@ -23,7 +26,7 @@ let properties: Property[] = [];
 let totalCount = 0;
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const result = await searchProperties({ operacion: 'renta', limit: ITEMS_PER_PAGE, offset });
+  const result = await searchProperties({ operacion: 'renta', limit: ITEMS_PER_PAGE, offset, pais });
   properties = result.properties;
   totalCount = result.total;
 } catch (error) {
@@ -31,6 +34,9 @@ try {
 }
 
 const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+let marketStats = null;
+try { marketStats = await getMarketStats(pais); } catch {}
 
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/fr/louer');
@@ -52,7 +58,7 @@ if (currentPage > totalPages && totalPages > 0) {
   <section class="bg-gradient-to-r from-secondary-600 to-secondary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Propriétés à Louer en République Dominicaine
+        Propriétés à Louer en {pais}
       </h1>
       <p class="text-green-100 text-lg max-w-3xl">
         Trouvez des appartements meublés, maisons familiales, bureaux et locaux commerciaux disponibles à la location.
@@ -96,11 +102,20 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
+  <!-- Market Stats -->
+  {marketStats && (
+    <section class="py-12 bg-gradient-to-b from-white to-gray-50">
+      <div class="container-custom">
+        <MarketStatsBar stats={marketStats} operacion="renta" lang="fr" countryName={pais} />
+      </div>
+    </section>
+  )}
+
   <!-- SEO Content -->
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Louer une Propriété en République Dominicaine</h2>
+        <h2>Louer une Propriété en {pais}</h2>
         <p>
           Que vous cherchiez un appartement meublé pour un court séjour,
           une maison pour votre famille, ou un local commercial pour votre entreprise,

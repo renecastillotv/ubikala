@@ -57,6 +57,8 @@ let locationData: { name: string; province: string } = {
 // Alternate URLs for SEO hreflang
 const alternateUrls = getAlternateUrls(`/fr/acheter/${typeSlug}/${locationSlug}`);
 
+const pais = Astro.locals.country.name;
+
 // Fetch properties filtered by type and location via MeiliSearch
 let properties: Property[] = [];
 let totalCount = 0;
@@ -69,7 +71,8 @@ try {
     tipo: typeInfo.dbValue,
     query: locationSlug?.replace(/-/g, ' '),
     limit: ITEMS_PER_PAGE,
-    offset
+    offset,
+    pais,
   });
 
   properties = result.properties;

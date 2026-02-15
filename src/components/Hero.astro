@@ -3,13 +3,18 @@ import { getLangFromUrl, useTranslations } from '../i18n';
 import SearchBox from './SearchBox.astro';
 import { getPlatformStats } from '../lib/meilisearch';
 
+interface Props {
+  pais?: string;
+}
+
+const { pais } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
 // Obtener estadísticas reales del portal desde MeiliSearch
 let stats = { properties: 0, agents: 0, cities: 0 };
 try {
-  const ms = await getPlatformStats();
+  const ms = await getPlatformStats(pais);
   stats = { properties: ms.totalProperties, agents: ms.totalAgents, cities: ms.totalCities };
 } catch (error) {
   console.error('Error fetching portal stats:', error);

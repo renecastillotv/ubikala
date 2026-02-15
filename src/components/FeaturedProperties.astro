@@ -4,13 +4,18 @@ import PropertyCard from './PropertyCard.astro';
 import { getFeaturedProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 
+interface Props {
+  pais?: string;
+}
+
+const { pais } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
 // Fetch from MeiliSearch
 let featuredProperties: Property[] = [];
 try {
-  featuredProperties = await getFeaturedProperties(6);
+  featuredProperties = await getFeaturedProperties(6, pais);
 } catch (error) {
   console.error('Error fetching featured properties:', error);
 }

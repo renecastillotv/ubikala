@@ -5,9 +5,10 @@ import { searchProperties } from '../../lib/meilisearch';
 export const prerender = false;
 
 // Solo GET permitido - Endpoint de búsqueda avanzada
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
+    const pais = (locals as any).country?.name;
 
     // Parámetros de búsqueda
     const q = url.searchParams.get('q') || '';
@@ -31,7 +32,8 @@ export const GET: APIRoute = async ({ request }) => {
       operacion: meiliOperacion,
       precioMin: minPrice,
       precioMax: maxPrice,
-      habitacionesMin: habitaciones
+      habitacionesMin: habitaciones,
+      pais
     });
 
     return new Response(JSON.stringify({

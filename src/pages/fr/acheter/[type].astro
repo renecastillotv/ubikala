@@ -76,10 +76,12 @@ const spanishSlug = frenchToSpanishSlug[typeSlug || ''] || typeSlug;
 const alternateUrls = getAlternateUrls(`/fr/acheter/${typeSlug}`);
 
 // R\u00e9cup\u00e9rer les propri\u00e9t\u00e9s depuis MeiliSearch
+const pais = Astro.locals.country.name;
+
 let typeProperties: Property[] = [];
 let totalCount = 0;
 try {
-  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24 });
+  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24, pais });
   typeProperties = result.properties;
   totalCount = result.total;
 } catch (error) {

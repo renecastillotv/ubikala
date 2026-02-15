@@ -57,11 +57,13 @@ const dbType = slugToDbType[typeSlug || ''] || typeSlug;
 const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Propiedades';
 const typeDescription = typeDescriptions[typeSlug || ''] || `Encuentra ${typeName.toLowerCase()} en venta en República Dominicana.`;
 
+const pais = Astro.locals.country.name;
+
 // Fetch properties from MeiliSearch
 let typeProperties: Property[] = [];
 let totalCount = 0;
 try {
-  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24 });
+  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24, pais });
   typeProperties = result.properties;
   totalCount = result.total;
 } catch (error) {
