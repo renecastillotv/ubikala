@@ -1,0 +1,168 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AgentCard from '../../components/AgentCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls } from '../../i18n';
+import { getPortalInmobiliarias } from '../../lib/meilisearch';
+import { getUbikalaInmobiliarias } from '../../lib/ubikala-db';
+import { transformUbikalaAgents } from '../../lib/transformers';
+import type { Agent } from '../../data/types';
+
+// SSR for pagination
+export const prerender = false;
+
+const t = useTranslations('en');
+const alternateUrls = getAlternateUrls('/en/real-estate');
+
+// Pagination config
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+// Fetch inmobiliarias: tenants with portal properties + Ubikala company accounts
+let inmobiliarias: Agent[] = [];
+let totalCount = 0;
+try {
+  const [portalTenants, ubikalaRows] = await Promise.all([
+    getPortalInmobiliarias(),
+    getUbikalaInmobiliarias({ limit: 100 }),
+  ]);
+
+  const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
+
+  // Merge, deduplicate by name, sort by property count
+  const seen = new Set<string>();
+  const allInmobiliarias: Agent[] = [];
+  for (const inmo of [...portalTenants, ...ubikalaInmobiliarias]) {
+    const key = inmo.name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      allInmobiliarias.push(inmo);
+    }
+  }
+  allInmobiliarias.sort((a, b) => b.propertiesCount - a.propertiesCount);
+
+  totalCount = allInmobiliarias.length;
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  inmobiliarias = allInmobiliarias.slice(offset, offset + ITEMS_PER_PAGE);
+} catch (error) {
+  console.error('Error fetching real estate agencies:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+// Redirect if page is out of bounds
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect('/en/real-estate');
+}
+---
+
+<Layout
+  title="Real Estate Agencies | Ubikala"
+  description="Find the best real estate agencies and companies. Buy, sell, and rent properties with verified professionals."
+  keywords="real estate agencies dominican republic, real estate companies, property agencies dr"
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">Real Estate Agencies</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        Real Estate Agencies in the Dominican Republic
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        Find the best real estate agencies and companies. Verified professionals with extensive property portfolios ready to help you buy, sell, or rent.
+      </p>
+    </div>
+  </section>
+
+  <!-- Search Filters -->
+  <section class="py-8 bg-white shadow-sm">
+    <div class="container-custom">
+      <form class="flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <select class="select">
+            <option value="">All Locations</option>
+            <option value="santo-domingo">Santo Domingo</option>
+            <option value="punta-cana">Punta Cana</option>
+            <option value="santiago">Santiago</option>
+            <option value="las-terrenas">Las Terrenas</option>
+            <option value="bavaro">Bavaro</option>
+          </select>
+        </div>
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
+          <select class="select">
+            <option value="">All Specializations</option>
+            <option value="residential">Residential</option>
+            <option value="commercial">Commercial</option>
+            <option value="luxury">Luxury</option>
+            <option value="investment">Investment</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary">
+          Search
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8">
+        <p class="text-gray-600">
+          <span class="font-semibold text-gray-900">{totalCount}</span> agencies found
+        </p>
+        <select class="select py-2 text-sm w-auto">
+          <option value="properties">Most Properties</option>
+          <option value="rating">Highest Rated</option>
+          <option value="recent">Most Recent</option>
+        </select>
+      </div>
+
+      {inmobiliarias.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {inmobiliarias.map((agent) => (
+            <AgentCard agent={agent} />
+          ))}
+        </div>
+      ) : (
+        <div class="card p-12 text-center">
+          <p class="text-gray-600">No agencies found.</p>
+        </div>
+      )}
+
+      <!-- Pagination -->
+      {inmobiliarias.length > 0 && (
+        <div class="mt-12">
+          <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl="/en/real-estate" />
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom text-center">
+      <h2 class="text-3xl font-bold text-gray-900 mb-4">Do You Own a Real Estate Agency?</h2>
+      <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        Join Ubikala and reach thousands of potential clients.
+        List your properties, manage your team, and grow your business.
+      </p>
+      <a href="/en/list" class="btn-primary">
+        Register Your Agency
+      </a>
+    </div>
+  </section>
+</Layout>

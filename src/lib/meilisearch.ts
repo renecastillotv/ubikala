@@ -803,3 +803,67 @@ export async function getPlatformStats(pais?: string): Promise<{
     totalCities: Object.keys(cities).length,
   };
 }
+
+/**
+ * Get unique inmobiliarias (tenants) that have portal properties.
+ * Each tenant with at least one en_portal_ubikala=true property appears as an inmobiliaria.
+ */
+export async function getPortalInmobiliarias(): Promise<Agent[]> {
+  const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+    method: 'POST',
+    body: JSON.stringify({
+      q: '',
+      filter: portalFilter(),
+      facets: ['tenant_id'],
+      limit: 300,
+      attributesToRetrieve: ['tenant_id', 'tenant_nombre', 'tenant_logo', 'agente_slug'],
+    }),
+  });
+
+  const distribution: Record<string, number> = result.facetDistribution?.tenant_id || {};
+  const hits: Array<{ tenant_id: string; tenant_nombre: string | null; tenant_logo: string | null; agente_slug: string | null }> = result.hits || [];
+
+  // Build tenant info from hits (first occurrence for name/logo, count unique agents)
+  const tenantInfo = new Map<string, { name: string; logo: string | null; agents: Set<string> }>();
+  for (const hit of hits) {
+    if (!tenantInfo.has(hit.tenant_id)) {
+      tenantInfo.set(hit.tenant_id, {
+        name: hit.tenant_nombre || 'Inmobiliaria',
+        logo: hit.tenant_logo || null,
+        agents: new Set(),
+      });
+    }
+    if (hit.agente_slug) {
+      tenantInfo.get(hit.tenant_id)!.agents.add(hit.agente_slug);
+    }
+  }
+
+  return Object.entries(distribution)
+    .map(([tenantId, propCount]) => {
+      const info = tenantInfo.get(tenantId);
+      const name = info?.name || 'Inmobiliaria';
+      return {
+        id: tenantId,
+        slug: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+        name,
+        email: '',
+        phone: '',
+        whatsapp: '',
+        photo: info?.logo || '/images/agent-placeholder.svg',
+        company: name,
+        userType: 'agent' as UserType,
+        verified: true,
+        rating: 5,
+        reviewCount: 0,
+        experienceYears: 10,
+        languages: ['Español'],
+        bio: '',
+        propertiesCount: propCount,
+        responseTime: 'menos de 1 hora',
+        specializations: [],
+        locations: [],
+        isClicInmobiliaria: true,
+      };
+    })
+    .sort((a, b) => b.propertiesCount - a.propertiesCount);
+}

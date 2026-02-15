@@ -76,20 +76,11 @@ export function getAlternateLanguages(currentLang: Lang): { lang: Lang; name: st
  * Genera URLs alternativas para SEO (hreflang)
  */
 export function getAlternateUrls(currentPath: string, siteUrl: string = 'https://ubikala.com'): { lang: Lang; url: string }[] {
-  // Remover prefijo de idioma si existe
-  let basePath = currentPath;
-  for (const lang of Object.keys(languages)) {
-    if (currentPath.startsWith(`/${lang}/`) || currentPath === `/${lang}`) {
-      basePath = currentPath.slice(lang.length + 1) || '/';
-      break;
-    }
-  }
+  const langUrls = getLanguageUrls(currentPath);
 
-  return Object.keys(languages).map((lang) => ({
-    lang: lang as Lang,
-    url: lang === defaultLang
-      ? `${siteUrl}${basePath}`
-      : `${siteUrl}/${lang}${basePath === '/' ? '' : basePath}`,
+  return (Object.keys(languages) as Lang[]).map((lang) => ({
+    lang,
+    url: `${siteUrl}${langUrls[lang]}`,
   }));
 }
 
@@ -155,16 +146,50 @@ export function translateRoute(path: string, fromLang: Lang, toLang: Lang): stri
 }
 
 /**
- * Obtiene las URLs de todos los idiomas para la ruta actual
+ * Available first-level routes per language (must match actual page files).
+ * Spanish has all routes as the default language.
+ */
+const availableRoutes: Record<Lang, Set<string>> = {
+  es: new Set(), // ES is default, all routes exist
+  en: new Set(['about', 'agents', 'buy', 'contact', 'list', 'privacy', 'real-estate', 'rent', 'search', 'terms', 'login']),
+  fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'immobilieres', 'louer', 'publier', 'recherche']),
+};
+
+function isRouteAvailable(path: string, lang: Lang): boolean {
+  if (lang === defaultLang) return true;
+
+  const prefix = `/${lang}`;
+  if (path === prefix || path === `${prefix}/`) return true;
+
+  const afterPrefix = path.startsWith(`${prefix}/`) ? path.slice(prefix.length + 1) : path;
+  const segments = afterPrefix.split('/').filter(Boolean);
+  if (segments.length === 0) return true;
+
+  // Only flat (single-segment) routes exist in EN/FR currently
+  return segments.length === 1 && availableRoutes[lang].has(segments[0]);
+}
+
+/**
+ * Obtiene las URLs de todos los idiomas para la ruta actual.
+ * Falls back to the language homepage if the translated route doesn't exist.
  */
 export function getLanguageUrls(pathname: string): Record<Lang, string> {
   // Detectar el idioma actual de la URL
   const [, firstSegment] = pathname.split('/');
   const currentLang: Lang = (firstSegment in translations) ? firstSegment as Lang : defaultLang;
 
-  return {
+  const urls: Record<string, string> = {
     es: translateRoute(pathname, currentLang, 'es'),
     en: translateRoute(pathname, currentLang, 'en'),
     fr: translateRoute(pathname, currentLang, 'fr'),
   };
+
+  // Fallback to homepage if target route doesn't have an actual page
+  for (const lang of ['en', 'fr'] as Lang[]) {
+    if (!isRouteAvailable(urls[lang], lang)) {
+      urls[lang] = `/${lang}`;
+    }
+  }
+
+  return urls as Record<Lang, string>;
 }

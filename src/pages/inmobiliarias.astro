@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
 import { useTranslations } from '../i18n';
+import { getPortalInmobiliarias } from '../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../lib/ubikala-db';
 import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
@@ -16,13 +17,28 @@ const t = useTranslations('es');
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-// Fetch inmobiliarias (company accounts only, not individual agents)
+// Fetch inmobiliarias: tenants with portal properties + Ubikala company accounts
 let inmobiliarias: Agent[] = [];
 let totalCount = 0;
 try {
-  const ubikalaRows = await getUbikalaInmobiliarias({ limit: 100 });
-  const allInmobiliarias = transformUbikalaAgents(ubikalaRows)
-    .sort((a, b) => b.propertiesCount - a.propertiesCount);
+  const [portalTenants, ubikalaRows] = await Promise.all([
+    getPortalInmobiliarias(),
+    getUbikalaInmobiliarias({ limit: 100 }),
+  ]);
+
+  const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
+
+  // Merge, deduplicate by name, sort by property count
+  const seen = new Set<string>();
+  const allInmobiliarias: Agent[] = [];
+  for (const inmo of [...portalTenants, ...ubikalaInmobiliarias]) {
+    const key = inmo.name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      allInmobiliarias.push(inmo);
+    }
+  }
+  allInmobiliarias.sort((a, b) => b.propertiesCount - a.propertiesCount);
 
   totalCount = allInmobiliarias.length;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;

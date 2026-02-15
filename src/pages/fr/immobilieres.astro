@@ -1,0 +1,128 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import AgentCard from '../../components/AgentCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls } from '../../i18n';
+import { getPortalInmobiliarias } from '../../lib/meilisearch';
+import { getUbikalaInmobiliarias } from '../../lib/ubikala-db';
+import { transformUbikalaAgents } from '../../lib/transformers';
+import type { Agent } from '../../data/types';
+
+// SSR pour pagination
+export const prerender = false;
+
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls('/fr/immobilieres');
+
+// Config pagination
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+// Fetch inmobiliarias: tenants with portal properties + Ubikala company accounts
+let inmobiliarias: Agent[] = [];
+let totalCount = 0;
+try {
+  const [portalTenants, ubikalaRows] = await Promise.all([
+    getPortalInmobiliarias(),
+    getUbikalaInmobiliarias({ limit: 100 }),
+  ]);
+
+  const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
+
+  // Merge, deduplicate by name, sort by property count
+  const seen = new Set<string>();
+  const allInmobiliarias: Agent[] = [];
+  for (const inmo of [...portalTenants, ...ubikalaInmobiliarias]) {
+    const key = inmo.name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      allInmobiliarias.push(inmo);
+    }
+  }
+  allInmobiliarias.sort((a, b) => b.propertiesCount - a.propertiesCount);
+
+  totalCount = allInmobiliarias.length;
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  inmobiliarias = allInmobiliarias.slice(offset, offset + ITEMS_PER_PAGE);
+} catch (error) {
+  console.error('Error fetching inmobiliarias:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect('/fr/immobilieres');
+}
+---
+
+<Layout
+  title="Agences Immobilières | Ubikala"
+  description="Trouvez les meilleures agences immobilières et entreprises de biens immobiliers. Achat, vente et location de propriétés."
+  keywords="agences immobilières, entreprises immobilières, répertoire agences immobilières, immobilier république dominicaine"
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{t.nav.realEstate}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        Agences Immobilières en République Dominicaine
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        Trouvez les meilleures agences immobilières et entreprises de biens immobiliers. Des professionnels vérifiés avec un large portefeuille de propriétés.
+      </p>
+    </div>
+  </section>
+
+  <!-- Résultats -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8">
+        <p class="text-gray-600">
+          <span class="font-semibold text-gray-900">{totalCount}</span> agences immobilières trouvées
+        </p>
+        <select class="select py-2 text-sm w-auto">
+          <option value="properties">Plus de Propriétés</option>
+          <option value="recent">Plus Récentes</option>
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {inmobiliarias.map((agent) => (
+          <AgentCard agent={agent} lang="fr" />
+        ))}
+      </div>
+
+      <!-- Pagination -->
+      {inmobiliarias.length > 0 && (
+        <div class="mt-12">
+          <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl="/fr/immobilieres" />
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom text-center">
+      <h2 class="text-3xl font-bold text-gray-900 mb-4">Vous Avez une Agence Immobilière?</h2>
+      <p class="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+        Inscrivez votre agence sur Ubikala et accédez à des milliers de clients potentiels.
+        Gérez votre équipe, publiez des propriétés et développez votre activité.
+      </p>
+      <a href="/fr/publier" class="btn-primary">
+        Inscrire mon Agence
+      </a>
+    </div>
+  </section>
+</Layout>
