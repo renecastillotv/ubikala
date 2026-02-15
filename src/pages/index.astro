@@ -54,7 +54,7 @@ const organizationSchema = {
   name: 'Ubíkala',
   url: 'https://ubikala.com',
   logo: 'https://ubikala.com/logo.png',
-  description: 'Esa propiedad que buscas, ubíkala aquí. Encuentra casas, apartamentos, villas y terrenos en venta y alquiler en República Dominicana.',
+  description: t.meta.siteDescription,
   address: {
     '@type': 'PostalAddress',
     addressCountry: 'DO',
@@ -240,6 +240,115 @@ const organizationSchema = {
           <p class="text-gray-600">
             {t.sections.expertAgentsDesc}
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Inversión Inmobiliaria RD -->
+  <section class="py-16 bg-white">
+    <div class="container-custom">
+      <div class="text-center mb-12">
+        <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">Tu Próximo Hogar te Espera</span>
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2">
+          Bienes Raíces en República Dominicana
+        </h2>
+        <p class="text-lg text-gray-600 max-w-3xl mx-auto mt-4">
+          Bienvenido a Ubíkala — tu puerta al Caribe. Desde villas frente al mar hasta apartamentos en el corazón de la ciudad,
+          descubre miles de propiedades verificadas en los destinos más codiciados de República Dominicana.
+        </p>
+      </div>
+
+      <!-- Beneficios de inversión -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <div class="bg-gradient-to-br from-primary-50 to-white rounded-2xl p-6 border border-primary-100">
+          <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Abierto a Todos</h3>
+          <p class="text-sm text-gray-600">Sin restricciones para extranjeros. Compra con los mismos derechos que los ciudadanos dominicanos.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-secondary-50 to-white rounded-2xl p-6 border border-secondary-100">
+          <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Retorno Sólido</h3>
+          <p class="text-sm text-gray-600">El mercado turístico en auge genera excelentes ingresos por alquiler, especialmente en Punta Cana y zonas costeras.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-accent-50 to-white rounded-2xl p-6 border border-accent-100">
+          <div class="w-12 h-12 bg-accent-100 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Precios Accesibles</h3>
+          <p class="text-sm text-gray-600">Obtén más por tu inversión comparado con Bahamas, Islas Turcas u otros destinos caribeños.</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-primary-50 to-white rounded-2xl p-6 border border-primary-100">
+          <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
+            </svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Paraíso Todo el Año</h3>
+          <p class="text-sm text-gray-600">Disfruta de más de 300 días de sol al año. El clima perfecto para tu casa vacacional o residencia permanente.</p>
+        </div>
+      </div>
+
+      <!-- Destinos populares -->
+      <div class="bg-gray-50 rounded-3xl p-8 md:p-12">
+        <h3 class="text-2xl font-bold text-gray-900 mb-2">¿Dónde Será tu Próximo Hogar?</h3>
+        <p class="text-gray-600 mb-8">Cada rincón de República Dominicana cuenta una historia diferente. Encuentra la que va contigo.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <a href="/propiedades/punta-cana" class="flex items-start gap-4 group">
+            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
+              <span class="text-lg">🏖️</span>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Punta Cana</h4>
+              <p class="text-sm text-gray-600">El destino turístico #1 del Caribe. Condominios frente a la playa, villas de lujo y alquileres vacacionales con ROI excepcional.</p>
+            </div>
+          </a>
+          <a href="/propiedades/santo-domingo" class="flex items-start gap-4 group">
+            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
+              <span class="text-lg">🏙️</span>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Santo Domingo</h4>
+              <p class="text-sm text-gray-600">La capital vibrante. Apartamentos modernos en Piantini y Naco, casas familiares en Arroyo Hondo, opciones para todos los presupuestos.</p>
+            </div>
+          </a>
+          <a href="/propiedades/santiago" class="flex items-start gap-4 group">
+            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
+              <span class="text-lg">🏔️</span>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Santiago</h4>
+              <p class="text-sm text-gray-600">El corazón cultural del Cibao. Precios accesibles, infraestructura en crecimiento y un estilo de vida comunitario cálido.</p>
+            </div>
+          </a>
+          <a href="/propiedades/las-terrenas" class="flex items-start gap-4 group">
+            <div class="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 group-hover:shadow-md transition-shadow">
+              <span class="text-lg">🌴</span>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">Las Terrenas</h4>
+              <p class="text-sm text-gray-600">Paraíso bohemio en la península de Samaná. Propiedades a pasos de la playa y una comunidad internacional próspera.</p>
+            </div>
+          </a>
+        </div>
+        <div class="mt-8 text-center">
+          <a href="/propiedades" class="text-primary-600 font-semibold hover:text-primary-700 inline-flex items-center gap-2">
+            Explorar todas las ubicaciones
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+          </a>
         </div>
       </div>
     </div>
