@@ -59,8 +59,8 @@ export function localizedUrl(path: string, lang: Lang): string {
     return cleanPath;
   }
 
-  // Para otros idiomas, agregar prefijo
-  return `/${lang}${cleanPath}`;
+  // Para otros idiomas, traducir segmentos de ruta y agregar prefijo
+  return translateRoute(cleanPath, defaultLang, lang);
 }
 
 /**

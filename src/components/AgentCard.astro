@@ -4,9 +4,10 @@ import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
 
 interface Props {
   agent: Agent;
+  href?: string;
 }
 
-const { agent } = Astro.props;
+const { agent, href } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
@@ -14,10 +15,12 @@ const t = useTranslations(lang);
 const hasValidPhoto = agent.photo &&
   agent.photo !== '/images/agent-placeholder.svg' &&
   !agent.photo.includes('placeholder');
+
+const cardHref = href ?? localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.slug}` : `/asesor/${agent.slug}`, lang);
 ---
 
 <a
-  href={localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.slug}` : `/asesor/${agent.slug}`, lang)}
+  href={cardHref}
   class="card group p-6 text-center"
   data-agent-name={agent.name}
   data-agent-company={agent.company || 'Asesor Independiente'}

@@ -41,6 +41,7 @@ const filters = {
   maxPrice: params.get('maxPrice') ? parseInt(params.get('maxPrice')!) : undefined,
   bedrooms: params.get('bedrooms') ? parseInt(params.get('bedrooms')!) : undefined,
   bathrooms: params.get('bathrooms') ? parseInt(params.get('bathrooms')!) : undefined,
+  tenantId: params.get('tenant_id') || undefined,
 };
 
 // Buscar propiedades via MeiliSearch
@@ -65,6 +66,7 @@ try {
     precioMax: filters.maxPrice,
     habitacionesMin: filters.bedrooms,
     banosMin: filters.bathrooms,
+    tenantId: filters.tenantId,
     limit: ITEMS_PER_PAGE,
     offset,
   });

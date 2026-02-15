@@ -397,6 +397,7 @@ export interface SearchOptions {
   destacada?: boolean;
   amenidades?: string[];
   agenteSlug?: string;
+  tenantId?: string;
   sort?: string[];
   limit?: number;
   offset?: number;
@@ -416,7 +417,7 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
     query = '',
     tipo, operacion, pais, provincia, ciudad, sector,
     precioMin, precioMax, habitacionesMin, banosMin,
-    destacada, amenidades, agenteSlug,
+    destacada, amenidades, agenteSlug, tenantId,
     sort = ['destacada:desc', 'updated_at:desc'],
     limit = 20, offset = 0, facets,
   } = options;
@@ -456,8 +457,9 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
     amenidades.forEach(a => filters.push(`amenidades_codigos = "${a}"`));
   }
 
-  // Agent
+  // Agent / Tenant
   if (agenteSlug) filters.push(`agente_slug = "${agenteSlug}"`);
+  if (tenantId) filters.push(`tenant_id = "${tenantId}"`);
 
   const body: any = {
     q: query,
