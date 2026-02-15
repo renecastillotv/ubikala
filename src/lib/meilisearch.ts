@@ -376,9 +376,9 @@ export function meiliToAgent(doc: MeiliAgentDoc): Agent {
 // SEARCH FUNCTIONS
 // ============================================================================
 
-/** Portal filter: matches ubikala OR ubika OR propiedadenrd */
+/** Portal filter: uses computed boolean that includes ubikala/ubika/propiedadenrd/null */
 function portalFilter(): string {
-  return PORTAL_KEYS.map(k => `portales.${k} = true`).join(' OR ');
+  return 'en_portal_ubikala = true';
 }
 
 export interface SearchOptions {
