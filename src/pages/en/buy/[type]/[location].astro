@@ -1,0 +1,606 @@
+---
+import Layout from '../../../../layouts/Layout.astro';
+import PropertyCard from '../../../../components/PropertyCard.astro';
+import SearchBox from '../../../../components/SearchBox.astro';
+import Pagination from '../../../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls } from '../../../../i18n';
+import { searchProperties } from '../../../../lib/meilisearch';
+import type { Property } from '../../../../data/types';
+
+// SSR for dynamic routes
+export const prerender = false;
+
+const { type: typeSlug, location: locationSlug } = Astro.params;
+const t = useTranslations('en');
+
+// Map English URL slugs to database values and display names
+const propertyTypeMap: Record<string, { dbValue: string; singular: string; plural: string; icon: string }> = {
+  'houses': { dbValue: 'casa', singular: 'House', plural: 'Houses', icon: '🏠' },
+  'apartments': { dbValue: 'apartamento', singular: 'Apartment', plural: 'Apartments', icon: '🏢' },
+  'villas': { dbValue: 'villa', singular: 'Villa', plural: 'Villas', icon: '🏡' },
+  'penthouses': { dbValue: 'penthouse', singular: 'Penthouse', plural: 'Penthouses', icon: '🌆' },
+  'land': { dbValue: 'terreno', singular: 'Land Parcel', plural: 'Land & Lots', icon: '🌳' },
+  'commercial': { dbValue: 'local comercial', singular: 'Commercial Space', plural: 'Commercial Spaces', icon: '🏪' },
+  'offices': { dbValue: 'oficina', singular: 'Office', plural: 'Offices', icon: '🏛️' },
+  'warehouses': { dbValue: 'nave', singular: 'Warehouse', plural: 'Warehouses', icon: '🏭' },
+  'buildings': { dbValue: 'edificio', singular: 'Building', plural: 'Buildings', icon: '🏗️' },
+};
+
+// Validate property type
+const typeInfo = propertyTypeMap[typeSlug?.toLowerCase() || ''];
+if (!typeInfo) {
+  return Astro.redirect('/en/buy');
+}
+
+// Format location name from slug
+const formatLocationName = (slug: string) => {
+  return slug
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const locationName = formatLocationName(locationSlug || '');
+
+// Pagination config
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+// Location data with sensible defaults
+let locationData: { name: string; province: string } = {
+  name: locationName,
+  province: 'Dominican Republic'
+};
+
+// Alternate URLs for SEO hreflang
+const alternateUrls = getAlternateUrls(`/en/buy/${typeSlug}/${locationSlug}`);
+
+// Fetch properties filtered by type and location via MeiliSearch
+let properties: Property[] = [];
+let totalCount = 0;
+
+try {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const result = await searchProperties({
+    operacion: 'venta',
+    tipo: typeInfo.dbValue,
+    query: locationSlug?.replace(/-/g, ' '),
+    limit: ITEMS_PER_PAGE,
+    offset
+  });
+
+  properties = result.properties;
+  totalCount = result.total;
+
+  // Update location data from the first property if available
+  if (properties.length > 0) {
+    const firstProp = properties[0];
+    if (firstProp.location.city) {
+      locationData.name = firstProp.location.city;
+    }
+    if (firstProp.location.province) {
+      locationData.province = firstProp.location.province;
+    }
+  }
+} catch (error) {
+  console.error('Error fetching properties:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+// Redirect if page is out of range
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect(`/en/buy/${typeSlug}/${locationSlug}`);
+}
+
+// Dynamic SEO titles and descriptions
+const pageTitle = `${typeInfo.plural} for Sale in ${locationData.name} | Ubikala`;
+const pageDescription = `Find ${typeInfo.plural.toLowerCase()} for sale in ${locationData.name}, ${locationData.province}. ${totalCount} properties available with photos, prices and direct contact with agents.`;
+
+// SEO content specific to type+location combinations
+const seoContent: Record<string, Record<string, { intro: string; benefits: string[]; tips: string[] }>> = {
+  'apartamento': {
+    'default': {
+      intro: `Apartments are the most popular choice for buyers seeking convenience, security and modern amenities. They offer reduced maintenance and access to shared facilities such as pools, gyms and social areas.`,
+      benefits: [
+        '24/7 security and controlled access',
+        'Shared amenities (pool, gym, green areas)',
+        'Lower maintenance than a house',
+        'Central locations with easy access to services'
+      ],
+      tips: [
+        'Inspect the building condition and common areas',
+        'Ask about monthly maintenance fees',
+        'Consider the unit orientation for natural light and ventilation',
+        'Review condo rules regarding pets and short-term rentals'
+      ]
+    },
+    'punta-cana': {
+      intro: `Apartments in Punta Cana are ideal for vacation rental investment and second-home buyers. Many complexes offer rental-pool programs with excellent returns thanks to a steady flow of tourists year-round.`,
+      benefits: [
+        'High demand for vacation rentals',
+        'Access to world-class beaches and resorts',
+        'Hotel-style management programs available',
+        'Appreciation potential from ongoing tourism development'
+      ],
+      tips: [
+        'Consider apartments with a rental-pool program for passive income',
+        'Check proximity to the beach and resort amenities',
+        'Ask about occupancy history if buying for investment',
+        'Factor in low-season maintenance costs'
+      ]
+    },
+    'santo-domingo': {
+      intro: `Santo Domingo offers apartments for every budget, from studios in bustling neighborhoods to luxury penthouses in Piantini and Naco. The capital has the most active real estate market in the country with strong long-term rental demand.`,
+      benefits: [
+        'Most liquid market for buying and selling',
+        'Excellent connectivity and services',
+        'Wide range of prices and locations',
+        'Strong long-term rental demand'
+      ],
+      tips: [
+        'Consider traffic patterns and metro access if you work in the city',
+        'Neighborhoods like Evaristo Morales and Bella Vista offer great value',
+        'Verify parking availability before committing',
+        'Ask about the security profile of the neighborhood'
+      ]
+    }
+  },
+  'casa': {
+    'default': {
+      intro: `Houses offer more space, privacy and the freedom to make the home truly yours. They are perfect for families looking for a yard, barbecue area and room to grow.`,
+      benefits: [
+        'More indoor and outdoor space',
+        'Complete privacy with no neighbors above or below',
+        'Freedom to renovate and expand',
+        'Ideal for families with children or pets'
+      ],
+      tips: [
+        'Inspect the roof, plumbing and electrical systems',
+        'Factor in yard and garden maintenance costs',
+        'Evaluate the neighborhood security and access points',
+        'Ask about any history of flooding or structural issues'
+      ]
+    }
+  },
+  'villa': {
+    'default': {
+      intro: `Villas represent the pinnacle of residential luxury, featuring expansive living spaces, premium finishes and exclusive amenities such as private pools, landscaped gardens and panoramic views.`,
+      benefits: [
+        'Luxury finishes and unique architectural design',
+        'Private pool and spacious gardens',
+        'Greater privacy and exclusivity',
+        'Strong potential for luxury vacation rentals'
+      ],
+      tips: [
+        'Budget for pool and garden maintenance costs',
+        'Consider hiring a property manager if renting it out',
+        'Inspect the quality of finishes and systems',
+        'Ask about construction warranties'
+      ]
+    }
+  },
+  'terreno': {
+    'default': {
+      intro: `Buying land gives you the freedom to build exactly what you envision. It is an investment with strong appreciation potential, especially in developing areas.`,
+      benefits: [
+        'Total freedom to design your project',
+        'Long-term appreciation potential',
+        'Lower initial investment than a built property',
+        'Option to develop in phases'
+      ],
+      tips: [
+        'Verify the land survey and title certificate',
+        'Check the permitted land use (residential, commercial, mixed)',
+        'Confirm access to utilities (water, power, sewage)',
+        'Account for grading costs if the terrain is sloped'
+      ]
+    }
+  },
+  'local comercial': {
+    'default': {
+      intro: `Commercial spaces in the Dominican Republic cater to a growing domestic economy and booming tourism industry. Whether you need a storefront, restaurant space or retail location, there are options across every major city.`,
+      benefits: [
+        'Steady rental income from established commercial areas',
+        'Growing consumer economy drives demand',
+        'Tourism zones offer high-traffic foot traffic',
+        'Potential for long-term commercial leases'
+      ],
+      tips: [
+        'Evaluate foot traffic and visibility of the location',
+        'Verify zoning and permitted commercial activities',
+        'Ask about existing leases and tenant history',
+        'Check parking and accessibility for customers'
+      ]
+    }
+  },
+  'oficina': {
+    'default': {
+      intro: `Office spaces in the Dominican Republic range from modern coworking-ready suites to full floors in corporate towers. The growing business environment makes offices a solid investment.`,
+      benefits: [
+        'Professional business addresses in prime locations',
+        'Modern infrastructure with high-speed internet',
+        'Growing demand from both local and international firms',
+        'Potential for stable long-term leases'
+      ],
+      tips: [
+        'Evaluate the building amenities and management quality',
+        'Check internet and telecom infrastructure',
+        'Consider proximity to banks, restaurants and transit',
+        'Verify parking spaces included with the unit'
+      ]
+    }
+  },
+  'nave': {
+    'default': {
+      intro: `Warehouses and industrial spaces are in demand across the Dominican Republic, particularly in free-trade zones and logistics corridors. They serve manufacturing, distribution and storage needs.`,
+      benefits: [
+        'Strategic locations near ports and highways',
+        'Free-trade zone benefits for eligible businesses',
+        'Large floor plates for flexible use',
+        'Growing logistics and e-commerce demand'
+      ],
+      tips: [
+        'Confirm ceiling height and loading dock specifications',
+        'Verify electrical capacity for your operations',
+        'Check proximity to major highways and shipping ports',
+        'Review any free-trade zone regulations and benefits'
+      ]
+    }
+  },
+  'edificio': {
+    'default': {
+      intro: `Full buildings represent significant investment or development opportunities. Whether you are looking for a rental income portfolio or a redevelopment project, buying an entire building offers maximum control.`,
+      benefits: [
+        'Full control over the asset and its tenants',
+        'Diversified rental income from multiple units',
+        'Redevelopment and value-add potential',
+        'Economies of scale in management'
+      ],
+      tips: [
+        'Conduct thorough due diligence on all existing leases',
+        'Get a professional structural and systems inspection',
+        'Analyze the cap rate and operating expenses',
+        'Verify zoning for any planned changes of use'
+      ]
+    }
+  }
+};
+
+// Get the specific or default SEO content
+const typeContent = seoContent[typeInfo.dbValue] || seoContent['apartamento'];
+const locationContent = typeContent[locationSlug || ''] || typeContent['default'];
+
+// Dynamic FAQs based on type and location
+const dynamicFAQs = [
+  {
+    question: `How much does a ${typeInfo.singular.toLowerCase()} in ${locationData.name} cost?`,
+    answer: `Prices for ${typeInfo.plural.toLowerCase()} in ${locationData.name} vary depending on the exact location, size and amenities. We currently have ${totalCount} options available. We recommend browsing the listings and contacting the agents for the latest pricing information.`
+  },
+  {
+    question: `Is buying a ${typeInfo.singular.toLowerCase()} in ${locationData.name} a good investment?`,
+    answer: `${locationData.name} is an area with stable demand for ${typeInfo.plural.toLowerCase()}. To evaluate whether it is a good investment, consider factors such as historical appreciation, rental demand, infrastructure development and your financial goals. A local real estate agent can provide market-specific insights.`
+  },
+  {
+    question: `What documents do I need to buy a ${typeInfo.singular.toLowerCase()}?`,
+    answer: `To purchase a ${typeInfo.singular.toLowerCase()} in the Dominican Republic you need: a valid passport or cedula, proof of income or bank statements, and a down payment (typically 10-30% of the property value). The seller must provide a certified title certificate, cadastral plan and no-lien certification.`
+  },
+  {
+    question: `Can I finance a ${typeInfo.singular.toLowerCase()} in ${locationData.name}?`,
+    answer: `Yes, most ${typeInfo.plural.toLowerCase()} can be financed through local Dominican banks. Current interest rates range from 9-12% annually for terms of 15-25 years. Some new developments also offer direct developer financing with more flexible conditions.`
+  }
+];
+
+// Schema.org structured data
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `${typeInfo.plural} for Sale in ${locationData.name}`,
+  description: pageDescription,
+  numberOfItems: totalCount,
+  itemListElement: properties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      description: property.description.substring(0, 160),
+      url: `https://ubikala.com/en/property/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: dynamicFAQs.map(faq => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer
+    }
+  }))
+};
+
+// Related property types for suggestions
+const relatedTypes = Object.entries(propertyTypeMap)
+  .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue)
+  .slice(0, 4)
+  .map(([slug, info]) => ({ slug, ...info }));
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  keywords={`${typeInfo.plural.toLowerCase()} ${locationData.name.toLowerCase()}, buy ${typeInfo.singular.toLowerCase()} ${locationData.name.toLowerCase()}, ${typeInfo.plural.toLowerCase()} for sale ${locationData.name.toLowerCase()}`}
+  alternateLanguages={alternateUrls}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
+
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex flex-wrap text-sm text-gray-600">
+        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <a href="/en/buy" class="hover:text-primary-600">{t.nav.buy}</a>
+        <span class="mx-2">/</span>
+        <a href={`/en/buy/${typeSlug}`} class="hover:text-primary-600">{typeInfo.plural}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{locationData.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        {typeInfo.plural} for Sale in {locationData.name}
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        {totalCount > 0
+          ? `Browse ${totalCount} ${typeInfo.plural.toLowerCase()} available for purchase in ${locationData.name}, ${locationData.province}.`
+          : `There are currently no ${typeInfo.plural.toLowerCase()} available in ${locationData.name}. Explore other areas or property types.`
+        }
+      </p>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="py-6 bg-white shadow-sm sticky top-16 z-40">
+    <div class="container-custom">
+      <SearchBox />
+    </div>
+  </section>
+
+  <!-- Results or Empty State -->
+  <section class="section">
+    <div class="container-custom">
+      {properties.length > 0 ? (
+        <>
+          <div class="flex items-center justify-between mb-8">
+            <p class="text-gray-600">
+              <span class="font-semibold text-gray-900">{totalCount}</span> {typeInfo.plural.toLowerCase()} for sale
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard property={property} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div class="mt-12">
+              <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={`/en/buy/${typeSlug}/${locationSlug}`} />
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="text-center py-16">
+          <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-4">
+            No {typeInfo.plural.toLowerCase()} found in {locationData.name}
+          </h2>
+          <p class="text-gray-600 mb-8 max-w-md mx-auto">
+            There are currently no {typeInfo.plural.toLowerCase()} available in this area. Try a different location or property type.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/en/buy" class="btn-primary">
+              View All Properties
+            </a>
+            <a href={`/en/properties/${locationSlug}`} class="btn-outline">
+              See Everything in {locationData.name}
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- SEO Content Section -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
+          Buying {typeInfo.plural} in {locationData.name}
+        </h2>
+
+        <p class="text-gray-600 text-lg mb-8">
+          {locationContent.intro}
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <!-- Benefits -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Benefits of {typeInfo.plural}
+            </h3>
+            <ul class="space-y-3">
+              {locationContent.benefits.map((benefit) => (
+                <li class="flex items-start gap-2 text-gray-600">
+                  <svg class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <!-- Tips -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tips for Buying
+            </h3>
+            <ul class="space-y-3">
+              {locationContent.tips.map((tip) => (
+                <li class="flex items-start gap-2 text-gray-600">
+                  <svg class="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                  {tip}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQs -->
+  <section class="py-16">
+    <div class="container-custom">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4">
+        Frequently Asked Questions
+      </h2>
+      <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+        Answers to common questions about buying {typeInfo.plural.toLowerCase()} in {locationData.name}
+      </p>
+
+      <div class="max-w-3xl mx-auto space-y-4">
+        {dynamicFAQs.map((faq) => (
+          <details class="bg-white rounded-xl shadow-sm group">
+            <summary class="flex items-center justify-between p-6 cursor-pointer">
+              <span class="font-semibold text-gray-900 pr-4">{faq.question}</span>
+              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-6 pb-6 text-gray-600">
+              {faq.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Other Property Types -->
+  <section class="py-16 bg-gray-50">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-6">
+        Other Property Types in {locationData.name}
+      </h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {relatedTypes.map((type) => (
+          <a
+            href={`/en/buy/${type.slug}/${locationSlug}`}
+            class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-center group"
+          >
+            <span class="text-3xl block mb-2">{type.icon}</span>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">
+              {type.plural}
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 bg-gradient-to-r from-primary-600 to-primary-700">
+    <div class="container-custom">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="text-3xl font-bold text-white mb-4">
+          Need help finding your {typeInfo.singular.toLowerCase()}?
+        </h2>
+        <p class="text-primary-100 text-lg mb-8">
+          Our agents know {locationData.name} inside and out and can help you find the perfect property for your budget and needs.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/en/agents" class="bg-white text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Contact an Agent
+          </a>
+          <a href="/en/buy" class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
+            View More Properties
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Related Links -->
+  <section class="py-12">
+    <div class="container-custom">
+      <h2 class="text-xl font-bold text-gray-900 mb-6">Related Links</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href={`/en/properties/${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">All in {locationData.name}</span>
+            <p class="text-sm text-gray-500">All properties</p>
+          </div>
+        </a>
+
+        <a href="/en/rent" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Rent in {locationData.name}</span>
+            <p class="text-sm text-gray-500">Rental properties</p>
+          </div>
+        </a>
+
+        <a href="/en/guides/how-to-buy" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Buying Guide</span>
+            <p class="text-sm text-gray-500">Step by step</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

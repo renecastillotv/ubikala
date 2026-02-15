@@ -316,12 +316,12 @@ export const es = {
       description: 'Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler. Miles de propiedades verificadas en Santo Domingo, Punta Cana, Santiago y más.',
     },
     buy: {
-      title: 'Propiedades en Venta | Ubíkala',
-      description: 'Explora miles de propiedades en venta. Casas, apartamentos, villas, terrenos y locales comerciales con los mejores precios del mercado.',
+      title: 'Propiedades en Venta en República Dominicana | Ubíkala',
+      description: 'Explora miles de propiedades en venta en República Dominicana. Casas, apartamentos, villas, terrenos y locales comerciales en Santo Domingo, Punta Cana, Santiago y más.',
     },
     rent: {
-      title: 'Propiedades en Alquiler | Ubíkala',
-      description: 'Alquila tu próximo hogar. Apartamentos amueblados, casas familiares, oficinas y locales comerciales disponibles para alquiler.',
+      title: 'Propiedades en Alquiler en República Dominicana | Ubíkala',
+      description: 'Alquila tu próximo hogar en República Dominicana. Apartamentos amueblados, casas familiares, oficinas y locales comerciales en Santo Domingo, Punta Cana y más.',
     },
     agents: {
       title: 'Asesores Inmobiliarios | Ubíkala',

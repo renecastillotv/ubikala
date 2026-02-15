@@ -6,6 +6,7 @@ import Pagination from '../../components/Pagination.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
+import { firstTimeBuyerFAQsEN, financingFAQsEN, usBuyerFAQsEN } from '../../lib/seo-content-en';
 
 // SSR for pagination
 export const prerender = false;
@@ -34,14 +35,51 @@ const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/en/buy');
 }
+
+const pageTitle = t.pages.buy.title;
+const pageDescription = t.pages.buy.description;
+
+// Schema.org ItemList for property listings
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Properties for Sale in the Dominican Republic',
+  description: pageDescription,
+  numberOfItems: totalCount,
+  itemListElement: properties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      description: property.description.substring(0, 160),
+      url: `https://ubikala.com/en/property/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
+
+// Combine FAQs for display and schema
+const displayFAQs = [
+  ...firstTimeBuyerFAQsEN.slice(0, 3),
+  ...financingFAQsEN.slice(0, 2),
+  ...usBuyerFAQsEN.slice(0, 1),
+];
 ---
 
 <Layout
-  title={t.pages.buy.title}
-  description={t.pages.buy.description}
+  title={pageTitle}
+  description={pageDescription}
   keywords={t.meta.keywords}
   alternateLanguages={alternateUrls}
 >
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
+
   <!-- Breadcrumb -->
   <div class="bg-gray-100 py-4">
     <div class="container-custom">
@@ -107,33 +145,299 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- SEO Content -->
-  <section class="py-12 bg-gray-50">
+  <!-- SEO Content - Visual Design -->
+  <section class="py-16 bg-gradient-to-b from-white to-gray-50">
     <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Buy Property in the Dominican Republic</h2>
-        <p>
-          The Dominican Republic offers excellent real estate investment opportunities in the Caribbean.
-          Whether you're looking for a family home in Santo Domingo, an investment apartment in Punta Cana,
-          a luxury beachfront villa in Las Terrenas, or development land in Santiago,
-          our portal connects you with the best options on the market.
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Your Guide to Buying in the Dominican Republic
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Everything you need to know about Caribbean real estate investment
         </p>
+      </div>
 
-        <h3>Popular Areas for Buying</h3>
-        <ul>
-          <li><strong>Santo Domingo:</strong> The capital offers modern apartments in Piantini and Naco to spacious houses in Arroyo Hondo.</li>
-          <li><strong>Punta Cana:</strong> The Caribbean's #1 tourist destination with excellent vacation rental returns.</li>
-          <li><strong>Santiago:</strong> More affordable prices and excellent quality of life in the Cibao region.</li>
-          <li><strong>Las Terrenas:</strong> Bohemian paradise with unique beachfront properties.</li>
-        </ul>
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+        <div class="bg-primary-50 rounded-xl p-5 text-center border border-primary-100">
+          <div class="w-10 h-10 bg-primary-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">No restrictions for foreigners</span>
+        </div>
+        <div class="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100">
+          <div class="w-10 h-10 bg-emerald-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">First-time buyer subsidy available</span>
+        </div>
+        <div class="bg-amber-50 rounded-xl p-5 text-center border border-amber-100">
+          <div class="w-10 h-10 bg-amber-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">Secure trust (fideicomiso) purchases</span>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-5 text-center border border-purple-100">
+          <div class="w-10 h-10 bg-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">8-12% returns in tourist areas</span>
+        </div>
+      </div>
 
-        <h3>Buying Process for Foreigners</h3>
-        <p>
-          Foreigners can buy property in the Dominican Republic without restrictions.
-          The process is straightforward and the verified agents on our portal can guide you
-          through every step, from search to closing.
-        </p>
+      <!-- Two Column Layout -->
+      <div class="grid md:grid-cols-2 gap-12 mb-16">
+        <!-- Popular Areas -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Popular Areas for Buying</h3>
+          </div>
+          <div class="space-y-4">
+            <a href="/en/properties/santo-domingo" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600 text-lg">🏙️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Santo Domingo</span>
+                <p class="text-sm text-gray-500">Modern apartments in Piantini, Naco, Bella Vista</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/punta-cana" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-lg">🏖️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Punta Cana</span>
+                <p class="text-sm text-gray-500">Villas and condos with high rental returns</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/santiago" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-lg">🏔️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Santiago</span>
+                <p class="text-sm text-gray-500">Affordable prices, excellent quality of life</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/samana" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-lg">🌴</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Las Terrenas / Samana</span>
+                <p class="text-sm text-gray-500">Bohemian paradise with beachfront living</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Property Types -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Property Types</h3>
+          </div>
+          <div class="space-y-4">
+            <a href="/en/buy/apartments" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600 text-sm font-bold">A</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Apartments</span>
+                <p class="text-sm text-gray-500">From studios to luxury penthouses</p>
+              </div>
+            </a>
+            <a href="/en/buy/houses" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">H</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Houses</span>
+                <p class="text-sm text-gray-500">Family homes with 24/7 gated security</p>
+              </div>
+            </a>
+            <a href="/en/buy/villas" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-sm font-bold">V</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Villas</span>
+                <p class="text-sm text-gray-500">Exclusive properties with private pools</p>
+              </div>
+            </a>
+            <a href="/en/buy/land" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors group">
+              <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">L</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-primary-600">Land</span>
+                <p class="text-sm text-gray-500">Lots for residential or commercial development</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Foreign Buyers Info Box -->
+      <div class="bg-green-50 border-l-4 border-green-500 rounded-r-xl p-6 mb-16">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-green-800 mb-2">No Restrictions for Foreign Buyers</h3>
+            <p class="text-green-700">
+              Foreigners can purchase property in the Dominican Republic with the exact same rights as Dominican nationals.
+              You do not need residency or a special visa to buy. All you need is a valid passport, and our verified agents
+              will guide you through every step of the process -- from search to closing.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- FAQ Section -->
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions About Buying in the DR</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        {displayFAQs.map((faq) => (
+          <details class="group bg-gray-50 rounded-lg">
+            <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+              <span class="font-medium text-gray-900 pr-4">{faq.question}</span>
+              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-4 pb-4 text-gray-600">
+              {faq.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Educational Content & Internal Linking -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- First-Time Buyer Subsidy -->
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">First-Time Buyer Subsidy</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Buying your first home? You could receive up to RD$1,500,000 (approx. US$25,000) in government subsidies through the Bono Primera Vivienda program.
+          </p>
+          <a href="/en/guides/first-time-buyer-subsidy" class="text-primary-600 font-medium text-sm hover:underline inline-flex items-center gap-1">
+            Learn about requirements
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Trust Purchases (Fideicomiso) -->
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Trust Purchases (Fideicomiso)</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            The safest way to buy pre-construction properties. Your investment is protected by law, with bank-supervised fund releases tied to construction milestones.
+          </p>
+          <a href="/en/guides/fideicomiso-trust-purchases" class="text-primary-600 font-medium text-sm hover:underline inline-flex items-center gap-1">
+            Learn how it works
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- US Buyers Guide -->
+        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">US Buyers Guide</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Complete guide for American buyers: taxes, financing options, wire transfers, residency by investment, and the step-by-step purchase process.
+          </p>
+          <a href="/en/guides/us-buyers-guide" class="text-primary-600 font-medium text-sm hover:underline inline-flex items-center gap-1">
+            Read the full guide
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-12 bg-gradient-to-r from-primary-600 to-primary-700">
+    <div class="container-custom text-center">
+      <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
+        Ready to find your ideal property?
+      </h2>
+      <p class="text-primary-100 mb-6 max-w-xl mx-auto">
+        Our verified agents will help you navigate the Dominican Republic real estate market and find the perfect property for your needs.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/en/agents" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          Browse Agents
+        </a>
+        <a href="/en/contact" class="inline-flex items-center justify-center gap-2 bg-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Contact Us
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Schema -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": displayFAQs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  })} />
 </Layout>

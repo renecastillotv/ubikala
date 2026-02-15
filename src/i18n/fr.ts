@@ -318,12 +318,12 @@ export const fr: Translations = {
       description: 'Trouvez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer. Des milliers de propriétés vérifiées à Saint-Domingue, Punta Cana, Santiago et plus.',
     },
     buy: {
-      title: 'Propriétés à Vendre | Ubíkala',
-      description: 'Explorez des milliers de propriétés à vendre. Maisons, appartements, villas, terrains et locaux commerciaux aux meilleurs prix du marché.',
+      title: 'Propriétés à Vendre en République Dominicaine | Ubíkala',
+      description: 'Explorez des milliers de propriétés à vendre en République Dominicaine. Maisons, appartements, villas, terrains à Punta Cana, Saint-Domingue, Santiago et plus.',
     },
     rent: {
-      title: 'Propriétés à Louer | Ubíkala',
-      description: 'Louez votre prochain logement. Appartements meublés, maisons familiales, bureaux et locaux commerciaux disponibles à la location.',
+      title: 'Propriétés à Louer en République Dominicaine | Ubíkala',
+      description: 'Louez votre prochain logement en République Dominicaine. Appartements meublés, maisons familiales, bureaux à Saint-Domingue, Punta Cana et plus.',
     },
     agents: {
       title: 'Agents Immobiliers | Ubíkala',

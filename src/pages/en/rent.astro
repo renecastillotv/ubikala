@@ -7,6 +7,26 @@ import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
 
+// Inline English rental FAQs
+const rentalFAQs = [
+  {
+    question: "What documents do I need to rent in the DR?",
+    answer: "You will generally need: a valid ID or passport, proof of income (employment letter or bank statements), personal or employer references, and a security deposit (usually 1-2 months of rent). Some landlords may also require a guarantor or bank guarantee."
+  },
+  {
+    question: "What is the typical security deposit?",
+    answer: "The standard deposit is 1 to 2 months of rent, plus the first month paid in advance. For luxury or furnished properties, the deposit can be 2-3 months. This deposit is refundable at the end of the lease if the property is in good condition."
+  },
+  {
+    question: "Do rentals include utilities?",
+    answer: "It depends on the agreement. Furnished or vacation apartments sometimes include water, internet, and common area maintenance. Electricity is generally paid by the tenant. Always verify what is included before signing the lease."
+  },
+  {
+    question: "Can foreigners rent in the Dominican Republic?",
+    answer: "Yes, foreigners can rent without restrictions. You only need a valid passport and to meet the landlord's requirements. For long-term leases, some landlords prefer tenants with residency or a work visa, but it is not mandatory."
+  }
+];
+
 // SSR for pagination
 export const prerender = false;
 
@@ -34,14 +54,44 @@ const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/en/rent');
 }
+
+const pageTitle = t.pages.rent.title;
+const pageDescription = t.pages.rent.description;
+
+// Schema.org ItemList for rental properties
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Properties for Rent in the Dominican Republic',
+  description: pageDescription,
+  numberOfItems: totalCount,
+  itemListElement: properties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      description: property.description.substring(0, 160),
+      url: `https://ubikala.com/en/property/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
 ---
 
 <Layout
-  title={t.pages.rent.title}
-  description={t.pages.rent.description}
+  title={pageTitle}
+  description={pageDescription}
   keywords={t.meta.keywords}
   alternateLanguages={alternateUrls}
 >
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
+
   <!-- Breadcrumb -->
   <div class="bg-gray-100 py-4">
     <div class="container-custom">
@@ -94,8 +144,16 @@ if (currentPage > totalPages && totalPages > 0) {
         </div>
       ) : (
         <div class="card p-12 text-center">
-          <p class="text-gray-600">No rental properties available at the moment.</p>
-          <a href="/en/buy" class="btn-primary mt-4">View properties for sale</a>
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <h2 class="text-2xl font-semibold text-gray-900 mb-2">
+            No rental properties available
+          </h2>
+          <p class="text-gray-600 mb-6 max-w-md mx-auto">
+            There are currently no properties available for rent. Check out properties for sale instead.
+          </p>
+          <a href="/en/buy" class="btn-primary">View properties for sale</a>
         </div>
       )}
 
@@ -108,24 +166,242 @@ if (currentPage > totalPages && totalPages > 0) {
     </div>
   </section>
 
-  <!-- SEO Content -->
-  <section class="py-12 bg-gray-50">
+  <!-- SEO Content - Visual Design -->
+  <section class="py-16 bg-gradient-to-b from-white to-gray-50">
     <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Rent Property in the Dominican Republic</h2>
-        <p>
-          Whether you're looking for a furnished apartment for a short stay,
-          a house for your family, or a commercial space for your business,
-          we have the best rental options throughout the country.
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Your Guide to Renting in the Dominican Republic
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Find the perfect space to live or work
         </p>
+      </div>
 
-        <h3>Types of Rentals Available</h3>
-        <ul>
-          <li><strong>Residential Rental:</strong> Apartments and houses for long-term living.</li>
-          <li><strong>Vacation Rental:</strong> Furnished properties for short stays in tourist destinations.</li>
-          <li><strong>Commercial Rental:</strong> Offices, retail spaces and industrial warehouses for your business.</li>
-        </ul>
+      <!-- Rental Types Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+        <div class="bg-secondary-50 rounded-xl p-5 text-center border border-secondary-100">
+          <div class="w-10 h-10 bg-secondary-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">Furnished Apartments</span>
+        </div>
+        <div class="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100">
+          <div class="w-10 h-10 bg-emerald-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">Family Houses</span>
+        </div>
+        <div class="bg-amber-50 rounded-xl p-5 text-center border border-amber-100">
+          <div class="w-10 h-10 bg-amber-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">Offices & Commercial</span>
+        </div>
+        <div class="bg-purple-50 rounded-xl p-5 text-center border border-purple-100">
+          <div class="w-10 h-10 bg-purple-500 rounded-full mx-auto mb-3 flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+          <span class="text-sm font-medium text-gray-800">Vacation Villas</span>
+        </div>
+      </div>
+
+      <!-- Two Column Layout -->
+      <div class="grid md:grid-cols-2 gap-12 mb-16">
+        <!-- Popular Areas -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Popular Areas for Renting</h3>
+          </div>
+          <div class="space-y-4">
+            <a href="/en/properties/santo-domingo" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-secondary-50 transition-colors group">
+              <span class="w-8 h-8 bg-secondary-100 rounded-lg flex items-center justify-center text-secondary-600 text-lg">🏙️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-secondary-600">Santo Domingo</span>
+                <p class="text-sm text-gray-500">Piantini, Naco, Bella Vista, Serralles</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/punta-cana" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-secondary-50 transition-colors group">
+              <span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-lg">🏖️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-secondary-600">Punta Cana</span>
+                <p class="text-sm text-gray-500">Cap Cana, Bavaro, Punta Cana Village</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/santiago" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-secondary-50 transition-colors group">
+              <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-lg">🏔️</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-secondary-600">Santiago</span>
+                <p class="text-sm text-gray-500">Cerros de Gurabo, Jardines Metropolitanos</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+            <a href="/en/properties/puerto-plata" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-secondary-50 transition-colors group">
+              <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-lg">🌊</span>
+              <div class="flex-1">
+                <span class="font-medium text-gray-900 group-hover:text-secondary-600">Puerto Plata</span>
+                <p class="text-sm text-gray-500">Sosua, Cabarete</p>
+              </div>
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Rental Requirements -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Rental Requirements</h3>
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <div>
+                <span class="font-medium text-gray-900">ID / Passport</span>
+                <p class="text-sm text-gray-500">Valid Dominican ID card or passport</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <div>
+                <span class="font-medium text-gray-900">Proof of income</span>
+                <p class="text-sm text-gray-500">Employment letter or bank statements</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <div>
+                <span class="font-medium text-gray-900">Security deposit</span>
+                <p class="text-sm text-gray-500">Usually 1-2 months of rent</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+              <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+              <div>
+                <span class="font-medium text-gray-900">References</span>
+                <p class="text-sm text-gray-500">Personal or employer references</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Box -->
+      <div class="bg-blue-50 border-l-4 border-blue-500 rounded-r-xl p-6 mb-16">
+        <div class="flex items-start gap-4">
+          <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-semibold text-blue-800 mb-2">Foreigners Can Rent Without Restrictions</h3>
+            <p class="text-blue-700">
+              You do not need residency or a special visa to rent in the Dominican Republic.
+              Just a valid passport and meeting the landlord's requirements. Our agents will help you find the ideal property.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- FAQ Section -->
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions About Renting</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        {rentalFAQs.map((faq) => (
+          <details class="group bg-gray-50 rounded-lg">
+            <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+              <span class="font-medium text-gray-900 pr-4">{faq.question}</span>
+              <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div class="px-4 pb-4 text-gray-600">
+              {faq.answer}
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-12 bg-gradient-to-r from-secondary-600 to-secondary-700">
+    <div class="container-custom text-center">
+      <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">
+        Looking for a place to rent?
+      </h2>
+      <p class="text-green-100 mb-6 max-w-xl mx-auto">
+        Our agents will help you find the perfect space for you and your family.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/en/agents" class="inline-flex items-center justify-center gap-2 bg-white text-secondary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          View Agents
+        </a>
+        <a href="/en/contact" class="inline-flex items-center justify-center gap-2 bg-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary-400 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Contact Us
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Schema -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": rentalFAQs.map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  })} />
 </Layout>

@@ -6,6 +6,7 @@ import Pagination from '../../../components/Pagination.astro';
 import { useTranslations, getAlternateUrls, localizedUrl, type Lang } from '../../../i18n';
 import { getPropertiesByLocation } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
+import { locationFAQsEN, firstTimeBuyerFAQsEN, financingFAQsEN } from '../../../lib/seo-content-en';
 
 export const prerender = false;
 
@@ -58,17 +59,129 @@ const startIndex = (validCurrentPage - 1) * PROPERTIES_PER_PAGE;
 const endIndex = startIndex + PROPERTIES_PER_PAGE;
 const paginatedProperties = locationProperties.slice(startIndex, endIndex);
 
-const pageTitle = `Properties in ${locationData.name} | Ubikala`;
+const pageTitle = `Properties in ${locationData.name}, Dominican Republic | Ubikala`;
 const pageDescription = `Find ${locationData.propertyCount} properties in ${locationData.name}, Dominican Republic. Houses, apartments, villas and more.`;
 
 const preserveParams: Record<string, string> = {};
+
+// Location-specific SEO content
+type LocationInfo = {
+  highlights: string[];
+  investmentReasons: string[];
+  nearbyAttractions: string[];
+  lifestyle: string;
+};
+
+const locationContent: Record<string, LocationInfo> = {
+  'punta-cana': {
+    highlights: ['White sand beaches', 'World-class resorts', 'Championship golf courses', 'International airport'],
+    investmentReasons: [
+      'The #1 Caribbean tourist destination with millions of annual visitors',
+      'High vacation rental demand with excellent return on investment',
+      'Modern and continuously developing infrastructure',
+      'Tourist free zone with tax benefits'
+    ],
+    nearbyAttractions: ['Cap Cana', 'Bavaro', 'Macao Beach', 'Saona Island', 'Hoyo Azul'],
+    lifestyle: 'tropical beach lifestyle with access to resorts, gourmet restaurants and nightlife'
+  },
+  'santo-domingo': {
+    highlights: ['Capital of the Dominican Republic', 'UNESCO World Heritage Colonial Zone', 'Financial center of the country', 'Culture and history'],
+    investmentReasons: [
+      'The economic and commercial center of the country',
+      'Highest demand for long-term residential rentals',
+      'Excellent connectivity and services',
+      'Most stable and mature real estate market'
+    ],
+    nearbyAttractions: ['Colonial Zone', 'Malecon', 'Botanical Garden', 'Los Tres Ojos', 'Boca Chica'],
+    lifestyle: 'urban with all amenities, shopping centers, universities and top-tier hospitals'
+  },
+  'santiago': {
+    highlights: ['Second largest city', 'Industrial center of the Cibao', 'Pleasant mountain climate', 'Rich local culture'],
+    investmentReasons: [
+      'The economic engine of the northern region',
+      'More affordable prices than Santo Domingo',
+      'Steady growth and urban development',
+      'Excellent quality of life'
+    ],
+    nearbyAttractions: ['Monumento a los Heroes', 'Centro Leon', 'Jarabacoa', 'Constanza', 'La Vega'],
+    lifestyle: 'urban with cool climate, cultural traditions and mountain access'
+  },
+  'la-romana': {
+    highlights: ['Casa de Campo Resort', 'Altos de Chavon', 'Cruise port', 'Teeth of the Dog golf course'],
+    investmentReasons: [
+      'World-renowned luxury destination',
+      'Established expatriate community',
+      'World-class marina',
+      'Consistent appreciation in premium properties'
+    ],
+    nearbyAttractions: ['Casa de Campo', 'Altos de Chavon', 'Catalina Island', 'Bayahibe', 'Dominicus'],
+    lifestyle: 'exclusive resort living with access to golf, marina and beach'
+  },
+  'puerto-plata': {
+    highlights: ['Amber Coast', 'Only cable car in the Caribbean', 'San Felipe Fortress', 'Golden beaches'],
+    investmentReasons: [
+      'More affordable prices than other tourist destinations',
+      'International airport with direct flights',
+      'Growing tourism development',
+      'Significant appreciation potential'
+    ],
+    nearbyAttractions: ['Playa Dorada', 'Cabarete', 'Sosua', 'Ocean World', '27 Charcos de Damajagua'],
+    lifestyle: 'relaxed coastal living with water sports, kitesurfing and surfing'
+  },
+  'samana': {
+    highlights: ['Whale watching', 'Pristine beaches', 'El Limon waterfall', 'Los Haitises National Park'],
+    investmentReasons: [
+      'Booming eco-tourism destination',
+      'Unique and preserved natural beauty',
+      'New international airport',
+      'Sustainable development opportunities'
+    ],
+    nearbyAttractions: ['Las Terrenas', 'Las Galeras', 'Cayo Levantado', 'Playa Rincon', 'Los Haitises'],
+    lifestyle: 'peaceful and natural with emphasis on eco-tourism and wellness'
+  }
+};
+
+// Get location-specific content or use defaults
+const slugLower = (locationSlug || '').toLowerCase();
+const specificContent = locationContent[slugLower] || {
+  highlights: ['Prime location', 'Growing community', 'Good connectivity', 'Nearby amenities'],
+  investmentReasons: [
+    'Developing real estate market',
+    'Competitive prices',
+    'Appreciation potential',
+    'Growing demand'
+  ],
+  nearbyAttractions: [],
+  lifestyle: 'unique with Dominican charm'
+};
+
+// ItemList Schema for the location page
+const locationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `Properties in ${locationData.name}`,
+  description: pageDescription,
+  numberOfItems: locationProperties.length,
+  itemListElement: locationProperties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      url: `https://ubikala.com/en/property/${property.slug}`,
+    },
+  })),
+};
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
   alternateLanguages={alternateUrls}
+  keywords={`properties ${locationData.name}, houses ${locationData.name}, apartments ${locationData.name}, real estate ${locationData.province} dominican republic`}
 >
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(locationSchema)} slot="head" />
+
   <!-- Breadcrumb -->
   <div class="bg-gray-100 py-4">
     <div class="container-custom">
@@ -165,6 +278,228 @@ const preserveParams: Record<string, string> = {};
     </div>
   </section>
 
+  <!-- SEO Content - Dynamic based on location - Styled -->
+  <section class="py-16 bg-gradient-to-b from-white to-gray-50">
+    <div class="container-custom">
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Discover {locationData.name}
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          {locationData.propertyCount} properties available in {locationData.province}
+        </p>
+      </div>
+
+      <!-- Location Highlights - Cards with Icons -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+        {specificContent.highlights.map((highlight, index) => {
+          const colors = ['bg-primary-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500'];
+          const bgColors = ['bg-primary-50', 'bg-emerald-50', 'bg-amber-50', 'bg-purple-50'];
+          return (
+            <div class={`${bgColors[index % 4]} rounded-xl p-5 text-center border border-gray-100`}>
+              <div class={`w-10 h-10 ${colors[index % 4]} rounded-full mx-auto mb-3 flex items-center justify-center`}>
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-sm font-medium text-gray-800">{highlight}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <!-- Two Column Layout -->
+      <div class="grid md:grid-cols-2 gap-12 mb-16">
+        <!-- Investment Reasons -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Why Invest Here?</h3>
+          </div>
+          <p class="text-gray-600 mb-6">
+            {locationData.name} offers a {specificContent.lifestyle}, with unique opportunities for both residence and investment.
+          </p>
+          <ul class="space-y-3">
+            {specificContent.investmentReasons.map((reason) => (
+              <li class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span class="text-gray-700">{reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <!-- Property Types -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-secondary-100 rounded-xl flex items-center justify-center">
+              <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900">Property Types</h3>
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-primary-600 text-sm font-bold">A</span>
+              <div>
+                <span class="font-medium text-gray-900">Apartments</span>
+                <p class="text-sm text-gray-500">From studios to luxury penthouses</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 text-sm font-bold">H</span>
+              <div>
+                <span class="font-medium text-gray-900">Houses</span>
+                <p class="text-sm text-gray-500">Family residences with 24/7 security</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 text-sm font-bold">V</span>
+              <div>
+                <span class="font-medium text-gray-900">Villas</span>
+                <p class="text-sm text-gray-500">Exclusive properties with private pools</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">L</span>
+              <div>
+                <span class="font-medium text-gray-900">Land</span>
+                <p class="text-sm text-gray-500">Lots for your residential or commercial project</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nearby Attractions - Pill Tags -->
+      {specificContent.nearbyAttractions.length > 0 && (
+        <div class="mb-16">
+          <h3 class="text-xl font-bold text-gray-900 mb-6 text-center">Nearby Areas and Attractions</h3>
+          <div class="flex flex-wrap justify-center gap-3">
+            {specificContent.nearbyAttractions.map((attraction) => (
+              <span class="px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-700 text-sm hover:border-primary-300 hover:bg-primary-50 transition-colors">
+                {attraction}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- CTA -->
+      <div class="bg-gradient-to-r from-primary-600 to-primary-700 rounded-2xl p-8 md:p-12 text-center">
+        <h3 class="text-2xl md:text-3xl font-bold text-white mb-4">
+          Looking for property in {locationData.name}?
+        </h3>
+        <p class="text-primary-100 mb-6 max-w-xl mx-auto">
+          Our specialized agents know the local market and will guide you through the entire process.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/en/agents" class="inline-flex items-center justify-center gap-2 bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            View Agents
+          </a>
+          <a href="/en/contact" class="inline-flex items-center justify-center gap-2 bg-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-400 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Contact Us
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-12 bg-white">
+    <div class="container-custom">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions about {locationData.name}</h2>
+      <div class="max-w-3xl mx-auto space-y-4">
+        {(() => {
+          const locFaqs = locationFAQsEN[slugLower] || [];
+          const allFaqs = [...locFaqs, ...firstTimeBuyerFAQsEN.slice(0, 2), ...financingFAQsEN.slice(0, 1)];
+          return allFaqs.map((faq) => (
+            <details class="group bg-gray-50 rounded-lg">
+              <summary class="flex items-center justify-between p-4 cursor-pointer list-none">
+                <span class="font-medium text-gray-900">{faq.question}</span>
+                <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="px-4 pb-4 text-gray-600">
+                {faq.answer}
+              </div>
+            </details>
+          ));
+        })()}
+      </div>
+    </div>
+  </section>
+
+  <!-- Educational Content & Internal Linking -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <div class="grid md:grid-cols-3 gap-8">
+        <!-- First-Time Buyer Subsidy -->
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">First-Time Buyer Subsidy</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Buying your first home in {locationData.name}? You could receive up to RD$1,500,000 in government subsidies.
+          </p>
+          <a href="/en/guides/first-time-buyer" class="text-primary-600 font-medium text-sm hover:underline">
+            Learn the requirements &rarr;
+          </a>
+        </div>
+
+        <!-- Trust Purchases (Fideicomiso) -->
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Trust Purchases (Fideicomiso)</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Buy safely in pre-construction projects with your investment protected by law.
+          </p>
+          <a href="/en/guides/trust-purchases" class="text-primary-600 font-medium text-sm hover:underline">
+            Learn how it works &rarr;
+          </a>
+        </div>
+
+        <!-- US Buyers Guide -->
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">US Buyers Guide</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Guide for Americans: taxes, financing and the buying process in the Dominican Republic.
+          </p>
+          <a href="/en/guides/buying-from-usa" class="text-primary-600 font-medium text-sm hover:underline">
+            View complete guide &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Explore Other Locations -->
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
@@ -191,4 +526,42 @@ const preserveParams: Record<string, string> = {};
       </div>
     </div>
   </section>
+
+  <!-- BreadcrumbList Schema -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://ubikala.com/en"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": `Properties in ${locationData.name}`,
+        "item": `https://ubikala.com/en/properties/${locationData.slug}`
+      }
+    ]
+  })} />
+
+  <!-- FAQ Schema for location -->
+  <script is:inline type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      ...(locationFAQsEN[slugLower] || []),
+      ...firstTimeBuyerFAQsEN.slice(0, 2),
+      ...financingFAQsEN.slice(0, 1)
+    ].map(faq => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer
+      }
+    }))
+  })} />
 </Layout>

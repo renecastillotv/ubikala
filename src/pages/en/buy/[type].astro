@@ -1,0 +1,187 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PropertyCard from '../../../components/PropertyCard.astro';
+import SearchBox from '../../../components/SearchBox.astro';
+import { useTranslations, getAlternateUrls } from '../../../i18n';
+import { searchProperties } from '../../../lib/meilisearch';
+import type { Property } from '../../../data/types';
+
+// SSR for dynamic type pages
+export const prerender = false;
+
+// Map English URL slugs to database type values
+const slugToDbType: Record<string, string> = {
+  'houses': 'casa',
+  'apartments': 'apartamento',
+  'villas': 'villa',
+  'penthouses': 'penthouse',
+  'land': 'terreno',
+  'commercial': 'local comercial',
+  'offices': 'oficina',
+  'warehouses': 'nave',
+  'buildings': 'edificio',
+};
+
+const typeNames: Record<string, string> = {
+  'houses': 'Houses',
+  'apartments': 'Apartments',
+  'villas': 'Villas',
+  'penthouses': 'Penthouses',
+  'land': 'Land & Lots',
+  'commercial': 'Commercial Spaces',
+  'offices': 'Offices',
+  'warehouses': 'Warehouses',
+  'buildings': 'Buildings',
+};
+
+const typeDescriptions: Record<string, string> = {
+  'houses': 'Browse houses for sale across the Dominican Republic. From family residences to luxury homes in the most sought-after neighborhoods.',
+  'apartments': 'Explore apartments for sale in Santo Domingo, Punta Cana, Santiago and beyond. Modern units with top amenities in prime locations.',
+  'villas': 'Discover exclusive beachfront villas, golf course estates and gated-community retreats. Premium Caribbean luxury at its finest.',
+  'penthouses': 'The most spectacular penthouses in the Dominican Republic. Panoramic views, private terraces and first-class finishes.',
+  'land': 'Land and lots for sale to build your next project. Residential, commercial and industrial parcels in strategic locations.',
+  'commercial': 'Commercial spaces in high-traffic areas. Ideal for restaurants, retail shops, offices and more.',
+  'offices': 'Office space in business towers and commercial buildings. Move-in ready for your company.',
+  'warehouses': 'Industrial warehouses and storage facilities in free-trade zones and industrial parks.',
+  'buildings': 'Full buildings for sale as investment or development opportunities.',
+};
+
+// Map English slugs back to Spanish slugs for alternate URLs
+const englishToSpanishSlug: Record<string, string> = {
+  'houses': 'casas',
+  'apartments': 'apartamentos',
+  'villas': 'villas',
+  'penthouses': 'penthouses',
+  'land': 'terrenos',
+  'commercial': 'locales-comerciales',
+  'offices': 'oficinas',
+  'warehouses': 'almacenes',
+  'buildings': 'edificios',
+};
+
+const { type: typeSlug } = Astro.params;
+const t = useTranslations('en');
+
+const dbType = slugToDbType[typeSlug || ''];
+const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Properties';
+const typeDescription = typeDescriptions[typeSlug || ''] || `Find ${typeName.toLowerCase()} for sale in the Dominican Republic.`;
+
+// Redirect to /en/buy if the type slug is not recognized
+if (!dbType) {
+  return Astro.redirect('/en/buy');
+}
+
+const spanishSlug = englishToSpanishSlug[typeSlug || ''] || typeSlug;
+const alternateUrls = getAlternateUrls(`/en/buy/${typeSlug}`);
+
+// Fetch properties from MeiliSearch
+let typeProperties: Property[] = [];
+let totalCount = 0;
+try {
+  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24 });
+  typeProperties = result.properties;
+  totalCount = result.total;
+} catch (error) {
+  console.error('Error fetching properties by type:', error);
+}
+
+const pageTitle = `${typeName} for Sale in Dominican Republic | Ubikala`;
+---
+
+<Layout
+  title={pageTitle}
+  description={typeDescription}
+  keywords={`${typeName.toLowerCase()} for sale dominican republic, buy ${typeName.toLowerCase()} dr, ${typeName.toLowerCase()} santo domingo, ${typeName.toLowerCase()} punta cana`}
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <a href="/en/buy" class="hover:text-primary-600">{t.nav.buy}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">{typeName}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        {typeName} for Sale in the Dominican Republic
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        {typeDescription}
+      </p>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="py-8 bg-white shadow-sm">
+    <div class="container-custom">
+      <SearchBox variant="inline" />
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8">
+        <p class="text-gray-600">
+          <span class="font-semibold text-gray-900">{totalCount}</span> {typeName.toLowerCase()} found
+        </p>
+        <select class="select py-2 text-sm w-auto">
+          <option value="recent">Most Recent</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+        </select>
+      </div>
+
+      {typeProperties.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {typeProperties.map((property) => (
+            <PropertyCard property={property} />
+          ))}
+        </div>
+      ) : (
+        <div class="card p-12 text-center">
+          <p class="text-gray-600 mb-4">No {typeName.toLowerCase()} available at this time.</p>
+          <a href="/en/buy" class="btn-primary">View all properties</a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- SEO Content -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <div class="prose prose-lg max-w-4xl mx-auto">
+        <h2>Buying {typeName} in the Dominican Republic</h2>
+        <p>
+          {typeDescription} On Ubikala.com, real estate agents and owners list
+          {typeName.toLowerCase()} across the entire country. Contact the listing agent directly
+          to get more details and schedule viewings.
+        </p>
+
+        <h3>Popular Areas for {typeName}</h3>
+        <ul>
+          <li><strong>Santo Domingo:</strong> Piantini, Naco, Bella Vista, Arroyo Hondo, Ensanche Paraiso</li>
+          <li><strong>Punta Cana:</strong> Cap Cana, Bavaro, Cocotal, Punta Cana Village</li>
+          <li><strong>Santiago:</strong> Cerros de Gurabo, Jardines Metropolitanos, Los Jardines</li>
+          <li><strong>Puerto Plata:</strong> Sosua, Cabarete, Costambar</li>
+        </ul>
+
+        <h3>Buying Process for Foreign Buyers</h3>
+        <p>
+          Foreigners can purchase property in the Dominican Republic with the same rights as locals.
+          The process is straightforward: find a property, hire a local attorney to verify the title,
+          sign the purchase agreement, and register the transfer. Our verified agents can guide you
+          through every step.
+        </p>
+      </div>
+    </div>
+  </section>
+</Layout>

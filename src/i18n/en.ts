@@ -318,12 +318,12 @@ export const en: Translations = {
       description: 'Find houses, apartments, land and commercial properties for sale and rent. Thousands of verified properties in Santo Domingo, Punta Cana, Santiago and more.',
     },
     buy: {
-      title: 'Properties for Sale | Ubíkala',
-      description: 'Explore thousands of properties for sale. Houses, apartments, villas, land and commercial properties at the best market prices.',
+      title: 'Properties for Sale in Dominican Republic | Ubíkala',
+      description: 'Explore thousands of properties for sale in the Dominican Republic. Houses, apartments, villas, land and commercial properties in Punta Cana, Santo Domingo, Santiago and more.',
     },
     rent: {
-      title: 'Properties for Rent | Ubíkala',
-      description: 'Rent your next home. Furnished apartments, family houses, offices and commercial spaces available for rent.',
+      title: 'Properties for Rent in Dominican Republic | Ubíkala',
+      description: 'Rent your next home in the Dominican Republic. Furnished apartments, family houses, offices and commercial spaces in Santo Domingo, Punta Cana and more.',
     },
     agents: {
       title: 'Real Estate Agents | Ubíkala',
