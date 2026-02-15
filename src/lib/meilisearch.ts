@@ -337,7 +337,7 @@ export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = fa
     landArea: doc.m2_terreno || undefined,
     yearBuilt: doc.year_built || undefined,
     totalFloors: doc.pisos || undefined,
-    features: doc.amenidades || [],
+    features: doc.amenidades_codigos || doc.amenidades || [],
     images,
     videoUrl: doc.video_url || undefined,
     virtualTourUrl: doc.tour_virtual_url || undefined,

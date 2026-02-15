@@ -159,8 +159,8 @@ const availableRoutes: Record<Lang, Set<string>> = {
 /** Route prefixes that have dynamic sub-routes (e.g. /en/agent/[slug]) */
 const nestedRoutePrefixes: Record<Lang, Set<string>> = {
   es: new Set(), // ES is default
-  en: new Set(['agent', 'user', 'property']),
-  fr: new Set(['agent', 'utilisateur', 'propriete']),
+  en: new Set(['agent', 'user', 'property', 'real-estate', 'properties']),
+  fr: new Set(['agent', 'utilisateur', 'propriete', 'immobilieres', 'proprietes']),
 };
 
 function isRouteAvailable(path: string, lang: Lang): boolean {

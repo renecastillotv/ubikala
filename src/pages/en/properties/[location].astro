@@ -1,0 +1,194 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import PropertyCard from '../../../components/PropertyCard.astro';
+import SearchBox from '../../../components/SearchBox.astro';
+import Pagination from '../../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls, localizedUrl, type Lang } from '../../../i18n';
+import { getPropertiesByLocation } from '../../../lib/meilisearch';
+import type { Property } from '../../../data/types';
+
+export const prerender = false;
+
+const { location: locationSlug } = Astro.params;
+const lang: Lang = 'en';
+const t = useTranslations(lang);
+const alternateUrls = getAlternateUrls(`/en/properties/${locationSlug}`);
+
+const PROPERTIES_PER_PAGE = 48;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+
+let locationProperties: Property[] = [];
+let heroImages: string[] = [];
+let locationData = {
+  slug: locationSlug || '',
+  name: locationSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '',
+  province: 'Dominican Republic',
+  propertyCount: 0
+};
+
+try {
+  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, lang: 'en' });
+  locationProperties = result.properties;
+  const totalPropertyCount = result.total;
+
+  if (locationProperties.length > 0) {
+    const firstProp = locationProperties[0];
+    const cityName = firstProp.location.city || locationData.name;
+    locationData = {
+      slug: locationSlug || '',
+      name: cityName,
+      province: firstProp.location.province || 'Dominican Republic',
+      propertyCount: totalPropertyCount
+    };
+  }
+  locationData.propertyCount = totalPropertyCount || locationProperties.length;
+
+  heroImages = locationProperties
+    .slice(0, 4)
+    .map(p => p.images[0]?.url)
+    .filter(Boolean) as string[];
+} catch (error) {
+  console.error('Error fetching location data:', error);
+}
+
+const totalProperties = locationProperties.length;
+const totalPages = Math.ceil(totalProperties / PROPERTIES_PER_PAGE);
+const validCurrentPage = Math.min(currentPage, totalPages || 1);
+const startIndex = (validCurrentPage - 1) * PROPERTIES_PER_PAGE;
+const endIndex = startIndex + PROPERTIES_PER_PAGE;
+const paginatedProperties = locationProperties.slice(startIndex, endIndex);
+
+const pageTitle = `Properties in ${locationData.name} | Ubikala`;
+const pageDescription = `Find ${locationData.propertyCount} properties in ${locationData.name}, Dominican Republic. Houses, apartments, villas and more.`;
+
+const preserveParams: Record<string, string> = {};
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  alternateLanguages={alternateUrls}
+>
+  <!-- Breadcrumb -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/en" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">Properties in {locationData.name}</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero with Property Images -->
+  <section class="relative h-[250px] md:h-[350px] flex items-center overflow-hidden">
+    <div class="absolute inset-0">
+      {heroImages.length > 0 ? (
+        <div class="grid grid-cols-2 md:grid-cols-4 h-full">
+          {heroImages.map((img) => (
+            <div class="overflow-hidden h-full">
+              <img src={img} alt="" class="w-full h-full object-cover" loading="eager" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="w-full h-full bg-gradient-to-r from-primary-600 to-primary-700"></div>
+      )}
+      <div class="absolute inset-0 bg-gradient-to-r from-black/70 to-black/40"></div>
+    </div>
+    <div class="container-custom relative z-10">
+      <h1 class="text-3xl md:text-5xl font-bold text-white mb-4">
+        Properties in {locationData.name}
+      </h1>
+      <p class="text-xl text-gray-200 max-w-2xl">
+        {locationData.province}, Dominican Republic
+      </p>
+      <div class="mt-4">
+        <span class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          {locationData.propertyCount} properties available
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search & Filters -->
+  <section class="py-4 bg-white shadow-sm">
+    <div class="container-custom">
+      <SearchBox variant="compact" />
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="section">
+    <div class="container-custom">
+      {paginatedProperties.length > 0 ? (
+        <>
+          <div class="flex items-center justify-between mb-8">
+            <p class="text-gray-600">
+              <span class="font-semibold text-gray-900">{totalProperties}</span> properties in {locationData.name}
+              {totalPages > 1 && (
+                <span class="text-gray-400 ml-2">• Page {validCurrentPage} of {totalPages}</span>
+              )}
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {paginatedProperties.map((property, index) => (
+              <PropertyCard property={property} priority={index < 4} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div class="mt-12">
+              <Pagination
+                currentPage={validCurrentPage}
+                totalPages={totalPages}
+                baseUrl={`/en/properties/${locationSlug}`}
+                preserveParams={preserveParams}
+              />
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="text-center py-16">
+          <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          <h2 class="text-2xl font-semibold text-gray-900 mb-2">No properties available</h2>
+          <p class="text-gray-600 mb-6">We currently don't have properties in {locationData.name}</p>
+          <a href="/en/buy" class="btn-primary">View all properties</a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Explore Other Locations -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Explore Other Locations</h3>
+      <div class="flex flex-wrap justify-center gap-3">
+        {(locationSlug || '').toLowerCase() !== 'santo-domingo' && (
+          <a href="/en/properties/santo-domingo" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">Santo Domingo</a>
+        )}
+        {(locationSlug || '').toLowerCase() !== 'punta-cana' && (
+          <a href="/en/properties/punta-cana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">Punta Cana</a>
+        )}
+        {(locationSlug || '').toLowerCase() !== 'santiago' && (
+          <a href="/en/properties/santiago" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">Santiago</a>
+        )}
+        {(locationSlug || '').toLowerCase() !== 'la-romana' && (
+          <a href="/en/properties/la-romana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">La Romana</a>
+        )}
+        {(locationSlug || '').toLowerCase() !== 'puerto-plata' && (
+          <a href="/en/properties/puerto-plata" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">Puerto Plata</a>
+        )}
+        {(locationSlug || '').toLowerCase() !== 'samana' && (
+          <a href="/en/properties/samana" class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">Samana</a>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>

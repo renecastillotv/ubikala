@@ -55,6 +55,9 @@ export const en: Translations = {
     apply: 'Apply Filters',
     clear: 'Clear Filters',
     results: 'results found',
+    allLocations: 'All Locations',
+    anyPrice: 'Any Price',
+    any: 'Any',
   },
 
   // Property Types
@@ -251,6 +254,11 @@ export const en: Translations = {
     verifiedPropertiesDesc: 'All properties are verified by our team to ensure accurate and reliable information.',
     expertAgents: 'Expert Agents',
     expertAgentsDesc: 'Connect with professional real estate agents who know the market perfectly.',
+    exploreByLocation: 'Explore by Location',
+    popularDestinations: 'Popular Destinations in the Dominican Republic',
+    popularDestinationsDesc: 'Find properties in the most sought-after cities and areas of the country',
+    viewAllLocations: 'View all locations',
+    properties: 'properties',
   },
 
   // Common Messages

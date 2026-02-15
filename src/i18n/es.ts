@@ -53,6 +53,9 @@ export const es = {
     apply: 'Aplicar Filtros',
     clear: 'Limpiar Filtros',
     results: 'resultados encontrados',
+    allLocations: 'Todas las ubicaciones',
+    anyPrice: 'Cualquier precio',
+    any: 'Cualquiera',
   },
 
   // Tipos de propiedad
@@ -249,6 +252,11 @@ export const es = {
     verifiedPropertiesDesc: 'Todas las propiedades son verificadas por nuestro equipo para garantizar información precisa y confiable.',
     expertAgents: 'Asesores Expertos',
     expertAgentsDesc: 'Conecta con asesores inmobiliarios profesionales que conocen el mercado a la perfección.',
+    exploreByLocation: 'Explora por Ubicación',
+    popularDestinations: 'Destinos Populares en República Dominicana',
+    popularDestinationsDesc: 'Encuentra propiedades en las ciudades y zonas más buscadas del país',
+    viewAllLocations: 'Ver todas las ubicaciones',
+    properties: 'propiedades',
   },
 
   // Mensajes comunes

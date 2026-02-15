@@ -1,6 +1,6 @@
 ---
 import type { Property } from '../data/types';
-import { getLangFromUrl, localizedUrl } from '../i18n';
+import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
 
 interface Props {
   property: Property;
@@ -9,6 +9,7 @@ interface Props {
 
 const { property, priority = false } = Astro.props;
 const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
 
 // Get up to 5 images for carousel
 const carouselImages = property.images.slice(0, 5);
@@ -26,26 +27,18 @@ const cardId = `card-${property.slug}`;
 const propertyUrl = localizedUrl(`/propiedad/${property.slug}`, lang);
 
 // Build features string
+const bedLabel = lang === 'en' ? 'bd' : lang === 'fr' ? 'ch' : 'hab';
+const bathLabel = lang === 'en' ? 'ba' : lang === 'fr' ? 'sdb' : (property.bathrooms === 1 ? 'baño' : 'baños');
+const parkLabel = lang === 'en' ? 'pkg' : lang === 'fr' ? 'pkg' : 'parq';
 const features: string[] = [];
-if (property.bedrooms && property.bedrooms > 0) features.push(`${property.bedrooms} hab`);
-if (property.bathrooms && property.bathrooms > 0) features.push(`${property.bathrooms} ${property.bathrooms === 1 ? 'baño' : 'baños'}`);
+if (property.bedrooms && property.bedrooms > 0) features.push(`${property.bedrooms} ${bedLabel}`);
+if (property.bathrooms && property.bathrooms > 0) features.push(`${property.bathrooms} ${bathLabel}`);
 if (property.area > 0) features.push(`${property.area}m²`);
-if (property.parkingSpaces && property.parkingSpaces > 0) features.push(`${property.parkingSpaces} parq`);
+if (property.parkingSpaces && property.parkingSpaces > 0) features.push(`${property.parkingSpaces} ${parkLabel}`);
 const featuresText = features.join(' · ');
 
-// Format property type
-const typeLabels: Record<string, string> = {
-  'house': 'Casa',
-  'apartment': 'Apartamento',
-  'penthouse': 'Penthouse',
-  'villa': 'Villa',
-  'land': 'Terreno',
-  'commercial': 'Comercial',
-  'office': 'Oficina',
-  'warehouse': 'Nave',
-  'building': 'Edificio',
-};
-const typeLabel = typeLabels[property.type] || 'Propiedad';
+// Format property type using i18n
+const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes] || property.type;
 ---
 
 <article class="card-property" data-card-id={cardId}>
@@ -152,13 +145,13 @@ const typeLabel = typeLabels[property.type] || 'Propiedad';
       <div class="card-price-row">
         <span class="card-price">
           {formatPrice(property.price, property.currency)}
-          {property.transactionType === 'rent' && <span class="price-period">/mes</span>}
+          {property.transactionType === 'rent' && <span class="price-period">{t.property.pricePerMonth}</span>}
         </span>
         {property.transactionType === 'rent' && (
-          <span class="card-tag rent">Alquiler</span>
+          <span class="card-tag rent">{t.transactionTypes.rent}</span>
         )}
         {property.isPriceReduced && (
-          <span class="card-tag reduced">Rebajado</span>
+          <span class="card-tag reduced">{t.common.reduced}</span>
         )}
       </div>
 

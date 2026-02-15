@@ -136,7 +136,7 @@ if (currentPage > totalPages && totalPages > 0) {
           {inmobiliarias.map((agent) => (
             <AgentCard
               agent={agent}
-              href={agent.isUbikalaUser ? localizedUrl(`/usuario/${agent.slug}`, 'en') : `${localizedUrl('/buscar', 'en')}?tenant_id=${agent.id}`}
+              href={agent.isUbikalaUser ? localizedUrl(`/usuario/${agent.slug}`, 'en') : `/en/real-estate/${agent.slug}`}
             />
           ))}
         </div>
