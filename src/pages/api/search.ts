@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getProperties, getPropertiesCount } from '../../lib/db';
+import { searchProperties } from '../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -20,26 +20,23 @@ export const GET: APIRoute = async ({ request }) => {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
     const offset = parseInt(url.searchParams.get('offset') || '0');
 
-    // Usar ciudad como término de búsqueda si q está presente
-    const searchCity = q || ciudad;
+    // Map 'alquiler' to 'renta' for MeiliSearch
+    const meiliOperacion = operacion === 'alquiler' ? 'renta' : operacion;
 
-    const [properties, total] = await Promise.all([
-      getProperties({
-        limit,
-        offset,
-        tipo,
-        operacion,
-        ciudad: searchCity,
-        minPrice,
-        maxPrice,
-        habitaciones
-      }),
-      getPropertiesCount({ tipo, operacion, ciudad: searchCity })
-    ]);
+    const result = await searchProperties({
+      query: q || ciudad || '',
+      limit,
+      offset,
+      tipo,
+      operacion: meiliOperacion,
+      precioMin: minPrice,
+      precioMax: maxPrice,
+      habitacionesMin: habitaciones
+    });
 
     return new Response(JSON.stringify({
       success: true,
-      data: properties,
+      data: result.properties,
       query: {
         q,
         tipo,
@@ -50,11 +47,11 @@ export const GET: APIRoute = async ({ request }) => {
         habitaciones
       },
       pagination: {
-        total,
+        total: result.total,
         limit,
         offset,
-        hasMore: offset + properties.length < total,
-        pages: Math.ceil(total / limit),
+        hasMore: offset + result.properties.length < result.total,
+        pages: Math.ceil(result.total / limit),
         currentPage: Math.floor(offset / limit) + 1
       }
     }), {

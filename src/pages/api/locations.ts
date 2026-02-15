@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getLocations } from '../../lib/db';
+import { getCitiesWithCounts } from '../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -7,13 +7,7 @@ export const prerender = false;
 // Solo GET permitido
 export const GET: APIRoute = async ({ request }) => {
   try {
-    const url = new URL(request.url);
-
-    // Parámetros de query
-    const nivel = url.searchParams.get('nivel') ? parseInt(url.searchParams.get('nivel')!) : undefined;
-    const parentId = url.searchParams.get('parentId') ? parseInt(url.searchParams.get('parentId')!) : undefined;
-
-    const locations = await getLocations({ nivel, parentId });
+    const locations = await getCitiesWithCounts();
 
     return new Response(JSON.stringify({
       success: true,

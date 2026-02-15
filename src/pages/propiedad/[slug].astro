@@ -5,8 +5,7 @@ import ContactForm from '../../components/ContactForm.astro';
 import PropertyMap from '../../components/PropertyMap.astro';
 import Icon from '../../components/Icons.astro';
 import { useTranslations, localizedUrl } from '../../i18n';
-import { getPropertyBySlug, getProperties, getAgentBySlug } from '../../lib/db';
-import { transformProperty, transformProperties, transformAgent, type DBProperty, type DBAgent } from '../../lib/transformers';
+import { getPropertyBySlug, getSimilarProperties, getAgentBySlug } from '../../lib/meilisearch';
 import { getLocationCoordinates, hasValidCoordinates } from '../../lib/location-coordinates';
 import type { Property, Agent } from '../../data/types';
 
@@ -16,33 +15,22 @@ export const prerender = false;
 const { slug } = Astro.params;
 const t = useTranslations('es');
 
-// Fetch property from database
+// Fetch property from MeiliSearch
 let property: Property | null = null;
 let similarProperties: Property[] = [];
 let fullAgent: Agent | null = null;
 
 try {
-  const dbProperty = await getPropertyBySlug(slug || '');
-  if (dbProperty) {
-    property = transformProperty(dbProperty as unknown as DBProperty);
+  property = await getPropertyBySlug(slug || '');
 
-    // Get full agent data with real property count and company from tenant
-    if (property.agent.slug && property.agent.slug !== 'propiedadenrd') {
-      const dbAgent = await getAgentBySlug(property.agent.slug);
-      if (dbAgent) {
-        fullAgent = transformAgent(dbAgent as unknown as DBAgent);
-      }
+  if (property) {
+    // Get full agent data from MeiliSearch asesores index
+    if (property.agent.slug && property.agent.slug !== 'ubikala') {
+      fullAgent = await getAgentBySlug(property.agent.slug);
     }
 
-    // Get similar properties (same city or type)
-    const dbSimilar = await getProperties({
-      ciudad: property.location.city,
-      tipo: property.type === 'house' ? 'casa' : property.type === 'apartment' ? 'apartamento' : property.type,
-      limit: 4
-    });
-    similarProperties = transformProperties(dbSimilar as unknown as DBProperty[])
-      .filter(p => p.slug !== property?.slug)
-      .slice(0, 3);
+    // Get similar properties (same city, excluding current)
+    similarProperties = (await getSimilarProperties(property, 3));
   }
 } catch (error) {
   console.error('Error fetching property:', error);

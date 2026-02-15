@@ -3,8 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import Icon from '../../components/Icons.astro';
 import { useTranslations, localizedUrl } from '../../i18n';
-import { getAgentBySlug, getAgentProperties } from '../../lib/db';
-import { transformAgent, transformProperties, type DBAgent, type DBProperty } from '../../lib/transformers';
+import { getAgentBySlug, getPropertiesByAgent } from '../../lib/meilisearch';
 import type { Agent, Property } from '../../data/types';
 
 // SSR para páginas dinámicas
@@ -18,13 +17,10 @@ let agent: Agent | null = null;
 let agentProperties: Property[] = [];
 
 try {
-  const dbAgent = await getAgentBySlug(slug || '');
-  if (dbAgent) {
-    agent = transformAgent(dbAgent as unknown as DBAgent);
-
-    // Buscar propiedades del agente por slug o email
-    const dbProperties = await getAgentProperties(dbAgent.slug, dbAgent.email, 12);
-    agentProperties = transformProperties(dbProperties as unknown as DBProperty[]);
+  agent = await getAgentBySlug(slug || '');
+  if (agent) {
+    // Buscar propiedades del agente por slug
+    agentProperties = await getPropertiesByAgent(agent.slug, 12);
   }
 } catch (error) {
   console.error('Error fetching agent:', error);

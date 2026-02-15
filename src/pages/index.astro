@@ -6,9 +6,9 @@ import LocationsGrid from '../components/LocationsGrid.astro';
 import CTASection from '../components/CTASection.astro';
 import AgentCard from '../components/AgentCard.astro';
 import { useTranslations } from '../i18n';
-import { getAgents } from '../lib/db';
+import { searchAgents } from '../lib/meilisearch';
 import { getUbikalaAgents } from '../lib/ubikala-db';
-import { transformAgents, transformUbikalaAgents, type DBAgent } from '../lib/transformers';
+import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
 
 const t = useTranslations('es');
@@ -16,11 +16,11 @@ const t = useTranslations('es');
 // Fetch agents from both databases and merge
 let featuredAgents: Agent[] = [];
 try {
-  const [dbAgents, ubikalaAgentRows] = await Promise.all([
-    getAgents({ limit: 4 }),
+  const [meiliResult, ubikalaAgentRows] = await Promise.all([
+    searchAgents({ limit: 4 }),
     getUbikalaAgents({ limit: 4 })
   ]);
-  const clicAgents = transformAgents(dbAgents as unknown as DBAgent[]);
+  const clicAgents = meiliResult.agents;
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
   // Merge and sort by properties count, take top 4
   featuredAgents = [...clicAgents, ...ubikalaAgents]

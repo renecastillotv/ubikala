@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAgents } from '../../lib/db';
+import { searchAgents } from '../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -12,17 +12,18 @@ export const GET: APIRoute = async ({ request }) => {
     // Parámetros de query
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100);
     const offset = parseInt(url.searchParams.get('offset') || '0');
-    const zona = url.searchParams.get('zona') || undefined;
+    const query = url.searchParams.get('zona') || url.searchParams.get('q') || '';
 
-    const agents = await getAgents({ limit, offset, zona });
+    const result = await searchAgents({ limit, offset, query });
 
     return new Response(JSON.stringify({
       success: true,
-      data: agents,
+      data: result.agents,
       pagination: {
+        total: result.total,
         limit,
         offset,
-        count: agents.length
+        count: result.agents.length
       }
     }), {
       status: 200,

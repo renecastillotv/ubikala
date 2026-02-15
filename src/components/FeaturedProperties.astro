@@ -1,18 +1,16 @@
 ---
 import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
 import PropertyCard from './PropertyCard.astro';
-import { getFeaturedProperties } from '../lib/db';
-import { transformProperties, type DBProperty } from '../lib/transformers';
+import { getFeaturedProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
-// Fetch from database
+// Fetch from MeiliSearch
 let featuredProperties: Property[] = [];
 try {
-  const dbProperties = await getFeaturedProperties(6);
-  featuredProperties = transformProperties(dbProperties as unknown as DBProperty[]);
+  featuredProperties = await getFeaturedProperties(6);
 } catch (error) {
   console.error('Error fetching featured properties:', error);
 }

@@ -3,8 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import { useTranslations, type Lang } from '../../i18n';
-import { getPropertiesByLocation, getLocationBySlug, getLocationPropertyCount } from '../../lib/db';
-import { transformProperties, type DBProperty } from '../../lib/transformers';
+import { getPropertiesByLocation } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
 import { locationFAQs, firstTimeBuyerFAQs, financingFAQs } from '../../lib/seo-content';
 
@@ -32,41 +31,35 @@ let locationData = {
   propertyCount: 0
 };
 
-// Get total count first for accurate numbers (using slug for consistent matching)
-let totalPropertyCount = 0;
 try {
-  totalPropertyCount = await getLocationPropertyCount(locationSlug || '');
-} catch (e) {
-  console.error('Error getting property count:', e);
-}
+  // Get properties for this location via MeiliSearch
+  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200 });
+  locationProperties = result.properties;
+  const totalPropertyCount = result.total;
 
-try {
-  // Try to get location details from database
-  const dbLocation = await getLocationBySlug(locationSlug || '');
-  if (dbLocation) {
+  // Update location data from first property if available
+  if (locationProperties.length > 0) {
+    const firstProp = locationProperties[0];
+    const cityName = firstProp.location.city || locationSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '';
     locationData = {
-      slug: dbLocation.slug,
-      name: dbLocation.nombre,
-      province: dbLocation.provincia || 'República Dominicana',
+      slug: locationSlug || '',
+      name: cityName,
+      province: firstProp.location.province || 'República Dominicana',
       title: {
-        es: dbLocation.seo_title || `Propiedades en ${dbLocation.nombre}`,
-        en: `Properties in ${dbLocation.nombre}`,
-        fr: `Propriétés à ${dbLocation.nombre}`
+        es: `Propiedades en ${cityName}`,
+        en: `Properties in ${cityName}`,
+        fr: `Propriétés à ${cityName}`
       },
       description: {
-        es: dbLocation.seo_description || `Encuentra las mejores propiedades en ${dbLocation.nombre}, República Dominicana.`,
-        en: `Find the best properties in ${dbLocation.nombre}, Dominican Republic.`,
-        fr: `Trouvez les meilleures propriétés à ${dbLocation.nombre}, République Dominicaine.`
+        es: `Encuentra las mejores propiedades en ${cityName}, República Dominicana.`,
+        en: `Find the best properties in ${cityName}, Dominican Republic.`,
+        fr: `Trouvez les meilleures propriétés à ${cityName}, République Dominicaine.`
       },
-      image: dbLocation.imagen || '/images/locations/default.jpg',
+      image: firstProp.images[0]?.url || '/images/locations/default.jpg',
       propertyCount: totalPropertyCount
     };
   }
 
-  // Get ALL properties for this location (no limit for now, can add pagination later)
-  const dbProperties = await getPropertiesByLocation(locationSlug || '', 200);
-  locationProperties = transformProperties(dbProperties as unknown as DBProperty[]);
-  // Use totalPropertyCount if available, otherwise use actual fetched count
   locationData.propertyCount = totalPropertyCount || locationProperties.length;
 
   // Get hero images from actual properties

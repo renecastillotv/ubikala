@@ -1,6 +1,6 @@
 ---
 import { getLangFromUrl, useTranslations, routeTranslations, defaultLang, type Lang } from '../i18n';
-import { getFooterLocations } from '../lib/db';
+import { getCitiesWithCounts } from '../lib/meilisearch';
 import { getSiteConfig } from '../lib/config';
 
 const lang = getLangFromUrl(Astro.url);
@@ -10,10 +10,11 @@ const currentYear = new Date().getFullYear();
 // Fetch site config
 const config = await getSiteConfig();
 
-// Obtener ubicaciones populares desde la base de datos
+// Obtener ubicaciones populares desde MeiliSearch
 let popularLocations: { name: string; slug: string; count: number }[] = [];
 try {
-  popularLocations = await getFooterLocations(6);
+  popularLocations = await getCitiesWithCounts();
+  popularLocations = popularLocations.slice(0, 6);
 } catch (error) {
   console.error('Error fetching footer locations:', error);
 }

@@ -1,15 +1,16 @@
 ---
 import { getLangFromUrl, useTranslations } from '../i18n';
 import SearchBox from './SearchBox.astro';
-import { getPortalStats } from '../lib/db';
+import { getPlatformStats } from '../lib/meilisearch';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
-// Obtener estadísticas reales del portal
+// Obtener estadísticas reales del portal desde MeiliSearch
 let stats = { properties: 0, agents: 0, cities: 0 };
 try {
-  stats = await getPortalStats();
+  const ms = await getPlatformStats();
+  stats = { properties: ms.totalProperties, agents: ms.totalAgents, cities: ms.totalCities };
 } catch (error) {
   console.error('Error fetching portal stats:', error);
 }

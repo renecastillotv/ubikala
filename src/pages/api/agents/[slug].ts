@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getAgentBySlug, getAgentProperties } from '../../../lib/db';
+import { getAgentBySlug, getPropertiesByAgent } from '../../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ params, request }) => {
 
     let properties = null;
     if (includeProperties) {
-      properties = await getAgentProperties(agent.id);
+      properties = await getPropertiesByAgent(agent.slug);
     }
 
     return new Response(JSON.stringify({

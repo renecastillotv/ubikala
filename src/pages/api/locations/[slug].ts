@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getLocationBySlug, getPropertiesByLocation } from '../../../lib/db';
+import { getPropertiesByLocation } from '../../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -23,9 +23,10 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    const location = await getLocationBySlug(slug);
+    // Get properties for this location to determine if it exists
+    const result = await getPropertiesByLocation(slug, { limit, offset });
 
-    if (!location) {
+    if (result.total === 0) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Ubicación no encontrada'
@@ -35,17 +36,19 @@ export const GET: APIRoute = async ({ params, request }) => {
       });
     }
 
-    let properties = null;
-    if (includeProperties) {
-      properties = await getPropertiesByLocation(slug, limit, offset);
-    }
+    // Derive location info from the first property
+    const firstProp = result.properties[0];
+    const locationData = {
+      slug,
+      name: firstProp?.location.city || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      province: firstProp?.location.province || '',
+      propertyCount: result.total,
+      ...(includeProperties && { properties: result.properties })
+    };
 
     return new Response(JSON.stringify({
       success: true,
-      data: {
-        ...location,
-        ...(properties && { properties })
-      }
+      data: locationData
     }), {
       status: 200,
       headers: {

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getFeaturedProperties, getRecentProperties } from '../../lib/db';
+import { getFeaturedProperties, getRecentProperties } from '../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;

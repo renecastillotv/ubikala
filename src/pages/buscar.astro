@@ -4,8 +4,7 @@ import PropertyCard from '../components/PropertyCard.astro';
 import Pagination from '../components/Pagination.astro';
 import Icon from '../components/Icons.astro';
 import { useTranslations } from '../i18n';
-import { getProperties, getPropertiesCount } from '../lib/db';
-import { transformProperties, type DBProperty } from '../lib/transformers';
+import { searchProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 import { firstTimeBuyerFAQs, financingFAQs, usBuyerFAQs } from '../lib/seo-content';
 
@@ -44,41 +43,34 @@ const filters = {
   bathrooms: params.get('bathrooms') ? parseInt(params.get('bathrooms')!) : undefined,
 };
 
-// Buscar propiedades en la base de datos
+// Buscar propiedades via MeiliSearch
 let results: Property[] = [];
 let totalCount = 0;
 
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const dbFilters: any = {
+
+  const operacion = filters.transactionType === 'sale' ? 'venta'
+    : filters.transactionType === 'rent' ? 'renta' : undefined;
+
+  const tipo = (filters.propertyType && filters.propertyType !== 'all')
+    ? (typeToDb[filters.propertyType] || filters.propertyType)
+    : undefined;
+
+  const searchResult = await searchProperties({
+    query: filters.query || filters.location || '',
+    tipo,
+    operacion,
+    precioMin: filters.minPrice,
+    precioMax: filters.maxPrice,
+    habitacionesMin: filters.bedrooms,
+    banosMin: filters.bathrooms,
     limit: ITEMS_PER_PAGE,
-    offset
-  };
+    offset,
+  });
 
-  // Mapear filtros
-  if (filters.transactionType === 'sale') dbFilters.operacion = 'venta';
-  if (filters.transactionType === 'rent') dbFilters.operacion = 'alquiler';
-  if (filters.propertyType && filters.propertyType !== 'all') {
-    dbFilters.tipo = typeToDb[filters.propertyType] || filters.propertyType;
-  }
-  if (filters.location || filters.query) {
-    dbFilters.ciudad = filters.location || filters.query;
-  }
-  if (filters.minPrice) dbFilters.minPrice = filters.minPrice;
-  if (filters.maxPrice) dbFilters.maxPrice = filters.maxPrice;
-  if (filters.bedrooms) dbFilters.habitaciones = filters.bedrooms;
-
-  const [dbProperties, count] = await Promise.all([
-    getProperties(dbFilters),
-    getPropertiesCount({
-      tipo: dbFilters.tipo,
-      operacion: dbFilters.operacion,
-      ciudad: dbFilters.ciudad
-    })
-  ]);
-
-  results = transformProperties(dbProperties as unknown as DBProperty[]);
-  totalCount = count;
+  results = searchResult.properties;
+  totalCount = searchResult.total;
 } catch (error) {
   console.error('Error searching properties:', error);
 }

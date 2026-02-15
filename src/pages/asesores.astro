@@ -3,9 +3,9 @@ import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
 import { useTranslations } from '../i18n';
-import { getAgents, getAgentsCount } from '../lib/db';
-import { getUbikalaAgents, getUbikalaAgentsCount } from '../lib/ubikala-db';
-import { transformAgents, transformUbikalaAgents, type DBAgent } from '../lib/transformers';
+import { searchAgents } from '../lib/meilisearch';
+import { getUbikalaAgents } from '../lib/ubikala-db';
+import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
 
 // SSR para paginación
@@ -21,14 +21,12 @@ const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '
 let agents: Agent[] = [];
 let totalCount = 0;
 try {
-  // Fetch all agents from both sources and count
-  const [dbAgents, clicCount, ubikalaAgentRows, ubikalaCount] = await Promise.all([
-    getAgents({ limit: 100 }),
-    getAgentsCount(),
-    getUbikalaAgents({ limit: 100 }),
-    getUbikalaAgentsCount()
+  // Fetch all agents from both sources
+  const [meiliResult, ubikalaAgentRows] = await Promise.all([
+    searchAgents({ limit: 100 }),
+    getUbikalaAgents({ limit: 100 })
   ]);
-  const clicAgents = transformAgents(dbAgents as unknown as DBAgent[]);
+  const clicAgents = meiliResult.agents;
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
 
   // Merge, sort by properties count, then paginate

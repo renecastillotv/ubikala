@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getProperties, getPropertiesCount } from '../../lib/db';
+import { searchProperties } from '../../lib/meilisearch';
 
 // SSR - no prerender
 export const prerender = false;
@@ -20,30 +20,29 @@ export const GET: APIRoute = async ({ request }) => {
     const habitaciones = url.searchParams.get('habitaciones') ? parseInt(url.searchParams.get('habitaciones')!) : undefined;
     const destacado = url.searchParams.get('destacado') === 'true';
 
-    // Obtener propiedades y count en paralelo
-    const [properties, total] = await Promise.all([
-      getProperties({
-        limit,
-        offset,
-        tipo,
-        operacion,
-        ciudad,
-        minPrice,
-        maxPrice,
-        habitaciones,
-        destacado: destacado || undefined
-      }),
-      getPropertiesCount({ tipo, operacion, ciudad })
-    ]);
+    // Map 'alquiler' to 'renta' for MeiliSearch
+    const meiliOperacion = operacion === 'alquiler' ? 'renta' : operacion;
+
+    const result = await searchProperties({
+      limit,
+      offset,
+      tipo,
+      operacion: meiliOperacion,
+      query: ciudad || '',
+      precioMin: minPrice,
+      precioMax: maxPrice,
+      habitacionesMin: habitaciones,
+      destacada: destacado || undefined
+    });
 
     return new Response(JSON.stringify({
       success: true,
-      data: properties,
+      data: result.properties,
       pagination: {
-        total,
+        total: result.total,
         limit,
         offset,
-        hasMore: offset + properties.length < total
+        hasMore: offset + result.properties.length < result.total
       }
     }), {
       status: 200,

@@ -1,8 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PropertyCard from '../components/PropertyCard.astro';
-import { getPropertyBySlug } from '../lib/db';
-import { transformProperty, type DBProperty } from '../lib/transformers';
+import { getPropertyBySlug } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 
 export const prerender = false;
@@ -17,11 +16,7 @@ let favoriteProperties: Property[] = [];
 if (favoriteSlugs.length > 0) {
   const propertyPromises = favoriteSlugs.map(async (slug) => {
     try {
-      const dbProperty = await getPropertyBySlug(slug);
-      if (dbProperty) {
-        return transformProperty(dbProperty as unknown as DBProperty);
-      }
-      return null;
+      return await getPropertyBySlug(slug);
     } catch (e) {
       console.error(`Error fetching favorite ${slug}:`, e);
       return null;

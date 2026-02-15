@@ -1,14 +1,14 @@
 ---
 import { getLangFromUrl, useTranslations, localizedUrl, type Lang } from '../i18n';
-import { getPopularLocationsWithStats, type LocationWithStats } from '../lib/db';
+import { getLocationsWithStats } from '../lib/meilisearch';
 
 const lang = getLangFromUrl(Astro.url) as Lang;
 const t = useTranslations(lang);
 
-// Obtener ubicaciones populares con conteos reales e imágenes de propiedades reales
-let locations: LocationWithStats[] = [];
+// Obtener ubicaciones populares desde MeiliSearch
+let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
 try {
-  locations = await getPopularLocationsWithStats();
+  locations = await getLocationsWithStats();
 } catch (error) {
   console.error('Error fetching location stats:', error);
 }

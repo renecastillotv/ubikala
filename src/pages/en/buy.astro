@@ -4,8 +4,7 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
-import { getProperties, getPropertiesCount } from '../../lib/db';
-import { transformProperties, type DBProperty } from '../../lib/transformers';
+import { searchProperties } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
 
 // SSR for pagination
@@ -18,17 +17,14 @@ const alternateUrls = getAlternateUrls('/en/buy');
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-// Fetch properties from database with pagination
+// Fetch properties from MeiliSearch with pagination
 let properties: Property[] = [];
 let totalCount = 0;
 try {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-  const [dbProperties, count] = await Promise.all([
-    getProperties({ operacion: 'venta', limit: ITEMS_PER_PAGE, offset }),
-    getPropertiesCount({ operacion: 'venta' })
-  ]);
-  properties = transformProperties(dbProperties as unknown as DBProperty[]);
-  totalCount = count;
+  const result = await searchProperties({ operacion: 'venta', limit: ITEMS_PER_PAGE, offset });
+  properties = result.properties;
+  totalCount = result.total;
 } catch (error) {
   console.error('Error fetching properties:', error);
 }

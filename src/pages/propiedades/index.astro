@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Pagination from '../../components/Pagination.astro';
 import { useTranslations } from '../../i18n';
-import { getPopularLocationsWithStats, type LocationWithStats } from '../../lib/db';
+import { getLocationsWithStats } from '../../lib/meilisearch';
 
 // SSR para datos dinámicos
 export const prerender = false;
@@ -10,9 +10,9 @@ export const prerender = false;
 const t = useTranslations('es');
 
 // Obtener todas las ubicaciones con conteos
-let locations: LocationWithStats[] = [];
+let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
 try {
-  locations = await getPopularLocationsWithStats();
+  locations = await getLocationsWithStats();
 } catch (error) {
   console.error('Error fetching locations:', error);
 }
