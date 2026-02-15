@@ -152,8 +152,8 @@ export function translateRoute(path: string, fromLang: Lang, toLang: Lang): stri
  */
 const availableRoutes: Record<Lang, Set<string>> = {
   es: new Set(), // ES is default, all routes exist
-  en: new Set(['about', 'agents', 'buy', 'contact', 'list', 'privacy', 'real-estate', 'rent', 'search', 'terms', 'login']),
-  fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'immobilieres', 'louer', 'publier', 'recherche']),
+  en: new Set(['about', 'agents', 'buy', 'contact', 'list', 'privacy', 'properties', 'real-estate', 'rent', 'search', 'terms', 'login']),
+  fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'immobilieres', 'louer', 'proprietes', 'publier', 'recherche']),
 };
 
 /** Route prefixes that have dynamic sub-routes (e.g. /en/agent/[slug]) */

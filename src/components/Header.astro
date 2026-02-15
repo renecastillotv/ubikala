@@ -33,7 +33,7 @@ const isLoggedIn = !!user;
       </div>
       <div class="flex items-center gap-3">
         <!-- Claim -->
-        <span class="hidden md:inline text-primary-100 text-xs">Esa propiedad que buscas, ubíkala aquí</span>
+        <span class="hidden md:inline text-primary-100 text-xs">{t.meta.tagline}</span>
         <!-- Language Switcher -->
         <div class="flex items-center gap-1 border-l border-primary-500 pl-3">
           {Object.entries(languages).map(([langCode, langName]) => (

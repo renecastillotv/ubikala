@@ -1,0 +1,127 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Pagination from '../../../components/Pagination.astro';
+import { useTranslations, getAlternateUrls, localizedUrl } from '../../../i18n';
+import { getLocationsWithStats } from '../../../lib/meilisearch';
+
+// SSR pour données dynamiques
+export const prerender = false;
+
+const t = useTranslations('fr');
+const alternateUrls = getAlternateUrls('/fr/proprietes');
+
+// Obtenir toutes les emplacements avec statistiques
+let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
+try {
+  locations = await getLocationsWithStats();
+} catch (error) {
+  console.error('Error fetching locations:', error);
+}
+
+// Image par défaut
+const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
+
+const pageTitle = 'Propriétés par Emplacement | Ubíkala.com';
+const pageDescription = 'Explorez les propriétés à vendre et à louer dans les principales villes et zones de la République Dominicaine. Punta Cana, Saint-Domingue, Santiago et plus.';
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  keywords="propriétés république dominicaine, immobilier par emplacement, maisons saint domingue, appartements punta cana, propriétés santiago"
+  alternateLanguages={alternateUrls}
+>
+  <!-- Fil d'Ariane -->
+  <div class="bg-gray-100 py-4">
+    <div class="container-custom">
+      <nav class="flex text-sm text-gray-600">
+        <a href="/fr" class="hover:text-primary-600">{t.nav.home}</a>
+        <span class="mx-2">/</span>
+        <span class="text-gray-900 font-medium">Propriétés par Emplacement</span>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        Propriétés par Emplacement
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        Explorez les principales villes et zones de la République Dominicaine où nous avons des propriétés disponibles pour vous.
+      </p>
+    </div>
+  </section>
+
+  <!-- Grille des Emplacements -->
+  <section class="section">
+    <div class="container-custom">
+      <div class="flex items-center justify-between mb-8">
+        <p class="text-gray-600">
+          <span class="font-semibold text-gray-900">{locations.length}</span> emplacements disponibles
+        </p>
+      </div>
+
+      {locations.length > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {locations.map((location) => (
+            <a
+              href={`/fr/proprietes/${location.slug}`}
+              class="group relative overflow-hidden rounded-2xl h-[250px]"
+            >
+              <img
+                src={location.sampleImage || defaultImage}
+                alt={`Propriétés à ${location.name}`}
+                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                loading="lazy"
+              />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+              <div class="absolute bottom-0 left-0 right-0 p-6">
+                <h3 class="text-white font-bold text-xl mb-1">
+                  {location.name}
+                </h3>
+                <p class="text-gray-200 text-sm mb-3">
+                  {location.province}
+                </p>
+                <span class="inline-flex items-center gap-2 text-white text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                  {location.propertyCount} {location.propertyCount === 1 ? 'propriété' : 'propriétés'}
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="card p-12 text-center">
+          <p class="text-gray-600">Aucun emplacement disponible.</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Contenu SEO -->
+  <section class="py-12 bg-gray-50">
+    <div class="container-custom">
+      <div class="prose prose-lg max-w-4xl mx-auto">
+        <h2>Trouvez des Propriétés dans Tout le Pays</h2>
+        <p>
+          La République Dominicaine offre une grande variété d'emplacements pour investir dans l'immobilier.
+          Des plages paradisiaques de Punta Cana à la vibrante capitale Saint-Domingue,
+          chaque zone possède des caractéristiques uniques adaptées à différents styles de vie et objectifs d'investissement.
+        </p>
+
+        <h3>Destinations les Plus Populaires</h3>
+        <ul>
+          <li><strong>Punta Cana :</strong> La destination touristique n°1 des Caraïbes avec un excellent retour sur investissement.</li>
+          <li><strong>Saint-Domingue :</strong> La capitale avec des options pour tous les budgets.</li>
+          <li><strong>Santiago :</strong> La deuxième plus grande ville avec des prix abordables.</li>
+          <li><strong>Las Terrenas :</strong> Paradis bohème avec des propriétés en bord de mer.</li>
+          <li><strong>Puerto Plata :</strong> Côte nord avec des plages spectaculaires et du golf.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Layout>

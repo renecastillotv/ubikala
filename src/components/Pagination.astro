@@ -1,4 +1,6 @@
 ---
+import { getLangFromUrl, useTranslations } from '../i18n';
+
 interface Props {
   currentPage: number;
   totalPages: number;
@@ -8,6 +10,8 @@ interface Props {
 }
 
 const { currentPage, totalPages, baseUrl, preserveParams = {} } = Astro.props;
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
 
 // Build URL with page parameter
 function buildUrl(page: number): string {
@@ -64,25 +68,25 @@ const hasNext = currentPage < totalPages;
 ---
 
 {totalPages > 1 && (
-  <nav class="flex items-center justify-center gap-1 sm:gap-2" aria-label="Paginación">
+  <nav class="flex items-center justify-center gap-1 sm:gap-2" aria-label="Pagination">
     <!-- Previous button -->
     {hasPrevious ? (
       <a
         href={buildUrl(currentPage - 1)}
         class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
-        aria-label="Página anterior"
+        aria-label={t.common.previous}
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
-        <span class="hidden sm:inline">Anterior</span>
+        <span class="hidden sm:inline">{t.common.previous}</span>
       </a>
     ) : (
       <span class="px-3 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-1">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
-        <span class="hidden sm:inline">Anterior</span>
+        <span class="hidden sm:inline">{t.common.previous}</span>
       </span>
     )}
 
@@ -114,16 +118,16 @@ const hasNext = currentPage < totalPages;
       <a
         href={buildUrl(currentPage + 1)}
         class="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
-        aria-label="Página siguiente"
+        aria-label={t.common.next}
       >
-        <span class="hidden sm:inline">Siguiente</span>
+        <span class="hidden sm:inline">{t.common.next}</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </a>
     ) : (
       <span class="px-3 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-1">
-        <span class="hidden sm:inline">Siguiente</span>
+        <span class="hidden sm:inline">{t.common.next}</span>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
