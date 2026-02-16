@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const body = await request.json();
-    const { email, password, name, role, phone, company_name, license_number } = body;
+    const { email, password, name, role, phone, company_name, license_number, country_code } = body;
 
     // Validate required fields
     if (!email || !password || !name || !role) {
@@ -64,6 +64,7 @@ export const POST: APIRoute = async ({ request }) => {
       phone: phone?.trim() || undefined,
       company_name: company_name?.trim() || undefined,
       license_number: license_number?.trim() || undefined,
+      country_code: country_code?.trim()?.toUpperCase() || undefined,
     }, ip_address, user_agent);
 
     return new Response(JSON.stringify({ user: result.user }), {

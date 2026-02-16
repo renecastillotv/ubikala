@@ -24,7 +24,7 @@ export const es = {
 
   // Hero Section
   hero: {
-    title: 'Encuentra tu Propiedad Ideal en República Dominicana',
+    title: 'Encuentra tu Propiedad Ideal en {pais}',
     subtitle: 'Miles de casas, apartamentos, terrenos y locales comerciales esperan por ti',
     searchPlaceholder: 'Buscar por ubicación, tipo de propiedad...',
     cta: 'Buscar Propiedades',
@@ -174,7 +174,7 @@ export const es = {
 
   // Página de publicar
   publish: {
-    title: 'Publica tu Propiedad en República Dominicana',
+    title: 'Publica tu Propiedad en {pais}',
     subtitle: 'Llega a miles de compradores e inquilinos potenciales',
     cta: 'Comenzar a Publicar',
     benefits: {
@@ -203,7 +203,7 @@ export const es = {
   locations: {
     santodomingo: {
       name: 'Santo Domingo',
-      title: 'Propiedades en Santo Domingo - Capital de República Dominicana',
+      title: 'Propiedades en Santo Domingo - Capital de {pais}',
       description: 'Encuentra las mejores propiedades en Santo Domingo. Apartamentos en Piantini, casas en Naco, locales en la Zona Colonial y más. La mayor oferta inmobiliaria de la capital dominicana.',
     },
     puntacana: {
@@ -214,7 +214,7 @@ export const es = {
     santiago: {
       name: 'Santiago',
       title: 'Propiedades en Santiago de los Caballeros',
-      description: 'Casas y apartamentos en Santiago de los Caballeros. La segunda ciudad más importante de República Dominicana con excelentes oportunidades inmobiliarias.',
+      description: 'Casas y apartamentos en Santiago de los Caballeros. La segunda ciudad más importante de {pais} con excelentes oportunidades inmobiliarias.',
     },
     lasterrenas: {
       name: 'Las Terrenas',
@@ -279,7 +279,7 @@ export const es = {
     expertAgents: 'Asesores Expertos',
     expertAgentsDesc: 'Conecta con asesores inmobiliarios profesionales que conocen el mercado a la perfección.',
     exploreByLocation: 'Explora por Ubicación',
-    popularDestinations: 'Destinos Populares en República Dominicana',
+    popularDestinations: 'Destinos Populares en {pais}',
     popularDestinationsDesc: 'Encuentra propiedades en las ciudades y zonas más buscadas del país',
     viewAllLocations: 'Ver todas las ubicaciones',
     properties: 'propiedades',
@@ -316,12 +316,12 @@ export const es = {
       description: 'Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler. Miles de propiedades verificadas en Santo Domingo, Punta Cana, Santiago y más.',
     },
     buy: {
-      title: 'Propiedades en Venta en República Dominicana | Ubíkala',
-      description: 'Explora miles de propiedades en venta en República Dominicana. Casas, apartamentos, villas, terrenos y locales comerciales en Santo Domingo, Punta Cana, Santiago y más.',
+      title: 'Propiedades en Venta en {pais} | Ubíkala',
+      description: 'Explora miles de propiedades en venta en {pais}. Casas, apartamentos, villas, terrenos y locales comerciales disponibles.',
     },
     rent: {
-      title: 'Propiedades en Alquiler en República Dominicana | Ubíkala',
-      description: 'Alquila tu próximo hogar en República Dominicana. Apartamentos amueblados, casas familiares, oficinas y locales comerciales en Santo Domingo, Punta Cana y más.',
+      title: 'Propiedades en Alquiler en {pais} | Ubíkala',
+      description: 'Alquila tu próximo hogar en {pais}. Apartamentos amueblados, casas familiares, oficinas y locales comerciales disponibles.',
     },
     agents: {
       title: 'Asesores Inmobiliarios | Ubíkala',

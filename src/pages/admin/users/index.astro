@@ -1,6 +1,6 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getAllUsers, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
+import { getAllUsers, getAllCountries, getRoleLabel, type UserRole } from '../../../lib/ubikala-db';
 
 const user = Astro.locals.user;
 
@@ -9,7 +9,10 @@ if (user?.role !== 'admin') {
   return Astro.redirect('/admin/dashboard');
 }
 
-const users = await getAllUsers();
+const [users, countries] = await Promise.all([
+  getAllUsers(),
+  getAllCountries(),
+]);
 ---
 
 <AdminLayout title="Usuarios">
@@ -32,6 +35,7 @@ const users = await getAllUsers();
             <th>Usuario</th>
             <th>Email</th>
             <th>Rol</th>
+            <th>País</th>
             <th>Estado</th>
             <th>Último acceso</th>
             <th>Acciones</th>
@@ -51,6 +55,13 @@ const users = await getAllUsers();
                 <span class:list={['badge', `badge-${u.role}`]}>
                   {getRoleLabel(u.role as UserRole)}
                 </span>
+              </td>
+              <td>
+                {(() => {
+                  const cc = (u as any).country_code;
+                  const c = cc ? countries.find((ct: any) => ct.code === cc) : null;
+                  return c ? `${c.flag} ${c.code}` : '—';
+                })()}
               </td>
               <td>
                 <span class:list={['status', u.is_active ? 'active' : 'inactive']}>
@@ -111,6 +122,15 @@ const users = await getAllUsers();
               <option value="asesor_independiente">Asesor Independiente</option>
               <option value="inmobiliaria">Inmobiliaria</option>
               <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="user-country">País</label>
+            <select id="user-country">
+              <option value="">— Sin asignar —</option>
+              {countries.map((c: any) => (
+                <option value={c.code}>{c.flag} {c.name} ({c.code})</option>
+              ))}
             </select>
           </div>
           <div class="form-group">
@@ -441,6 +461,7 @@ const users = await getAllUsers();
     const passwordInput = document.getElementById('user-password') as HTMLInputElement;
     const roleSelect = document.getElementById('user-role') as HTMLSelectElement;
     const phoneInput = document.getElementById('user-phone') as HTMLInputElement;
+    const countrySelect = document.getElementById('user-country') as HTMLSelectElement;
     const activeCheckbox = document.getElementById('user-active') as HTMLInputElement;
 
     // Open modal for new user
@@ -469,6 +490,7 @@ const users = await getAllUsers();
         passwordInput.value = '';
         roleSelect.value = userData.role;
         phoneInput.value = userData.phone || '';
+        countrySelect.value = userData.country_code || '';
         activeCheckbox.checked = userData.is_active;
 
         formError.classList.add('hidden');
@@ -497,6 +519,7 @@ const users = await getAllUsers();
         email: emailInput.value,
         role: roleSelect.value,
         phone: phoneInput.value || null,
+        country_code: countrySelect.value || null,
         is_active: activeCheckbox.checked,
       };
 

@@ -6,14 +6,15 @@ import { getSiteConfig } from '../lib/config';
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 const currentYear = new Date().getFullYear();
+const pais = Astro.locals.country?.name;
 
 // Fetch site config
 const config = await getSiteConfig();
 
-// Obtener ubicaciones populares desde MeiliSearch
+// Obtener ubicaciones populares desde MeiliSearch (filtradas por país)
 let popularLocations: { name: string; slug: string; count: number }[] = [];
 try {
-  popularLocations = await getCitiesWithCounts();
+  popularLocations = await getCitiesWithCounts(pais);
   popularLocations = popularLocations.slice(0, 6);
 } catch (error) {
   console.error('Error fetching footer locations:', error);

@@ -4,7 +4,7 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations } from '../../i18n';
+import { useTranslations, tPais } from '../../i18n';
 import { searchProperties, getMarketStats, getCitiesWithCounts } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
@@ -59,8 +59,8 @@ if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/comprar');
 }
 
-const pageTitle = t.pages.buy.title;
-const pageDescription = t.pages.buy.description;
+const pageTitle = tPais(t.pages.buy.title, pais);
+const pageDescription = tPais(t.pages.buy.description, pais);
 
 // Schema para listado de propiedades
 const listingSchema = {

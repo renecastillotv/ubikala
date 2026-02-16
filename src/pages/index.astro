@@ -29,7 +29,7 @@ let featuredAgents: Agent[] = [];
 try {
   const [meiliResult, ubikalaAgentRows] = await Promise.all([
     searchAgents({ limit: 4, pais }),
-    getUbikalaAgents({ limit: 4 })
+    getUbikalaAgents({ limit: 4, country_code: country?.code })
   ]);
   const clicAgents = meiliResult.agents;
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);

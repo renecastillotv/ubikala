@@ -4,7 +4,7 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations } from '../../i18n';
+import { useTranslations, tPais } from '../../i18n';
 import { searchProperties, getMarketStats, getCitiesWithCounts } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
@@ -57,8 +57,8 @@ if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/alquilar');
 }
 
-const pageTitle = t.pages.rent.title;
-const pageDescription = t.pages.rent.description;
+const pageTitle = tPais(t.pages.rent.title, pais);
+const pageDescription = tPais(t.pages.rent.description, pais);
 
 // Schema para listado de alquileres
 const listingSchema = {

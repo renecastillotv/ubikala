@@ -26,7 +26,7 @@ try {
   // Fetch all agents from both sources
   const [meiliResult, ubikalaAgentRows] = await Promise.all([
     searchAgents({ limit: 100, pais }),
-    getUbikalaAgents({ limit: 100 })
+    getUbikalaAgents({ limit: 100, country_code: Astro.locals.country?.code })
   ]);
   const clicAgents = meiliResult.agents;
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);

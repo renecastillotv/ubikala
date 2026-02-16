@@ -1,5 +1,5 @@
 ---
-import { getLangFromUrl, useTranslations } from '../i18n';
+import { getLangFromUrl, useTranslations, tPais } from '../i18n';
 import SearchBox from './SearchBox.astro';
 import { getPlatformStats } from '../lib/meilisearch';
 
@@ -27,7 +27,7 @@ try {
   <div class="absolute inset-0 z-0">
     <img
       src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80"
-      alt="Propiedades en República Dominicana"
+      alt={pais ? `Propiedades en ${pais}` : 'Propiedades inmobiliarias'}
       class="w-full h-full object-cover"
     />
     <div class="absolute inset-0 hero-gradient"></div>
@@ -37,7 +37,7 @@ try {
   <div class="container-custom relative z-10 py-20">
     <div class="hero-text-container">
       <h1 class="hero-title">
-        {t.hero.title}
+        {tPais(t.hero.title, pais || '')}
       </h1>
       <p class="hero-subtitle">
         {t.hero.subtitle}

@@ -748,15 +748,14 @@ export async function searchAgents(options: {
 } = {}): Promise<{ agents: Agent[]; total: number }> {
   const { query = '', limit = 50, offset = 0, sort = ['nombre_completo:asc'], pais } = options;
 
-  // When pais is provided but no explicit query, use country name as query
-  // to bias results toward agents in that country's locations (best-effort)
-  const effectiveQuery = query || (pais ? pais : '');
+  const filters: string[] = ['visible_en_web = true'];
+  if (pais) filters.push(`pais = "${pais}"`);
 
   const result = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({
-      q: effectiveQuery,
-      filter: 'visible_en_web = true',
+      q: query,
+      filter: filters.join(' AND '),
       sort,
       limit,
       offset,
@@ -815,7 +814,9 @@ export async function getPlatformStats(pais?: string): Promise<{
       method: 'POST',
       body: JSON.stringify({
         q: '',
-        filter: 'visible_en_web = true',
+        filter: pais
+          ? `visible_en_web = true AND pais = "${pais}"`
+          : 'visible_en_web = true',
         limit: 0,
       }),
     }),

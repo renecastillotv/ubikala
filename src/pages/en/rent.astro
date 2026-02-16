@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
-import { useTranslations, getAlternateUrls } from '../../i18n';
+import { useTranslations, getAlternateUrls, tPais } from '../../i18n';
 import { searchProperties, getMarketStats } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
@@ -55,8 +55,8 @@ if (currentPage > totalPages && totalPages > 0) {
   return Astro.redirect('/en/rent');
 }
 
-const pageTitle = t.pages.rent.title;
-const pageDescription = t.pages.rent.description;
+const pageTitle = tPais(t.pages.rent.title, pais);
+const pageDescription = tPais(t.pages.rent.description, pais);
 
 // Schema.org ItemList for rental properties
 const listingSchema = {

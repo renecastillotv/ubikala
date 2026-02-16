@@ -32,6 +32,7 @@ export interface UbikalaUser {
   custom_publication_limit: number | null;  // Custom limit set by parent inmobiliaria
   is_active: boolean;
   is_verified: boolean;
+  country_code: string | null;  // Country this user belongs to (e.g. 'DO', 'PA')
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
@@ -234,11 +235,13 @@ export async function createUser(data: {
   phone?: string;
   company_name?: string;
   license_number?: string;
+  country_code?: string;
 }): Promise<UbikalaUser> {
   if (!ubikalaDb) throw new Error('Database not configured');
+  await ensureUsersCountryColumn();
   const rows = await ubikalaDb`
-    INSERT INTO ubikala_users (email, password_hash, name, role, phone, company_name, license_number)
-    VALUES (${data.email}, ${data.password_hash}, ${data.name}, ${data.role}, ${data.phone || null}, ${data.company_name || null}, ${data.license_number || null})
+    INSERT INTO ubikala_users (email, password_hash, name, role, phone, company_name, license_number, country_code)
+    VALUES (${data.email}, ${data.password_hash}, ${data.name}, ${data.role}, ${data.phone || null}, ${data.company_name || null}, ${data.license_number || null}, ${data.country_code || null})
     RETURNING *
   `;
   return rows[0] as UbikalaUser;
@@ -259,8 +262,10 @@ export async function updateUser(id: string, data: Partial<{
   custom_publication_limit: number | null;
   is_active: boolean;
   is_verified: boolean;
+  country_code: string | null;
 }>): Promise<UbikalaUser | null> {
   if (!ubikalaDb) return null;
+  await ensureUsersCountryColumn();
 
   // Check if there's anything to update
   const hasUpdates = Object.values(data).some(v => v !== undefined);
@@ -282,6 +287,7 @@ export async function updateUser(id: string, data: Partial<{
   const parent_user_id = data.parent_user_id !== undefined ? data.parent_user_id : currentUser.parent_user_id;
   const custom_publication_limit = data.custom_publication_limit !== undefined ? data.custom_publication_limit : currentUser.custom_publication_limit;
   const is_active = data.is_active !== undefined ? data.is_active : currentUser.is_active;
+  const country_code = data.country_code !== undefined ? data.country_code : currentUser.country_code;
 
   const rows = await ubikalaDb`
     UPDATE ubikala_users
@@ -297,6 +303,7 @@ export async function updateUser(id: string, data: Partial<{
       parent_user_id = ${parent_user_id},
       custom_publication_limit = ${custom_publication_limit},
       is_active = ${is_active},
+      country_code = ${country_code},
       updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
@@ -796,53 +803,63 @@ export interface UbikalaAgentRow {
 export async function getUbikalaAgents(options: {
   limit?: number;
   offset?: number;
+  country_code?: string;
 } = {}): Promise<UbikalaAgentRow[]> {
   if (!ubikalaDb) return [];
+  await ensureUsersCountryColumn();
 
-  const { limit = 20, offset = 0 } = options;
+  const { limit = 20, offset = 0, country_code } = options;
 
-  const rows = await ubikalaDb`
-    SELECT
-      u.id,
-      u.name,
-      u.email,
-      u.phone,
-      u.avatar_url,
-      u.role,
-      u.company_name,
-      u.bio,
-      u.is_verified,
-      u.created_at,
-      u.parent_user_id,
-      parent.company_name as parent_company_name,
-      parent.name as parent_name,
-      (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) as properties_count
-    FROM ubikala_users u
-    LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
-    WHERE u.is_active = true
-    AND u.role IN ('inmobiliaria', 'asesor_independiente')
-    AND EXISTS (
-      SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true
-    )
-    ORDER BY u.is_verified DESC, (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  const rows = country_code
+    ? await ubikalaDb`
+        SELECT
+          u.id, u.name, u.email, u.phone, u.avatar_url, u.role, u.company_name,
+          u.bio, u.is_verified, u.created_at, u.parent_user_id,
+          parent.company_name as parent_company_name, parent.name as parent_name,
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) as properties_count
+        FROM ubikala_users u
+        LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
+        WHERE u.is_active = true
+        AND u.role IN ('inmobiliaria', 'asesor_independiente')
+        AND u.country_code = ${country_code}
+        AND EXISTS (SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true)
+        ORDER BY u.is_verified DESC, (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    : await ubikalaDb`
+        SELECT
+          u.id, u.name, u.email, u.phone, u.avatar_url, u.role, u.company_name,
+          u.bio, u.is_verified, u.created_at, u.parent_user_id,
+          parent.company_name as parent_company_name, parent.name as parent_name,
+          (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) as properties_count
+        FROM ubikala_users u
+        LEFT JOIN ubikala_users parent ON u.parent_user_id = parent.id
+        WHERE u.is_active = true
+        AND u.role IN ('inmobiliaria', 'asesor_independiente')
+        AND EXISTS (SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true)
+        ORDER BY u.is_verified DESC, (SELECT COUNT(*) FROM ubikala_properties WHERE created_by = u.id AND activo = true) DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
   return rows as UbikalaAgentRow[];
 }
 
-export async function getUbikalaAgentsCount(): Promise<number> {
+export async function getUbikalaAgentsCount(country_code?: string): Promise<number> {
   if (!ubikalaDb) return 0;
+  await ensureUsersCountryColumn();
 
-  const rows = await ubikalaDb`
-    SELECT COUNT(*) as total
-    FROM ubikala_users u
-    WHERE u.is_active = true
-    AND u.role IN ('inmobiliaria', 'asesor_independiente')
-    AND EXISTS (
-      SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true
-    )
-  `;
+  const rows = country_code
+    ? await ubikalaDb`
+        SELECT COUNT(*) as total FROM ubikala_users u
+        WHERE u.is_active = true AND u.role IN ('inmobiliaria', 'asesor_independiente')
+        AND u.country_code = ${country_code}
+        AND EXISTS (SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true)
+      `
+    : await ubikalaDb`
+        SELECT COUNT(*) as total FROM ubikala_users u
+        WHERE u.is_active = true AND u.role IN ('inmobiliaria', 'asesor_independiente')
+        AND EXISTS (SELECT 1 FROM ubikala_properties p WHERE p.created_by = u.id AND p.activo = true)
+      `;
 
   return parseInt(rows[0]?.total || '0');
 }
@@ -852,54 +869,63 @@ export async function getUbikalaAgentsCount(): Promise<number> {
 export async function getUbikalaInmobiliarias(options: {
   limit?: number;
   offset?: number;
+  country_code?: string;
 } = {}): Promise<UbikalaAgentRow[]> {
   if (!ubikalaDb) return [];
+  await ensureUsersCountryColumn();
 
-  const { limit = 100, offset = 0 } = options;
+  const { limit = 100, offset = 0, country_code } = options;
 
-  const rows = await ubikalaDb`
-    SELECT
-      u.id,
-      u.name,
-      u.email,
-      u.phone,
-      u.avatar_url,
-      u.role,
-      u.company_name,
-      u.bio,
-      u.is_verified,
-      u.created_at,
-      u.parent_user_id,
-      NULL as parent_company_name,
-      NULL as parent_name,
-      (
-        SELECT COUNT(*) FROM ubikala_properties
-        WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
-        AND activo = true
-      ) as properties_count
-    FROM ubikala_users u
-    WHERE u.is_active = true
-    AND u.role = 'inmobiliaria'
-    ORDER BY u.is_verified DESC, (
-      SELECT COUNT(*) FROM ubikala_properties
-      WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
-      AND activo = true
-    ) DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  const rows = country_code
+    ? await ubikalaDb`
+        SELECT
+          u.id, u.name, u.email, u.phone, u.avatar_url, u.role, u.company_name,
+          u.bio, u.is_verified, u.created_at, u.parent_user_id,
+          NULL as parent_company_name, NULL as parent_name,
+          (SELECT COUNT(*) FROM ubikala_properties
+           WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+           AND activo = true) as properties_count
+        FROM ubikala_users u
+        WHERE u.is_active = true AND u.role = 'inmobiliaria' AND u.country_code = ${country_code}
+        ORDER BY u.is_verified DESC, (
+          SELECT COUNT(*) FROM ubikala_properties
+          WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND activo = true) DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    : await ubikalaDb`
+        SELECT
+          u.id, u.name, u.email, u.phone, u.avatar_url, u.role, u.company_name,
+          u.bio, u.is_verified, u.created_at, u.parent_user_id,
+          NULL as parent_company_name, NULL as parent_name,
+          (SELECT COUNT(*) FROM ubikala_properties
+           WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+           AND activo = true) as properties_count
+        FROM ubikala_users u
+        WHERE u.is_active = true AND u.role = 'inmobiliaria'
+        ORDER BY u.is_verified DESC, (
+          SELECT COUNT(*) FROM ubikala_properties
+          WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND activo = true) DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
   return rows as UbikalaAgentRow[];
 }
 
-export async function getUbikalaInmobiliariasCount(): Promise<number> {
+export async function getUbikalaInmobiliariasCount(country_code?: string): Promise<number> {
   if (!ubikalaDb) return 0;
+  await ensureUsersCountryColumn();
 
-  const rows = await ubikalaDb`
-    SELECT COUNT(*) as total
-    FROM ubikala_users u
-    WHERE u.is_active = true
-    AND u.role = 'inmobiliaria'
-  `;
+  const rows = country_code
+    ? await ubikalaDb`
+        SELECT COUNT(*) as total FROM ubikala_users u
+        WHERE u.is_active = true AND u.role = 'inmobiliaria' AND u.country_code = ${country_code}
+      `
+    : await ubikalaDb`
+        SELECT COUNT(*) as total FROM ubikala_users u
+        WHERE u.is_active = true AND u.role = 'inmobiliaria'
+      `;
 
   return parseInt(rows[0]?.total || '0');
 }
@@ -2473,6 +2499,21 @@ export async function upsertSiteConfig(config: Partial<SiteConfigRecord> & { cou
 }
 
 // ============================================
+// MIGRATION: country_code on ubikala_users
+// ============================================
+
+let usersCountryColumnEnsured = false;
+
+export async function ensureUsersCountryColumn(): Promise<void> {
+  if (!ubikalaDb || usersCountryColumnEnsured) return;
+
+  await ubikalaDb`
+    ALTER TABLE ubikala_users ADD COLUMN IF NOT EXISTS country_code VARCHAR(5)
+  `;
+  usersCountryColumnEnsured = true;
+}
+
+// ============================================
 // COUNTRIES (ubikala_paises)
 // ============================================
 
@@ -2736,6 +2777,22 @@ export async function getAllSeoContentForCountry(
     ORDER BY section, page, sort_order
   `;
   return rows as SeoContentRecord[];
+}
+
+export async function deleteSeoContent(id: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  await ensureSeoContentTable();
+
+  await ubikalaDb`DELETE FROM ubikala_seo_content WHERE id = ${id}`;
+  return true;
+}
+
+export async function getSeoContentById(id: string): Promise<SeoContentRecord | null> {
+  if (!ubikalaDb) return null;
+  await ensureSeoContentTable();
+
+  const rows = await ubikalaDb`SELECT * FROM ubikala_seo_content WHERE id = ${id}`;
+  return rows[0] as SeoContentRecord || null;
 }
 
 export async function seedSeoContent(): Promise<void> {

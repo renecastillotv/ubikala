@@ -26,7 +26,7 @@ let totalCount = 0;
 try {
   const [portalTenants, ubikalaRows] = await Promise.all([
     getPortalInmobiliarias(pais),
-    getUbikalaInmobiliarias({ limit: 100 }),
+    getUbikalaInmobiliarias({ limit: 100, country_code: Astro.locals.country?.code }),
   ]);
 
   const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);

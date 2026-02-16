@@ -35,6 +35,13 @@ export function useTranslations(lang: Lang) {
 }
 
 /**
+ * Replaces {pais} placeholders in translated strings with actual country name
+ */
+export function tPais(text: string, pais: string): string {
+  return text.replace(/\{pais\}/g, pais);
+}
+
+/**
  * Obtiene la ruta sin el prefijo de idioma
  */
 export function getRouteFromUrl(url: URL): string {

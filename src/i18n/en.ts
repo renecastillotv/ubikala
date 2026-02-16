@@ -26,7 +26,7 @@ export const en: Translations = {
 
   // Hero Section
   hero: {
-    title: 'Find Your Dream Property in the Dominican Republic',
+    title: 'Find Your Dream Property in {pais}',
     subtitle: 'Thousands of houses, apartments, land and commercial properties await you',
     searchPlaceholder: 'Search by location, property type...',
     cta: 'Search Properties',
@@ -176,7 +176,7 @@ export const en: Translations = {
 
   // Publish Page
   publish: {
-    title: 'List Your Property in the Dominican Republic',
+    title: 'List Your Property in {pais}',
     subtitle: 'Reach thousands of potential buyers and tenants',
     cta: 'Start Listing',
     benefits: {
@@ -205,7 +205,7 @@ export const en: Translations = {
   locations: {
     santodomingo: {
       name: 'Santo Domingo',
-      title: 'Properties in Santo Domingo - Capital of the Dominican Republic',
+      title: 'Properties in Santo Domingo - Capital of {pais}',
       description: 'Find the best properties in Santo Domingo. Apartments in Piantini, houses in Naco, commercial spaces in the Colonial Zone and more. The largest real estate offering in the Dominican capital.',
     },
     puntacana: {
@@ -216,7 +216,7 @@ export const en: Translations = {
     santiago: {
       name: 'Santiago',
       title: 'Properties in Santiago de los Caballeros',
-      description: 'Houses and apartments in Santiago de los Caballeros. The second most important city in the Dominican Republic with excellent real estate opportunities.',
+      description: 'Houses and apartments in Santiago de los Caballeros. The second most important city in {pais} with excellent real estate opportunities.',
     },
     lasterrenas: {
       name: 'Las Terrenas',
@@ -281,7 +281,7 @@ export const en: Translations = {
     expertAgents: 'Expert Agents',
     expertAgentsDesc: 'Connect with professional real estate agents who know the market perfectly.',
     exploreByLocation: 'Explore by Location',
-    popularDestinations: 'Popular Destinations in the Dominican Republic',
+    popularDestinations: 'Popular Destinations in {pais}',
     popularDestinationsDesc: 'Find properties in the most sought-after cities and areas of the country',
     viewAllLocations: 'View all locations',
     properties: 'properties',
@@ -318,12 +318,12 @@ export const en: Translations = {
       description: 'Find houses, apartments, land and commercial properties for sale and rent. Thousands of verified properties in Santo Domingo, Punta Cana, Santiago and more.',
     },
     buy: {
-      title: 'Properties for Sale in Dominican Republic | Ubíkala',
-      description: 'Explore thousands of properties for sale in the Dominican Republic. Houses, apartments, villas, land and commercial properties in Punta Cana, Santo Domingo, Santiago and more.',
+      title: 'Properties for Sale in {pais} | Ubíkala',
+      description: 'Explore thousands of properties for sale in {pais}. Houses, apartments, villas, land and commercial properties available.',
     },
     rent: {
-      title: 'Properties for Rent in Dominican Republic | Ubíkala',
-      description: 'Rent your next home in the Dominican Republic. Furnished apartments, family houses, offices and commercial spaces in Santo Domingo, Punta Cana and more.',
+      title: 'Properties for Rent in {pais} | Ubíkala',
+      description: 'Rent your next home in {pais}. Furnished apartments, family houses, offices and commercial spaces available.',
     },
     agents: {
       title: 'Real Estate Agents | Ubíkala',

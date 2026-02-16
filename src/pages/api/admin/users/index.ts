@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email, password, name, role, phone } = body;
+    const { email, password, name, role, phone, country_code } = body;
 
     if (!email || !password || !name || !role) {
       return new Response(JSON.stringify({ error: 'Faltan campos requeridos' }), {
@@ -66,6 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       name,
       role,
       phone,
+      country_code: country_code?.toUpperCase() || undefined,
     });
 
     await logActivity({

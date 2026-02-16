@@ -50,9 +50,10 @@ try {
 let fallbackAgencies: Agent[] = [];
 if (!inmobiliaria) {
   try {
+    const cc = Astro.locals.country?.code;
     const [portalTenants, ubikalaRows] = await Promise.all([
-      getPortalInmobiliarias(),
-      getUbikalaInmobiliarias({ limit: 100 }),
+      getPortalInmobiliarias(Astro.locals.country?.name),
+      getUbikalaInmobiliarias({ limit: 100, country_code: cc }),
     ]);
     const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
     fallbackAgencies = [...portalTenants, ...ubikalaInmobiliarias].slice(0, 6);

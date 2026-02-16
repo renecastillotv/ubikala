@@ -1,8 +1,9 @@
 ---
-import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
+import { getLangFromUrl, useTranslations, localizedUrl, tPais } from '../i18n';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
+const pais = Astro.locals.country?.name || '';
 ---
 
 <section class="py-20 bg-primary-600 relative overflow-hidden">
@@ -21,7 +22,7 @@ const t = useTranslations(lang);
   <div class="container-custom relative z-10">
     <div class="max-w-4xl mx-auto text-center">
       <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-        {t.publish.title}
+        {tPais(t.publish.title, pais)}
       </h2>
       <p class="text-xl text-primary-100 mb-10">
         {t.publish.subtitle}

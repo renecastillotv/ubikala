@@ -4,7 +4,7 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations, getAlternateUrls } from '../../i18n';
+import { useTranslations, getAlternateUrls, tPais } from '../../i18n';
 import { searchProperties, getMarketStats } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
@@ -59,8 +59,8 @@ if (currentPage > totalPages && totalPages > 0) {
 ---
 
 <Layout
-  title={t.pages.buy.title}
-  description={t.pages.buy.description}
+  title={tPais(t.pages.buy.title, pais)}
+  description={tPais(t.pages.buy.description, pais)}
   keywords={t.meta.keywords}
   alternateLanguages={alternateUrls}
 >

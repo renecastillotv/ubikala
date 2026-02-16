@@ -26,7 +26,7 @@ export const fr: Translations = {
 
   // Hero Section
   hero: {
-    title: 'Trouvez Votre Propriété Idéale en République Dominicaine',
+    title: 'Trouvez Votre Propriété Idéale en {pais}',
     subtitle: 'Des milliers de maisons, appartements, terrains et locaux commerciaux vous attendent',
     searchPlaceholder: 'Rechercher par emplacement, type de propriété...',
     cta: 'Rechercher des Propriétés',
@@ -176,7 +176,7 @@ export const fr: Translations = {
 
   // Page de publication
   publish: {
-    title: 'Publiez Votre Propriété en République Dominicaine',
+    title: 'Publiez Votre Propriété en {pais}',
     subtitle: "Atteignez des milliers d'acheteurs et locataires potentiels",
     cta: 'Commencer à Publier',
     benefits: {
@@ -205,7 +205,7 @@ export const fr: Translations = {
   locations: {
     santodomingo: {
       name: 'Saint-Domingue',
-      title: 'Propriétés à Saint-Domingue - Capitale de la République Dominicaine',
+      title: 'Propriétés à Saint-Domingue - Capitale de {pais}',
       description: 'Trouvez les meilleures propriétés à Saint-Domingue. Appartements à Piantini, maisons à Naco, locaux dans la Zone Coloniale et plus. La plus grande offre immobilière de la capitale dominicaine.',
     },
     puntacana: {
@@ -216,7 +216,7 @@ export const fr: Translations = {
     santiago: {
       name: 'Santiago',
       title: 'Propriétés à Santiago de los Caballeros',
-      description: 'Maisons et appartements à Santiago de los Caballeros. La deuxième ville la plus importante de République Dominicaine avec d\'excellentes opportunités immobilières.',
+      description: 'Maisons et appartements à Santiago de los Caballeros. La deuxième ville la plus importante de {pais} avec d\'excellentes opportunités immobilières.',
     },
     lasterrenas: {
       name: 'Las Terrenas',
@@ -281,7 +281,7 @@ export const fr: Translations = {
     expertAgents: 'Agents Experts',
     expertAgentsDesc: 'Connectez-vous avec des agents immobiliers professionnels qui connaissent parfaitement le marché.',
     exploreByLocation: 'Explorer par Emplacement',
-    popularDestinations: 'Destinations Populaires en République Dominicaine',
+    popularDestinations: 'Destinations Populaires en {pais}',
     popularDestinationsDesc: 'Trouvez des propriétés dans les villes et zones les plus recherchées du pays',
     viewAllLocations: 'Voir tous les emplacements',
     properties: 'propriétés',
@@ -318,12 +318,12 @@ export const fr: Translations = {
       description: 'Trouvez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer. Des milliers de propriétés vérifiées à Saint-Domingue, Punta Cana, Santiago et plus.',
     },
     buy: {
-      title: 'Propriétés à Vendre en République Dominicaine | Ubíkala',
-      description: 'Explorez des milliers de propriétés à vendre en République Dominicaine. Maisons, appartements, villas, terrains à Punta Cana, Saint-Domingue, Santiago et plus.',
+      title: 'Propriétés à Vendre en {pais} | Ubíkala',
+      description: 'Explorez des milliers de propriétés à vendre en {pais}. Maisons, appartements, villas, terrains disponibles.',
     },
     rent: {
-      title: 'Propriétés à Louer en République Dominicaine | Ubíkala',
-      description: 'Louez votre prochain logement en République Dominicaine. Appartements meublés, maisons familiales, bureaux à Saint-Domingue, Punta Cana et plus.',
+      title: 'Propriétés à Louer en {pais} | Ubíkala',
+      description: 'Louez votre prochain logement en {pais}. Appartements meublés, maisons familiales, bureaux disponibles.',
     },
     agents: {
       title: 'Agents Immobiliers | Ubíkala',

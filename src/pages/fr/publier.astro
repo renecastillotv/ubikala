@@ -1,9 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
-import { useTranslations, getAlternateUrls } from '../../i18n';
+import { useTranslations, getAlternateUrls, tPais } from '../../i18n';
 
 const t = useTranslations('fr');
+const pais = Astro.locals.country?.name || '';
 const alternateUrls = getAlternateUrls('/fr/publier');
 ---
 
@@ -19,7 +20,7 @@ const alternateUrls = getAlternateUrls('/fr/publier');
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
         <div>
           <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">
-            {t.publish.title}
+            {tPais(t.publish.title, pais)}
           </h1>
           <p class="text-xl text-primary-100 mb-8">
             {t.publish.subtitle}

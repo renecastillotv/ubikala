@@ -206,6 +206,7 @@ export async function registerUser(
     phone?: string;
     company_name?: string;
     license_number?: string;
+    country_code?: string;
   },
   ip_address?: string,
   user_agent?: string
@@ -228,6 +229,7 @@ export async function registerUser(
     phone: data.phone,
     company_name: data.company_name,
     license_number: data.license_number,
+    country_code: data.country_code,
   });
 
   // Log activity

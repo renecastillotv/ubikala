@@ -51,7 +51,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email, password, name, role, phone, is_active } = body;
+    const { email, password, name, role, phone, is_active, country_code } = body;
 
     const updateData: any = {};
 
@@ -61,6 +61,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     if (role && validRoles.includes(role)) updateData.role = role;
     if (phone !== undefined) updateData.phone = phone;
     if (is_active !== undefined) updateData.is_active = is_active;
+    if (country_code !== undefined) updateData.country_code = country_code ? country_code.toUpperCase() : null;
     if (password) updateData.password_hash = await hashPassword(password);
 
     const updatedUser = await updateUser(params.id!, updateData);
