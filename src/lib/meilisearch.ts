@@ -1020,7 +1020,16 @@ export interface MarketStats {
   avgBathrooms: number | null;
   typeDistribution: Record<string, number>;
   cityDistribution: Record<string, number>;
-  topCities: Array<{ name: string; count: number; avgPriceSale: number | null; avgPriceRent: number | null }>;
+  topCities: Array<{
+    name: string;
+    count: number;
+    types: Array<{
+      type: string;
+      count: number;
+      medianPriceSale: number | null;
+      medianPriceRent: number | null;
+    }>;
+  }>;
 }
 
 export interface CityMarketStats {
@@ -1126,37 +1135,61 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
     cityDistribution[k] = (cityDistribution[k] || 0) + (v as number);
   }
 
-  // Top cities with sale & rent prices — residential only, currency-normalized
-  const citySalePrices = new Map<string, number[]>();
+  // Top cities with per-type prices — residential only, currency-normalized
+  // Key: "ciudad|tipo", Value: { sale: number[], rent: number[], count: number }
+  const cityTypeData = new Map<string, { sale: number[]; rent: number[]; count: number }>();
+
+  const ensureCityType = (ciudad: string, tipo: string) => {
+    const key = `${ciudad}|${tipo}`;
+    if (!cityTypeData.has(key)) cityTypeData.set(key, { sale: [], rent: [], count: 0 });
+    return cityTypeData.get(key)!;
+  };
+
   for (const h of saleHits) {
     if (h.ciudad && isResidentialType(h.tipo)) {
+      const d = ensureCityType(h.ciudad, h.tipo.toLowerCase());
+      d.count++;
       const raw = h.precio_venta || h.precio;
-      if (raw != null && raw > 0) {
-        if (!citySalePrices.has(h.ciudad)) citySalePrices.set(h.ciudad, []);
-        citySalePrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
-      }
+      if (raw != null && raw > 0) d.sale.push(normalizeToUSD(raw, h.moneda));
     }
   }
-  const cityRentPrices = new Map<string, number[]>();
   for (const h of rentHits) {
     if (h.ciudad && isResidentialType(h.tipo)) {
+      const d = ensureCityType(h.ciudad, h.tipo.toLowerCase());
+      d.count++;
       const raw = h.precio_alquiler || h.precio;
-      if (raw != null && raw > 0) {
-        if (!cityRentPrices.has(h.ciudad)) cityRentPrices.set(h.ciudad, []);
-        cityRentPrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
-      }
+      if (raw != null && raw > 0) d.rent.push(normalizeToUSD(raw, h.moneda));
     }
   }
+
+  // Display labels for property types
+  const typeLabels: Record<string, string> = {
+    'apartamento': 'Apartamento',
+    'casa': 'Casa',
+    'villa': 'Villa',
+    'penthouse': 'Penthouse',
+  };
 
   const topCities = Object.entries(cityDistribution)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
-    .map(([name, count]) => ({
-      name,
-      count,
-      avgPriceSale: citySalePrices.has(name) ? robustMedian(citySalePrices.get(name)!) : null,
-      avgPriceRent: cityRentPrices.has(name) ? robustMedian(cityRentPrices.get(name)!) : null,
-    }));
+    .map(([name, count]) => {
+      // Gather types for this city, sorted by count
+      const types: Array<{ type: string; count: number; medianPriceSale: number | null; medianPriceRent: number | null }> = [];
+      for (const [key, d] of cityTypeData.entries()) {
+        const [ciudad, tipo] = key.split('|');
+        if (ciudad === name && d.count > 0 && typeLabels[tipo]) {
+          types.push({
+            type: typeLabels[tipo],
+            count: d.count,
+            medianPriceSale: robustMedian(d.sale),
+            medianPriceRent: robustMedian(d.rent),
+          });
+        }
+      }
+      types.sort((a, b) => b.count - a.count);
+      return { name, count, types };
+    });
 
   const data: MarketStats = {
     totalProperties: totalForSale + totalForRent,
