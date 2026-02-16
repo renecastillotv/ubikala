@@ -941,6 +941,45 @@ export async function getPortalInmobiliarias(pais?: string): Promise<Agent[]> {
 // MARKET STATS (real data from MeiliSearch for SEO content)
 // ============================================================================
 
+// Currency conversion rates to USD (approximate, updated periodically)
+const CURRENCY_TO_USD: Record<string, number> = {
+  'USD': 1,
+  'US': 1,
+  'DOP': 1 / 59,    // ~59 DOP per USD
+  'MXN': 1 / 17.5,  // ~17.5 MXN per USD
+  'COP': 1 / 4200,  // ~4200 COP per USD
+  'ARS': 1 / 1050,  // ~1050 ARS per USD
+  'BRL': 1 / 5.8,   // ~5.8 BRL per USD
+  'CLP': 1 / 950,   // ~950 CLP per USD
+  'PEN': 1 / 3.7,   // ~3.7 PEN per USD
+  'UYU': 1 / 42,    // ~42 UYU per USD
+  'CRC': 1 / 510,   // ~510 CRC per USD
+  'GTQ': 1 / 7.7,   // ~7.7 GTQ per USD
+  'HNL': 1 / 25,    // ~25 HNL per USD
+  'NIO': 1 / 37,    // ~37 NIO per USD
+};
+
+/** Normalize a price to USD using the property's currency */
+function normalizeToUSD(price: number, moneda: string | null | undefined): number {
+  if (!moneda) return price; // assume USD if unknown
+  const rate = CURRENCY_TO_USD[moneda.toUpperCase()];
+  return rate != null ? price * rate : price;
+}
+
+// Property type categories
+const RESIDENTIAL_TYPES = new Set([
+  'apartamento', 'casa', 'villa', 'penthouse',
+  'apartment', 'house',
+]);
+const COMMERCIAL_TYPES = new Set([
+  'local comercial', 'local', 'oficina', 'nave',
+  'commercial', 'office', 'warehouse',
+]);
+
+function isResidentialType(tipo: string | null | undefined): boolean {
+  return !!tipo && RESIDENTIAL_TYPES.has(tipo.toLowerCase());
+}
+
 export interface MarketStats {
   totalProperties: number;
   totalForSale: number;
@@ -1021,28 +1060,36 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
   const totalForSale = saleResult.estimatedTotalHits || 0;
   const totalForRent = rentResult.estimatedTotalHits || 0;
 
-  // Compute sale price average (USD only for consistency)
+  // Compute sale price average — residential only, currency-normalized to USD
   const salePrices = saleHits
-    .map(h => h.precio_venta || h.precio)
-    .filter((p): p is number => p != null && p > 0);
+    .filter(h => isResidentialType(h.tipo))
+    .map(h => {
+      const raw = h.precio_venta || h.precio;
+      return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
+    })
+    .filter(p => p > 0);
   const avgPriceSaleUSD = salePrices.length > 0
     ? Math.round(salePrices.reduce((a, b) => a + b, 0) / salePrices.length)
     : null;
 
-  // Compute rent price average
+  // Compute rent price average — residential only, currency-normalized to USD
   const rentPrices = rentHits
-    .map(h => h.precio_alquiler || h.precio)
-    .filter((p): p is number => p != null && p > 0);
+    .filter(h => isResidentialType(h.tipo))
+    .map(h => {
+      const raw = h.precio_alquiler || h.precio;
+      return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
+    })
+    .filter(p => p > 0);
   const avgPriceRentUSD = rentPrices.length > 0
     ? Math.round(rentPrices.reduce((a, b) => a + b, 0) / rentPrices.length)
     : null;
 
-  // Compute m2 averages from all properties
-  const allHits = [...saleHits, ...rentHits];
-  const m2Vals = allHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
-  const m2LandVals = allHits.map(h => h.m2_terreno).filter((v): v is number => v != null && v > 0);
-  const bedVals = allHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
-  const bathVals = allHits.map(h => h.banos).filter((v): v is number => v != null && v > 0);
+  // Compute m2 averages from residential properties only
+  const allResidentialHits = [...saleHits, ...rentHits].filter(h => isResidentialType(h.tipo));
+  const m2Vals = allResidentialHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
+  const m2LandVals = allResidentialHits.map(h => h.m2_terreno).filter((v): v is number => v != null && v > 0);
+  const bedVals = allResidentialHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
+  const bathVals = allResidentialHits.map(h => h.banos).filter((v): v is number => v != null && v > 0);
 
   const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
 
@@ -1057,12 +1104,15 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
     cityDistribution[k] = (cityDistribution[k] || 0) + (v as number);
   }
 
-  // Top cities with avg price
+  // Top cities with avg price — residential only, currency-normalized
   const cityPrices = new Map<string, number[]>();
   for (const h of saleHits) {
-    if (h.ciudad && (h.precio_venta || h.precio)) {
-      if (!cityPrices.has(h.ciudad)) cityPrices.set(h.ciudad, []);
-      cityPrices.get(h.ciudad)!.push(h.precio_venta || h.precio || 0);
+    if (h.ciudad && isResidentialType(h.tipo)) {
+      const raw = h.precio_venta || h.precio;
+      if (raw != null && raw > 0) {
+        if (!cityPrices.has(h.ciudad)) cityPrices.set(h.ciudad, []);
+        cityPrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
+      }
     }
   }
 
@@ -1112,7 +1162,7 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
         filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "venta"`,
         facets: ['tipo'],
         limit: 200,
-        attributesToRetrieve: ['precio_venta', 'precio', 'm2_construccion', 'habitaciones'],
+        attributesToRetrieve: ['precio_venta', 'precio', 'moneda', 'tipo', 'm2_construccion', 'habitaciones'],
       }),
     }),
     meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -1122,7 +1172,7 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
         filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "renta"`,
         facets: ['tipo'],
         limit: 200,
-        attributesToRetrieve: ['precio_alquiler', 'precio', 'm2_construccion', 'habitaciones'],
+        attributesToRetrieve: ['precio_alquiler', 'precio', 'moneda', 'tipo', 'm2_construccion', 'habitaciones'],
       }),
     }),
   ]);
@@ -1134,11 +1184,24 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
   const saleHits: MeiliPropertyDoc[] = saleResult.hits || [];
   const rentHits: MeiliPropertyDoc[] = rentResult.hits || [];
 
-  const salePrices = saleHits.map(h => h.precio_venta || h.precio).filter((p): p is number => p != null && p > 0);
-  const rentPrices = rentHits.map(h => h.precio_alquiler || h.precio).filter((p): p is number => p != null && p > 0);
-  const allHits = [...saleHits, ...rentHits];
-  const m2Vals = allHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
-  const bedVals = allHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
+  // Residential-only, currency-normalized averages
+  const salePrices = saleHits
+    .filter(h => isResidentialType(h.tipo))
+    .map(h => {
+      const raw = h.precio_venta || h.precio;
+      return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
+    })
+    .filter(p => p > 0);
+  const rentPrices = rentHits
+    .filter(h => isResidentialType(h.tipo))
+    .map(h => {
+      const raw = h.precio_alquiler || h.precio;
+      return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
+    })
+    .filter(p => p > 0);
+  const residentialHits = [...saleHits, ...rentHits].filter(h => isResidentialType(h.tipo));
+  const m2Vals = residentialHits.map(h => h.m2_construccion).filter((v): v is number => v != null && v > 0);
+  const bedVals = residentialHits.map(h => h.habitaciones).filter((v): v is number => v != null && v > 0);
 
   const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
 
