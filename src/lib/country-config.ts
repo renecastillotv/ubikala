@@ -15,6 +15,7 @@ export interface CountryConfig {
   timezone: string;
   coordinates: { lat: number; lng: number }; // Default map center
   domain?: string;        // Full domain for this country
+  isActive: boolean;      // Whether this country is live (false = coming soon)
 }
 
 // Hardcoded fallback (only used when DB is unavailable)
@@ -30,6 +31,7 @@ const FALLBACK_COUNTRY: CountryConfig = {
   timezone: 'America/Santo_Domingo',
   coordinates: { lat: 18.7357, lng: -70.1627 },
   domain: 'ubikala.com',
+  isActive: true,
 };
 
 // Cache for countries from DB (5 minute TTL)
@@ -51,6 +53,7 @@ function recordToConfig(r: CountryRecord): CountryConfig {
     timezone: r.timezone,
     coordinates: { lat: Number(r.lat), lng: Number(r.lng) },
     domain: r.domain,
+    isActive: r.is_active,
   };
 }
 
@@ -83,17 +86,25 @@ export const DEFAULT_COUNTRY = FALLBACK_COUNTRY;
 
 /**
  * Detect country from hostname subdomain.
- * Tries DB countries first, falls back to default.
+ * Returns the matched country (active or inactive), DEFAULT_COUNTRY for base domain/www,
+ * or null for unknown subdomains (should show 404).
  */
-export async function detectCountryFromHostnameAsync(hostname: string): Promise<CountryConfig> {
+export async function detectCountryFromHostnameAsync(hostname: string): Promise<CountryConfig | null> {
   const host = hostname.split(':')[0];
   const parts = host.split('.');
 
   if (parts.length >= 3) {
     const subdomain = parts[0].toLowerCase();
+
+    // www is not a country subdomain
+    if (subdomain === 'www') return DEFAULT_COUNTRY;
+
     const countries = await loadCountriesFromDb();
     const match = countries.find(c => c.subdomain === subdomain);
     if (match) return match;
+
+    // Unknown subdomain — not a registered country
+    return null;
   }
 
   return DEFAULT_COUNTRY;
@@ -125,9 +136,17 @@ export async function getCountryByCodeConfig(code: string): Promise<CountryConfi
 }
 
 /**
- * Get all supported countries (from DB)
+ * Get all supported countries (active only, from DB)
  */
 export async function getSupportedCountries(): Promise<CountryConfig[]> {
+  const countries = await loadCountriesFromDb();
+  return countries.filter(c => c.isActive);
+}
+
+/**
+ * Get ALL countries including inactive (for admin pages)
+ */
+export async function getAllCountriesConfig(): Promise<CountryConfig[]> {
   return loadCountriesFromDb();
 }
 

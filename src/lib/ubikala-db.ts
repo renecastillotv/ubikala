@@ -2597,7 +2597,7 @@ export async function getAllCountries(): Promise<CountryRecord[]> {
   await seedDefaultCountries();
 
   const rows = await ubikalaDb`
-    SELECT * FROM ubikala_paises WHERE is_active = true ORDER BY name
+    SELECT * FROM ubikala_paises ORDER BY name
   `;
   return rows as CountryRecord[];
 }
