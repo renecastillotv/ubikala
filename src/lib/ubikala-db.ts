@@ -2817,7 +2817,8 @@ export async function seedSeoContent(): Promise<void> {
   try {
     const { countrySeedData } = await import('./seo-country-seeds');
     const { countrySeedData2 } = await import('./seo-country-seeds-2');
-    const allSeeds = { ...countrySeedData, ...countrySeedData2 };
+    const { countrySeedData3 } = await import('./seo-country-seeds-3');
+    const allSeeds = { ...countrySeedData, ...countrySeedData2, ...countrySeedData3 };
     for (const [cc, items] of Object.entries(allSeeds)) {
       if (await hasCountryData(cc)) continue;
       for (const item of items) {
