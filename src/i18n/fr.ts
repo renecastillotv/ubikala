@@ -5,8 +5,8 @@ export const fr: Translations = {
   meta: {
     siteName: 'Ubíkala',
     tagline: 'Cette propriété que vous cherchez, trouvez-la ici',
-    siteDescription: 'Cette propriété que vous cherchez, trouvez-la ici. Découvrez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer. Des milliers de propriétés vérifiées à Saint-Domingue, Punta Cana, Santiago et dans tout le pays.',
-    keywords: 'immobilier république dominicaine, maisons à vendre rd, appartements saint domingue, immobilier dominicain, propriétés rd, location punta cana, terrains santiago, locaux commerciaux république dominicaine',
+    siteDescription: 'Cette propriété que vous cherchez, trouvez-la ici. Découvrez des maisons, appartements, terrains et locaux commerciaux à vendre et à louer en {pais}. Des milliers de propriétés vérifiées.',
+    keywords: 'immobilier {pais}, maisons à vendre, appartements, portail immobilier, propriétés, location, terrains, locaux commerciaux, ubikala',
   },
 
   // Navigation

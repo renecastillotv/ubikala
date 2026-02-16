@@ -5,6 +5,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 
 const t = useTranslations('en');
 const alternateUrls = getAlternateUrls('/en/privacy');
+const pais = Astro.locals.country?.name || '';
 ---
 
 <Layout
@@ -31,7 +32,7 @@ const alternateUrls = getAlternateUrls('/en/privacy');
 
           <h2>1. Data Controller</h2>
           <p>
-            Ubikala.com, domiciled in Santo Domingo, Dominican Republic, is responsible for the processing
+            Ubikala.com, domiciled in {pais}, is responsible for the processing
             of your personal data through this website.
           </p>
 
@@ -99,7 +100,7 @@ const alternateUrls = getAlternateUrls('/en/privacy');
           </p>
           <ul>
             <li>Email: privacy@ubikala.com</li>
-            <li>Address: Santo Domingo, Dominican Republic</li>
+            <li>Address: {pais}</li>
           </ul>
 
           <p class="text-sm text-gray-500 mt-12">

@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
+
+const pais = Astro.locals.country?.name || '';
 ---
 
 <Layout
@@ -108,8 +110,8 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 
           <h2>10. Ley Aplicable</h2>
           <p>
-            Estos términos se rigen por las leyes de la República Dominicana. Cualquier
-            disputa será resuelta en los tribunales de Santo Domingo.
+            Estos términos se rigen por las leyes de {pais}. Cualquier
+            disputa será resuelta en los tribunales competentes.
           </p>
 
           <h2>11. Contacto</h2>

@@ -23,14 +23,14 @@ try {
 // Placeholder image
 const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
-const pageTitle = 'Properties by Location | Ubíkala.com';
-const pageDescription = `Explore properties for sale and rent in the main cities and areas of ${pais}. Punta Cana, Santo Domingo, Santiago and more.`;
+const pageTitle = `Properties by Location in ${pais} | Ubíkala.com`;
+const pageDescription = `Explore properties for sale and rent in the main cities and areas of ${pais}.`;
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords="dominican republic properties, real estate by location, houses santo domingo, apartments punta cana, properties santiago"
+  keywords={`properties ${pais}, real estate by location, houses for sale, apartments, ubikala`}
   alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
@@ -102,21 +102,12 @@ const pageDescription = `Explore properties for sale and rent in the main cities
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Find Properties Across the Country</h2>
+        <h2>Find Properties in {pais}</h2>
         <p>
           {pais} offers a wide variety of locations for real estate investment.
-          From the paradise beaches of Punta Cana to the vibrant capital Santo Domingo,
-          each area has unique characteristics that suit different lifestyles and investment goals.
+          Each area has unique characteristics that suit different lifestyles and investment goals.
+          Explore the locations above to find the ideal property.
         </p>
-
-        <h3>Most Popular Destinations</h3>
-        <ul>
-          <li><strong>Punta Cana:</strong> The #1 Caribbean tourist destination with excellent return on investment.</li>
-          <li><strong>Santo Domingo:</strong> The capital with options for every budget.</li>
-          <li><strong>Santiago:</strong> The second largest city with affordable prices.</li>
-          <li><strong>Las Terrenas:</strong> Bohemian paradise with beachfront properties.</li>
-          <li><strong>Puerto Plata:</strong> North coast with spectacular beaches and golf.</li>
-        </ul>
       </div>
     </div>
   </section>

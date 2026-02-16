@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { useTranslations, tPais } from '../i18n';
-import { getPlatformStats, formatStatNumber } from '../lib/platform-stats';
+import { getPlatformStats } from '../lib/meilisearch';
 
 const t = useTranslations('es');
 const pais = Astro.locals.country?.name || '';
@@ -10,24 +10,23 @@ const pais = Astro.locals.country?.name || '';
 const user = Astro.locals.user;
 const isLoggedIn = !!user;
 
-// Get real stats from both databases
-let stats = { totalProperties: 0, totalAgents: 0, cities: 0 };
+// Get real stats filtered by country
+let stats = { totalProperties: 0, totalAgents: 0, totalCities: 0 };
 try {
-  const platformStats = await getPlatformStats();
-  stats = {
-    totalProperties: platformStats.totalProperties,
-    totalAgents: platformStats.totalAgents,
-    cities: platformStats.cities,
-  };
+  stats = await getPlatformStats(pais);
 } catch (error) {
   console.error('Error fetching platform stats:', error);
+}
+
+function formatStatNumber(n: number): string {
+  return n.toLocaleString('es-DO');
 }
 ---
 
 <Layout
   title={t.pages.publish.title}
   description={t.pages.publish.description}
-  keywords="publicar propiedad republica dominicana, vender casa rd, anunciar apartamento santo domingo, inmobiliaria publicar gratis"
+  keywords="publicar propiedad, vender casa, anunciar apartamento, inmobiliaria publicar gratis, ubikala"
 >
   <!-- Hero -->
   <section class="relative py-20 bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 overflow-hidden">
@@ -65,7 +64,7 @@ try {
             <div class="text-primary-200 text-sm">Asesores registrados</div>
           </div>
           <div>
-            <div class="text-3xl md:text-4xl font-bold text-white">{formatStatNumber(stats.cities)}</div>
+            <div class="text-3xl md:text-4xl font-bold text-white">{formatStatNumber(stats.totalCities)}</div>
             <div class="text-primary-200 text-sm">Ciudades</div>
           </div>
         </div>

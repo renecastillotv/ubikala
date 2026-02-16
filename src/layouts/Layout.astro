@@ -35,6 +35,8 @@ const {
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
+const pais = country.name;
+const rp = (s: string) => s.replace(/\{pais\}/g, pais);
 
 const siteUrl = config.site_url;
 const fullCanonicalUrl = canonicalUrl || Astro.url.href;
@@ -56,7 +58,7 @@ const schemaOrg = {
   '@type': ['RealEstateAgent', 'LocalBusiness'],
   '@id': `${siteUrl}/#organization`,
   name: config.company_name,
-  description: t.meta.siteDescription,
+  description: rp(t.meta.siteDescription),
   url: siteUrl,
   logo: {
     '@type': 'ImageObject',
@@ -79,14 +81,10 @@ const schemaOrg = {
     longitude: config.geo_longitude
   },
   areaServed: [
-    { '@type': 'Country', name: config.address_country },
-    { '@type': 'City', name: 'Santo Domingo' },
-    { '@type': 'City', name: 'Punta Cana' },
-    { '@type': 'City', name: 'Santiago' },
-    { '@type': 'City', name: 'La Romana' }
+    { '@type': 'Country', name: country.name }
   ],
   priceRange: '$$$',
-  currenciesAccepted: 'USD, DOP',
+  currenciesAccepted: 'USD',
   paymentAccepted: 'Cash, Credit Card, Bank Transfer',
   openingHoursSpecification: [
     {
@@ -105,7 +103,7 @@ const schemaOrg = {
   sameAs: socialLinks,
   hasOfferCatalog: {
     '@type': 'OfferCatalog',
-    name: 'Propiedades en Republica Dominicana',
+    name: `Propiedades en ${country.name}`,
     itemListElement: [
       { '@type': 'OfferCatalog', name: 'Casas en Venta' },
       { '@type': 'OfferCatalog', name: 'Apartamentos en Venta' },
@@ -122,7 +120,7 @@ const websiteSchema = {
   '@id': `${siteUrl}/#website`,
   url: siteUrl,
   name: config.company_name,
-  description: t.meta.siteDescription,
+  description: rp(t.meta.siteDescription),
   publisher: { '@id': `${siteUrl}/#organization` },
   potentialAction: {
     '@type': 'SearchAction',
@@ -132,7 +130,7 @@ const websiteSchema = {
     },
     'query-input': 'required name=search_term_string'
   },
-  inLanguage: ['es-DO', 'en-US', 'fr-FR']
+  inLanguage: ['es', 'en', 'fr']
 };
 ---
 
@@ -144,9 +142,9 @@ const websiteSchema = {
     <meta name="google" content="notranslate" />
 
     <!-- SEO Meta Tags -->
-    <title>{title}</title>
-    <meta name="description" content={description} />
-    {keywords && <meta name="keywords" content={keywords} />}
+    <title>{rp(title)}</title>
+    <meta name="description" content={rp(description)} />
+    {keywords && <meta name="keywords" content={rp(keywords)} />}
     {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <!-- Country detection -->
@@ -165,19 +163,19 @@ const websiteSchema = {
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content={type} />
     <meta property="og:url" content={fullCanonicalUrl} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <meta property="og:title" content={rp(title)} />
+    <meta property="og:description" content={rp(description)} />
     <meta property="og:image" content={fullImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content={config.company_name} />
-    <meta property="og:locale" content={lang === 'es' ? 'es_DO' : lang === 'en' ? 'en_US' : 'fr_FR'} />
+    <meta property="og:locale" content={lang === 'es' ? `es_${country.code}` : lang === 'en' ? 'en_US' : 'fr_FR'} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content={fullCanonicalUrl} />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:title" content={rp(title)} />
+    <meta name="twitter:description" content={rp(description)} />
     <meta name="twitter:image" content={fullImageUrl} />
 
     <!-- Favicon -->

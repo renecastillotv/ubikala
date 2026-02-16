@@ -22,14 +22,14 @@ try {
 // Imagen placeholder
 const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
-const pageTitle = 'Propiedades por Ubicación | Ubíkala.com';
-const pageDescription = `Explora propiedades en venta y alquiler en las principales ciudades y zonas de ${pais}. Punta Cana, Santo Domingo, Santiago y más.`;
+const pageTitle = `Propiedades por Ubicación en ${pais} | Ubíkala.com`;
+const pageDescription = `Explora propiedades en venta y alquiler en las principales ciudades y zonas de ${pais}.`;
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords="propiedades republica dominicana, inmuebles por ubicacion, casas santo domingo, apartamentos punta cana, propiedades santiago"
+  keywords={`propiedades ${pais}, inmuebles por ubicacion, casas en venta, apartamentos, ubikala`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
@@ -100,21 +100,12 @@ const pageDescription = `Explora propiedades en venta y alquiler en las principa
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Encuentra Propiedades en Todo el País</h2>
+        <h2>Encuentra Propiedades en {pais}</h2>
         <p>
           {pais} ofrece una amplia variedad de ubicaciones para invertir en bienes raíces.
-          Desde las playas paradisíacas de Punta Cana hasta la vibrante capital Santo Domingo,
-          cada zona tiene características únicas que se adaptan a diferentes estilos de vida y objetivos de inversión.
+          Cada zona tiene características únicas que se adaptan a diferentes estilos de vida y objetivos de inversión.
+          Explora las ubicaciones disponibles arriba para encontrar la propiedad ideal.
         </p>
-
-        <h3>Destinos Más Populares</h3>
-        <ul>
-          <li><strong>Punta Cana:</strong> El destino turístico #1 del Caribe con excelente retorno de inversión.</li>
-          <li><strong>Santo Domingo:</strong> La capital con opciones para todos los presupuestos.</li>
-          <li><strong>Santiago:</strong> La segunda ciudad más grande con precios accesibles.</li>
-          <li><strong>Las Terrenas:</strong> Paraíso bohemio con propiedades frente al mar.</li>
-          <li><strong>Puerto Plata:</strong> Costa norte con playas espectaculares y golf.</li>
-        </ul>
       </div>
     </div>
   </section>

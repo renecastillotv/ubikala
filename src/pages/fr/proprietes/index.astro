@@ -22,14 +22,16 @@ try {
 // Image par défaut
 const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
-const pageTitle = 'Propriétés par Emplacement | Ubíkala.com';
-const pageDescription = 'Explorez les propriétés à vendre et à louer dans les principales villes et zones de la République Dominicaine. Punta Cana, Saint-Domingue, Santiago et plus.';
+const pais = Astro.locals.country.name;
+
+const pageTitle = `Propriétés par Emplacement au ${pais} | Ubíkala.com`;
+const pageDescription = `Explorez les propriétés à vendre et à louer dans les principales villes et zones du ${pais}.`;
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords="propriétés république dominicaine, immobilier par emplacement, maisons saint domingue, appartements punta cana, propriétés santiago"
+  keywords={`propriétés ${pais}, immobilier par emplacement, maisons à vendre, appartements, ubikala`}
   alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
@@ -44,7 +46,7 @@ const pageDescription = 'Explorez les propriétés à vendre et à louer dans le
         Propriétés par Emplacement
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
-        Explorez les principales villes et zones de la République Dominicaine où nous avons des propriétés disponibles pour vous.
+        Explorez les principales villes et zones du {pais} où nous avons des propriétés disponibles pour vous.
       </p>
     </div>
   </section>
@@ -101,21 +103,12 @@ const pageDescription = 'Explorez les propriétés à vendre et à louer dans le
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Trouvez des Propriétés dans Tout le Pays</h2>
+        <h2>Trouvez des Propriétés au {pais}</h2>
         <p>
-          La République Dominicaine offre une grande variété d'emplacements pour investir dans l'immobilier.
-          Des plages paradisiaques de Punta Cana à la vibrante capitale Saint-Domingue,
-          chaque zone possède des caractéristiques uniques adaptées à différents styles de vie et objectifs d'investissement.
+          Le {pais} offre une grande variété d'emplacements pour investir dans l'immobilier.
+          Chaque zone possède des caractéristiques uniques adaptées à différents styles de vie et objectifs d'investissement.
+          Explorez les emplacements ci-dessus pour trouver la propriété idéale.
         </p>
-
-        <h3>Destinations les Plus Populaires</h3>
-        <ul>
-          <li><strong>Punta Cana :</strong> La destination touristique n°1 des Caraïbes avec un excellent retour sur investissement.</li>
-          <li><strong>Saint-Domingue :</strong> La capitale avec des options pour tous les budgets.</li>
-          <li><strong>Santiago :</strong> La deuxième plus grande ville avec des prix abordables.</li>
-          <li><strong>Las Terrenas :</strong> Paradis bohème avec des propriétés en bord de mer.</li>
-          <li><strong>Puerto Plata :</strong> Côte nord avec des plages spectaculaires et du golf.</li>
-        </ul>
       </div>
     </div>
   </section>

@@ -2,14 +2,19 @@
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getPlatformStats, formatStatNumber } from '../lib/platform-stats';
+import { getPlatformStats } from '../lib/meilisearch';
 
-let stats = { totalProperties: 0, totalAgents: 0, cities: 0 };
+const pais = Astro.locals.country?.name || '';
+
+let stats = { totalProperties: 0, totalAgents: 0, totalCities: 0 };
 try {
-  const platformStats = await getPlatformStats();
-  stats = { totalProperties: platformStats.totalProperties, totalAgents: platformStats.totalAgents, cities: platformStats.cities };
+  stats = await getPlatformStats(pais);
 } catch (error) {
   console.error('Error fetching platform stats:', error);
+}
+
+function formatStatNumber(n: number): string {
+  return n.toLocaleString('es-DO');
 }
 ---
 
@@ -188,7 +193,7 @@ try {
           <div class="text-primary-200">Asesores Registrados</div>
         </div>
         <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.cities)}</div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.totalCities)}</div>
           <div class="text-primary-200">Ciudades</div>
         </div>
       </div>

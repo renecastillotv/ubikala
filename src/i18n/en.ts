@@ -5,8 +5,8 @@ export const en: Translations = {
   meta: {
     siteName: 'Ubíkala',
     tagline: 'That property you are looking for, find it here',
-    siteDescription: 'That property you are looking for, find it here. Discover houses, apartments, land and commercial properties for sale and rent. Thousands of verified properties in Santo Domingo, Punta Cana, Santiago and throughout the country.',
-    keywords: 'real estate dominican republic, houses for sale dr, apartments santo domingo, dominican real estate, properties dr, punta cana rental, santiago land, commercial properties dominican republic',
+    siteDescription: 'That property you are looking for, find it here. Discover houses, apartments, land and commercial properties for sale and rent in {pais}. Thousands of verified properties.',
+    keywords: 'real estate {pais}, houses for sale, apartments, real estate portal, properties, rental, land, commercial properties, ubikala',
   },
 
   // Navigation

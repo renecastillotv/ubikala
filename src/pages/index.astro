@@ -41,13 +41,15 @@ try {
   console.error('Error fetching agents:', error);
 }
 
+const rp = (s: string) => s.replace(/\{pais\}/g, pais);
+
 // SEO Schema para la página principal
 const homeSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Ubíkala',
   url: 'https://ubikala.com',
-  description: t.meta.siteDescription,
+  description: rp(t.meta.siteDescription),
   potentialAction: {
     '@type': 'SearchAction',
     target: {
@@ -65,7 +67,7 @@ const organizationSchema = {
   name: 'Ubíkala',
   url: 'https://ubikala.com',
   logo: 'https://ubikala.com/logo.png',
-  description: t.meta.siteDescription,
+  description: rp(t.meta.siteDescription),
   address: {
     '@type': 'PostalAddress',
     addressCountry: country.code,

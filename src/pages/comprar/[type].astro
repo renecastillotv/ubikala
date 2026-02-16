@@ -44,15 +44,15 @@ const pais = Astro.locals.country.name;
 
 const typeDescriptions: Record<string, string> = {
   'casas': `Encuentra casas en venta en ${pais}. Desde residencias familiares hasta propiedades de lujo en las mejores zonas del país.`,
-  'apartamentos': 'Explora apartamentos en venta en Santo Domingo, Punta Cana, Santiago y más. Modernos, con amenidades y ubicaciones privilegiadas.',
-  'villas': 'Descubre villas exclusivas frente al mar, en campos de golf y comunidades cerradas. El máximo lujo en el Caribe.',
+  'apartamentos': `Explora apartamentos en venta en ${pais}. Modernos, con amenidades y ubicaciones privilegiadas.`,
+  'villas': `Descubre villas exclusivas en ${pais}. Frente al mar, en campos de golf y comunidades cerradas.`,
   'penthouses': `Los penthouses más espectaculares de ${pais}. Vistas panorámicas, terrazas privadas y acabados de primera.`,
-  'terrenos': 'Terrenos en venta para construir tu proyecto. Lotes residenciales, comerciales e industriales en ubicaciones estratégicas.',
-  'locales-comerciales': 'Locales comerciales en las mejores zonas. Ideales para restaurantes, tiendas, oficinas y más.',
-  'oficinas': 'Espacios de oficina en torres empresariales y edificios comerciales. Listos para tu negocio.',
-  'almacenes': 'Naves industriales y almacenes en zonas francas y áreas industriales.',
-  'edificios': 'Edificios completos en venta para inversión o desarrollo.',
-  'solares': 'Solares en venta para construir tu proyecto ideal.',
+  'terrenos': `Terrenos en venta en ${pais}. Lotes residenciales, comerciales e industriales en ubicaciones estratégicas.`,
+  'locales-comerciales': `Locales comerciales en las mejores zonas de ${pais}. Ideales para restaurantes, tiendas, oficinas y más.`,
+  'oficinas': `Espacios de oficina en ${pais}. Torres empresariales y edificios comerciales listos para tu negocio.`,
+  'almacenes': `Naves industriales y almacenes en ${pais}.`,
+  'edificios': `Edificios completos en venta en ${pais} para inversión o desarrollo.`,
+  'solares': `Solares en venta en ${pais} para construir tu proyecto ideal.`,
 };
 
 const dbType = slugToDbType[typeSlug || ''] || typeSlug;

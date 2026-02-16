@@ -3,8 +3,8 @@ export const es = {
   meta: {
     siteName: 'Ubíkala',
     tagline: 'Esa propiedad que buscas, ubíkala aquí',
-    siteDescription: 'Esa propiedad que buscas, ubíkala aquí. Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler. Miles de propiedades verificadas en Santo Domingo, Punta Cana, Santiago y todo el país.',
-    keywords: 'propiedades en republica dominicana, casas en venta rd, apartamentos santo domingo, inmobiliaria dominicana, bienes raices rd, alquiler punta cana, terrenos santiago, locales comerciales republica dominicana',
+    siteDescription: 'Esa propiedad que buscas, ubíkala aquí. Encuentra casas, apartamentos, terrenos y locales comerciales en venta y alquiler en {pais}. Miles de propiedades verificadas.',
+    keywords: 'propiedades en {pais}, casas en venta, apartamentos, inmobiliaria, bienes raices, alquiler, terrenos, locales comerciales, ubikala',
   },
 
   // Navegación

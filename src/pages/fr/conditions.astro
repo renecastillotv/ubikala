@@ -5,6 +5,7 @@ import { useTranslations, getAlternateUrls } from '../../i18n';
 
 const t = useTranslations('fr');
 const alternateUrls = getAlternateUrls('/fr/conditions');
+const pais = Astro.locals.country?.name || '';
 ---
 
 <Layout
@@ -108,8 +109,8 @@ const alternateUrls = getAlternateUrls('/fr/conditions');
 
           <h2>10. Droit Applicable</h2>
           <p>
-            Ces termes sont régis par les lois de la République Dominicaine. Tout litige sera
-            résolu devant les tribunaux de Saint-Domingue.
+            Ces termes sont régis par les lois de {pais}. Tout litige sera
+            résolu devant les tribunaux compétents.
           </p>
 
           <h2>11. Contact</h2>
@@ -118,7 +119,7 @@ const alternateUrls = getAlternateUrls('/fr/conditions');
           </p>
           <ul>
             <li>Email: legal@ubikala.com</li>
-            <li>Adresse: Saint-Domingue, République Dominicaine</li>
+            <li>Adresse: {pais}</li>
           </ul>
 
           <p class="text-sm text-gray-500 mt-12">

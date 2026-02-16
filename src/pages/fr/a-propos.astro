@@ -3,17 +3,21 @@ import Layout from '../../layouts/Layout.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, getAlternateUrls } from '../../i18n';
-import { getPlatformStats, formatStatNumber } from '../../lib/platform-stats';
+import { getPlatformStats } from '../../lib/meilisearch';
 
 const t = useTranslations('fr');
 const alternateUrls = getAlternateUrls('/fr/a-propos');
+const pais = Astro.locals.country?.name || '';
 
-let stats = { totalProperties: 0, totalAgents: 0, cities: 0 };
+let stats = { totalProperties: 0, totalAgents: 0, totalCities: 0 };
 try {
-  const platformStats = await getPlatformStats();
-  stats = { totalProperties: platformStats.totalProperties, totalAgents: platformStats.totalAgents, cities: platformStats.cities };
+  stats = await getPlatformStats(pais);
 } catch (error) {
   console.error('Error fetching platform stats:', error);
+}
+
+function formatStatNumber(n: number): string {
+  return n.toLocaleString('fr-FR');
 }
 ---
 
@@ -193,7 +197,7 @@ try {
           <div class="text-primary-200">Agents Inscrits</div>
         </div>
         <div>
-          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.cities)}</div>
+          <div class="text-4xl md:text-5xl font-bold text-white mb-2">{formatStatNumber(stats.totalCities)}</div>
           <div class="text-primary-200">Villes</div>
         </div>
       </div>

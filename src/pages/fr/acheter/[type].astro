@@ -31,23 +31,11 @@ const typeNames: Record<string, string> = {
   'terrains': 'Terrains',
   'commerces': 'Commerces',
   'bureaux': 'Bureaux',
-  'entrepots': 'Entrep\u00f4ts',
+  'entrepots': 'Entrepôts',
   'immeubles': 'Immeubles',
 };
 
-const typeDescriptions: Record<string, string> = {
-  'maisons': 'Parcourez les maisons \u00e0 vendre dans toute la R\u00e9publique Dominicaine. Des r\u00e9sidences familiales aux maisons de luxe dans les quartiers les plus recherch\u00e9s.',
-  'appartements': 'Explorez les appartements \u00e0 vendre \u00e0 Saint-Domingue, Punta Cana, Santiago et au-del\u00e0. Des logements modernes avec les meilleurs \u00e9quipements dans des emplacements privil\u00e9gi\u00e9s.',
-  'villas': 'D\u00e9couvrez des villas exclusives en bord de mer, des domaines sur parcours de golf et des retraites dans des communaut\u00e9s ferm\u00e9es. Le luxe cara\u00efb\u00e9en haut de gamme.',
-  'penthouses': 'Les penthouses les plus spectaculaires de la R\u00e9publique Dominicaine. Vues panoramiques, terrasses priv\u00e9es et finitions de premi\u00e8re classe.',
-  'terrains': 'Terrains et lots \u00e0 vendre pour construire votre prochain projet. Parcelles r\u00e9sidentielles, commerciales et industrielles dans des emplacements strat\u00e9giques.',
-  'commerces': 'Locaux commerciaux dans des zones \u00e0 fort trafic. Id\u00e9al pour restaurants, boutiques, bureaux et plus encore.',
-  'bureaux': 'Espaces de bureaux dans des tours d\u2019affaires et des b\u00e2timents commerciaux. Pr\u00eats \u00e0 l\u2019emploi pour votre entreprise.',
-  'entrepots': 'Entrep\u00f4ts industriels et installations de stockage dans les zones franches et les parcs industriels.',
-  'immeubles': 'Immeubles complets \u00e0 vendre comme opportunit\u00e9s d\u2019investissement ou de d\u00e9veloppement.',
-};
-
-// Correspondance des slugs fran\u00e7ais vers les slugs espagnols pour les URL alternatives
+// Correspondance des slugs français vers les slugs espagnols pour les URL alternatives
 const frenchToSpanishSlug: Record<string, string> = {
   'maisons': 'casas',
   'appartements': 'apartamentos',
@@ -62,10 +50,23 @@ const frenchToSpanishSlug: Record<string, string> = {
 
 const { type: typeSlug } = Astro.params;
 const t = useTranslations('fr');
+const pais = Astro.locals.country.name;
+
+const typeDescriptions: Record<string, string> = {
+  'maisons': `Parcourez les maisons à vendre dans tout ${pais}. Des résidences familiales aux maisons de luxe dans les quartiers les plus recherchés.`,
+  'appartements': `Explorez les appartements à vendre dans tout ${pais}. Des logements modernes avec les meilleurs équipements dans des emplacements privilégiés.`,
+  'villas': `Découvrez des villas exclusives en bord de mer, des domaines sur parcours de golf et des retraites dans des communautés fermées. Le luxe caribéen haut de gamme.`,
+  'penthouses': `Les penthouses les plus spectaculaires de ${pais}. Vues panoramiques, terrasses privées et finitions de première classe.`,
+  'terrains': `Terrains et lots à vendre pour construire votre prochain projet. Parcelles résidentielles, commerciales et industrielles dans des emplacements stratégiques.`,
+  'commerces': `Locaux commerciaux dans des zones à fort trafic. Idéal pour restaurants, boutiques, bureaux et plus encore.`,
+  'bureaux': `Espaces de bureaux dans des tours d\u2019affaires et des bâtiments commerciaux. Prêts à l\u2019emploi pour votre entreprise.`,
+  'entrepots': `Entrepôts industriels et installations de stockage dans les zones franches et les parcs industriels.`,
+  'immeubles': `Immeubles complets à vendre comme opportunités d\u2019investissement ou de développement.`,
+};
 
 const dbType = slugToDbType[typeSlug || ''];
-const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Propri\u00e9t\u00e9s';
-const typeDescription = typeDescriptions[typeSlug || ''] || `Trouvez des ${typeName.toLowerCase()} \u00e0 vendre en R\u00e9publique Dominicaine.`;
+const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Propriétés';
+const typeDescription = typeDescriptions[typeSlug || ''] || `Trouvez des ${typeName.toLowerCase()} à vendre en ${pais}.`;
 
 // Rediriger vers /fr/acheter si le slug de type n'est pas reconnu
 if (!dbType) {
@@ -75,9 +76,7 @@ if (!dbType) {
 const spanishSlug = frenchToSpanishSlug[typeSlug || ''] || typeSlug;
 const alternateUrls = getAlternateUrls(`/fr/acheter/${typeSlug}`);
 
-// R\u00e9cup\u00e9rer les propri\u00e9t\u00e9s depuis MeiliSearch
-const pais = Astro.locals.country.name;
-
+// Récupérer les propriétés depuis MeiliSearch
 let typeProperties: Property[] = [];
 let totalCount = 0;
 try {
@@ -88,13 +87,13 @@ try {
   console.error('Error fetching properties by type:', error);
 }
 
-const pageTitle = `${typeName} \u00e0 Vendre en R\u00e9publique Dominicaine | Ub\u00edkala`;
+const pageTitle = `${typeName} à Vendre en ${pais} | Ubíkala`;
 ---
 
 <Layout
   title={pageTitle}
   description={typeDescription}
-  keywords={`${typeName.toLowerCase()} \u00e0 vendre r\u00e9publique dominicaine, acheter ${typeName.toLowerCase()} rd, ${typeName.toLowerCase()} saint-domingue, ${typeName.toLowerCase()} punta cana`}
+  keywords={`${typeName.toLowerCase()} à vendre ${pais}, acheter ${typeName.toLowerCase()}, ubikala`}
   alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
@@ -107,7 +106,7 @@ const pageTitle = `${typeName} \u00e0 Vendre en R\u00e9publique Dominicaine | Ub
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        {typeName} \u00e0 Vendre en R\u00e9publique Dominicaine
+        {typeName} à Vendre en {pais}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         {typeDescription}
@@ -122,17 +121,17 @@ const pageTitle = `${typeName} \u00e0 Vendre en R\u00e9publique Dominicaine | Ub
     </div>
   </section>
 
-  <!-- R\u00e9sultats -->
+  <!-- Résultats -->
   <section class="section">
     <div class="container-custom">
       <div class="flex items-center justify-between mb-8">
         <p class="text-gray-600">
-          <span class="font-semibold text-gray-900">{totalCount}</span> {typeName.toLowerCase()} trouv\u00e9(e)s
+          <span class="font-semibold text-gray-900">{totalCount}</span> {typeName.toLowerCase()} trouvé(e)s
         </p>
         <select class="select py-2 text-sm w-auto">
-          <option value="recent">Plus R\u00e9cents</option>
+          <option value="recent">Plus Récents</option>
           <option value="price-asc">Prix: Croissant</option>
-          <option value="price-desc">Prix: D\u00e9croissant</option>
+          <option value="price-desc">Prix: Décroissant</option>
         </select>
       </div>
 
@@ -145,7 +144,7 @@ const pageTitle = `${typeName} \u00e0 Vendre en R\u00e9publique Dominicaine | Ub
       ) : (
         <div class="card p-12 text-center">
           <p class="text-gray-600 mb-4">Aucun(e) {typeName.toLowerCase()} disponible pour le moment.</p>
-          <a href="/fr/acheter" class="btn-primary">Voir toutes les propri\u00e9t\u00e9s</a>
+          <a href="/fr/acheter" class="btn-primary">Voir toutes les propriétés</a>
         </div>
       )}
     </div>
@@ -155,27 +154,19 @@ const pageTitle = `${typeName} \u00e0 Vendre en R\u00e9publique Dominicaine | Ub
   <section class="py-12 bg-gray-50">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Acheter {typeName} en R\u00e9publique Dominicaine</h2>
+        <h2>Acheter {typeName} en {pais}</h2>
         <p>
-          {typeDescription} Sur Ubikala.com, les agents immobiliers et propri\u00e9taires publient
+          {typeDescription} Sur Ubikala.com, les agents immobiliers et propriétaires publient
           des {typeName.toLowerCase()} dans tout le pays. Contactez directement l'agent responsable
-          pour obtenir plus de d\u00e9tails et planifier des visites.
+          pour obtenir plus de détails et planifier des visites.
         </p>
 
-        <h3>Zones Populaires pour {typeName}</h3>
-        <ul>
-          <li><strong>Saint-Domingue:</strong> Piantini, Naco, Bella Vista, Arroyo Hondo, Ensanche Paraiso</li>
-          <li><strong>Punta Cana:</strong> Cap Cana, Bavaro, Cocotal, Punta Cana Village</li>
-          <li><strong>Santiago:</strong> Cerros de Gurabo, Jardines Metropolitanos, Los Jardines</li>
-          <li><strong>Puerto Plata:</strong> Sosua, Cabarete, Costambar</li>
-        </ul>
-
-        <h3>Processus d'Achat pour les \u00c9trangers</h3>
+        <h3>Processus d'Achat pour les Étrangers</h3>
         <p>
-          Les \u00e9trangers peuvent acheter des propri\u00e9t\u00e9s en R\u00e9publique Dominicaine avec les m\u00eames droits que les locaux.
-          Le processus est simple : trouvez une propri\u00e9t\u00e9, engagez un avocat local pour v\u00e9rifier le titre,
-          signez le contrat de vente et enregistrez le transfert. Nos agents v\u00e9rifi\u00e9s peuvent vous guider
-          \u00e0 chaque \u00e9tape.
+          Les étrangers peuvent acheter des propriétés en {pais} avec les mêmes droits que les locaux.
+          Le processus est simple : trouvez une propriété, engagez un avocat local pour vérifier le titre,
+          signez le contrat de vente et enregistrez le transfert. Nos agents vérifiés peuvent vous guider
+          à chaque étape.
         </p>
       </div>
     </div>

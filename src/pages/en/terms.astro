@@ -5,6 +5,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 
 const t = useTranslations('en');
 const alternateUrls = getAlternateUrls('/en/terms');
+const pais = Astro.locals.country?.name || '';
 ---
 
 <Layout
@@ -108,8 +109,8 @@ const alternateUrls = getAlternateUrls('/en/terms');
 
           <h2>10. Governing Law</h2>
           <p>
-            These terms are governed by the laws of the Dominican Republic. Any dispute will be
-            resolved in the courts of Santo Domingo.
+            These terms are governed by the laws of {pais}. Any dispute will be
+            resolved in the competent courts.
           </p>
 
           <h2>11. Contact</h2>
@@ -118,7 +119,7 @@ const alternateUrls = getAlternateUrls('/en/terms');
           </p>
           <ul>
             <li>Email: legal@ubikala.com</li>
-            <li>Address: Santo Domingo, Dominican Republic</li>
+            <li>Address: {pais}</li>
           </ul>
 
           <p class="text-sm text-gray-500 mt-12">

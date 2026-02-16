@@ -22,6 +22,7 @@ const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '
 // Fetch agents from both databases and merge
 let agents: Agent[] = [];
 let totalCount = 0;
+let agentLocations: string[] = [];
 try {
   // Fetch all agents from both sources
   const [meiliResult, ubikalaAgentRows] = await Promise.all([
@@ -34,6 +35,17 @@ try {
   // Merge, sort by properties count, then paginate
   const allAgents = [...clicAgents, ...ubikalaAgents]
     .sort((a, b) => b.propertiesCount - a.propertiesCount);
+
+  // Extract unique locations from all agents
+  const locationSet = new Set<string>();
+  for (const agent of allAgents) {
+    if (agent.locations) {
+      for (const loc of agent.locations) {
+        if (loc) locationSet.add(loc);
+      }
+    }
+  }
+  agentLocations = [...locationSet].sort();
 
   totalCount = allAgents.length;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -93,10 +105,9 @@ if (currentPage > totalPages && totalPages > 0) {
         <div class="flex flex-wrap gap-4">
           <select class="select py-2 w-auto">
             <option value="">Todas las ubicaciones</option>
-            <option value="santo-domingo">Santo Domingo</option>
-            <option value="punta-cana">Punta Cana</option>
-            <option value="santiago">Santiago</option>
-            <option value="puerto-plata">Puerto Plata</option>
+            {agentLocations.map((loc) => (
+              <option value={loc.toLowerCase().replace(/\s+/g, '-')}>{loc}</option>
+            ))}
           </select>
           <select class="select py-2 w-auto">
             <option value="">Especialización</option>

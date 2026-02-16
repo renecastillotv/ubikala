@@ -56,11 +56,11 @@ const defaultConfig: SiteConfig = {
   business_hours: 'Lun-Vie 9am-6pm',
 
   address_street: '',
-  address_city: 'Santo Domingo',
-  address_country: 'República Dominicana',
-  address_country_code: 'DO',
-  geo_latitude: '18.7357',
-  geo_longitude: '-70.1627',
+  address_city: '',
+  address_country: '',
+  address_country_code: '',
+  geo_latitude: '',
+  geo_longitude: '',
 
   social_facebook: 'https://facebook.com/ubikala',
   social_instagram: 'https://instagram.com/ubikala',

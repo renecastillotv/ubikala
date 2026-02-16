@@ -23,7 +23,7 @@ export function formatPrice(
 /**
  * Formatea el área en metros cuadrados
  */
-export function formatArea(area: number, locale: string = 'es-DO'): string {
+export function formatArea(area: number, locale: string = 'es'): string {
   return `${new Intl.NumberFormat(locale).format(area)} m²`;
 }
 
