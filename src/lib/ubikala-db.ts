@@ -2742,9 +2742,6 @@ export async function seedSeoContent(): Promise<void> {
   if (!ubikalaDb) return;
   await ensureSeoContentTable();
 
-  const existing = await ubikalaDb`SELECT COUNT(*) as count FROM ubikala_seo_content`;
-  if (Number(existing[0]?.count) > 0) return;
-
   const insert = async (cc: string, lang: string, section: string, page: string | null, content: any) => {
     await ubikalaDb!`
       INSERT INTO ubikala_seo_content (country_code, lang, section, page, content)
@@ -2752,6 +2749,30 @@ export async function seedSeoContent(): Promise<void> {
       ON CONFLICT (country_code, lang, section, page) DO NOTHING
     `;
   };
+
+  // Helper: check if a country already has seed data
+  const hasCountryData = async (cc: string): Promise<boolean> => {
+    const rows = await ubikalaDb!`SELECT COUNT(*) as count FROM ubikala_seo_content WHERE country_code = ${cc}`;
+    return Number(rows[0]?.count) > 0;
+  };
+
+  // Seed additional countries from external seed files
+  try {
+    const { countrySeedData } = await import('./seo-country-seeds');
+    const { countrySeedData2 } = await import('./seo-country-seeds-2');
+    const allSeeds = { ...countrySeedData, ...countrySeedData2 };
+    for (const [cc, items] of Object.entries(allSeeds)) {
+      if (await hasCountryData(cc)) continue;
+      for (const item of items) {
+        await insert(cc, item.lang, item.section, item.page, item.content);
+      }
+    }
+  } catch (e) {
+    // Seed files may not exist in all environments
+  }
+
+  // Skip DO seed if already has data
+  if (await hasCountryData('DO')) return;
 
   // === SPANISH (DO + es) ===
 
