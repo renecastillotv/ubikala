@@ -751,16 +751,35 @@ export async function searchAgents(options: {
   const filters: string[] = ['visible_en_web = true'];
   if (pais) filters.push(`pais = "${pais}"`);
 
-  const result = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
-    method: 'POST',
-    body: JSON.stringify({
-      q: query,
-      filter: filters.join(' AND '),
-      sort,
-      limit,
-      offset,
-    }),
-  });
+  let result: any;
+  try {
+    result = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: query,
+        filter: filters.join(' AND '),
+        sort,
+        limit,
+        offset,
+      }),
+    });
+  } catch {
+    // Fallback: if pais filter fails (field not yet indexed), retry without it
+    if (pais) {
+      result = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
+        method: 'POST',
+        body: JSON.stringify({
+          q: query,
+          filter: 'visible_en_web = true',
+          sort,
+          limit,
+          offset,
+        }),
+      });
+    } else {
+      return { agents: [], total: 0 };
+    }
+  }
 
   return {
     agents: (result.hits || []).map((hit: MeiliAgentDoc) => meiliToAgent(hit)),
@@ -800,8 +819,12 @@ export async function getPlatformStats(pais?: string): Promise<{
   const propFilters = [`(${portalFilter()})`];
   if (pais) propFilters.push(`pais = "${pais}"`);
 
-  const [propResult, agentResult] = await Promise.all([
-    meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+  // Query properties and agents separately so one failure doesn't break both
+  let propResult: any = { estimatedTotalHits: 0, facetDistribution: {} };
+  let agentResult: any = { estimatedTotalHits: 0 };
+
+  try {
+    propResult = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
       method: 'POST',
       body: JSON.stringify({
         q: '',
@@ -809,8 +832,13 @@ export async function getPlatformStats(pais?: string): Promise<{
         facets: ['ciudad'],
         limit: 0,
       }),
-    }),
-    meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
+    });
+  } catch (err: any) {
+    console.error('[getPlatformStats] Properties query failed:', err.message);
+  }
+
+  try {
+    agentResult = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
       method: 'POST',
       body: JSON.stringify({
         q: '',
@@ -819,8 +847,22 @@ export async function getPlatformStats(pais?: string): Promise<{
           : 'visible_en_web = true',
         limit: 0,
       }),
-    }),
-  ]);
+    });
+  } catch (err: any) {
+    // Fallback: if pais filter fails (field not yet indexed), try without it
+    try {
+      agentResult = await meiliRequest(`/indexes/${ASESORES_INDEX}/search`, {
+        method: 'POST',
+        body: JSON.stringify({
+          q: '',
+          filter: 'visible_en_web = true',
+          limit: 0,
+        }),
+      });
+    } catch {
+      console.error('[getPlatformStats] Agents query failed:', err.message);
+    }
+  }
 
   const cities = propResult.facetDistribution?.ciudad || {};
 
