@@ -13,7 +13,7 @@ const { stats, operacion = 'venta', lang = 'es', countryName } = Astro.props;
 const text = {
   es: {
     activeProperties: 'Propiedades Activas',
-    avgPrice: operacion === 'renta' ? 'Alquiler Promedio' : 'Precio Promedio',
+    avgPrice: operacion === 'renta' ? 'Alquiler Típico' : 'Precio Típico',
     avgArea: 'Área Promedio',
     cities: 'Ciudades',
     topCities: 'Ciudades Principales',
@@ -22,7 +22,7 @@ const text = {
   },
   en: {
     activeProperties: 'Active Properties',
-    avgPrice: operacion === 'renta' ? 'Avg. Rent' : 'Avg. Price',
+    avgPrice: operacion === 'renta' ? 'Typical Rent' : 'Typical Price',
     avgArea: 'Avg. Area',
     cities: 'Cities',
     topCities: 'Top Cities',
@@ -31,7 +31,7 @@ const text = {
   },
   fr: {
     activeProperties: 'Propriétés Actives',
-    avgPrice: operacion === 'renta' ? 'Loyer Moyen' : 'Prix Moyen',
+    avgPrice: operacion === 'renta' ? 'Loyer Typique' : 'Prix Typique',
     avgArea: 'Surface Moyenne',
     cities: 'Villes',
     topCities: 'Villes Principales',

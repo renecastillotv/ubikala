@@ -980,6 +980,32 @@ function isResidentialType(tipo: string | null | undefined): boolean {
   return !!tipo && RESIDENTIAL_TYPES.has(tipo.toLowerCase());
 }
 
+/**
+ * Compute a robust average: remove outliers using IQR method, then return the median.
+ * This prevents a single $300K "rental" from skewing the average to $8K.
+ */
+function robustMedian(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length < 4) {
+    // Too few values for IQR, just return median
+    const mid = Math.floor(sorted.length / 2);
+    return Math.round(sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2);
+  }
+  // IQR outlier removal
+  const q1Idx = Math.floor(sorted.length * 0.25);
+  const q3Idx = Math.floor(sorted.length * 0.75);
+  const q1 = sorted[q1Idx];
+  const q3 = sorted[q3Idx];
+  const iqr = q3 - q1;
+  const lower = q1 - 1.5 * iqr;
+  const upper = q3 + 1.5 * iqr;
+  const filtered = sorted.filter(v => v >= lower && v <= upper);
+  if (filtered.length === 0) return Math.round(sorted[Math.floor(sorted.length / 2)]);
+  const mid = Math.floor(filtered.length / 2);
+  return Math.round(filtered.length % 2 ? filtered[mid] : (filtered[mid - 1] + filtered[mid]) / 2);
+}
+
 export interface MarketStats {
   totalProperties: number;
   totalForSale: number;
@@ -1060,7 +1086,7 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
   const totalForSale = saleResult.estimatedTotalHits || 0;
   const totalForRent = rentResult.estimatedTotalHits || 0;
 
-  // Compute sale price average — residential only, currency-normalized to USD
+  // Compute sale price median — residential only, currency-normalized to USD, outliers removed
   const salePrices = saleHits
     .filter(h => isResidentialType(h.tipo))
     .map(h => {
@@ -1068,11 +1094,9 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
       return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
     })
     .filter(p => p > 0);
-  const avgPriceSaleUSD = salePrices.length > 0
-    ? Math.round(salePrices.reduce((a, b) => a + b, 0) / salePrices.length)
-    : null;
+  const avgPriceSaleUSD = robustMedian(salePrices);
 
-  // Compute rent price average — residential only, currency-normalized to USD
+  // Compute rent price median — residential only, currency-normalized to USD, outliers removed
   const rentPrices = rentHits
     .filter(h => isResidentialType(h.tipo))
     .map(h => {
@@ -1080,9 +1104,7 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
       return raw != null && raw > 0 ? normalizeToUSD(raw, h.moneda) : 0;
     })
     .filter(p => p > 0);
-  const avgPriceRentUSD = rentPrices.length > 0
-    ? Math.round(rentPrices.reduce((a, b) => a + b, 0) / rentPrices.length)
-    : null;
+  const avgPriceRentUSD = robustMedian(rentPrices);
 
   // Compute m2 averages from residential properties only
   const allResidentialHits = [...saleHits, ...rentHits].filter(h => isResidentialType(h.tipo));
@@ -1124,7 +1146,7 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
       return {
         name,
         count,
-        avgPrice: prices && prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null,
+        avgPrice: prices ? robustMedian(prices) : null,
       };
     });
 
@@ -1184,7 +1206,7 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
   const saleHits: MeiliPropertyDoc[] = saleResult.hits || [];
   const rentHits: MeiliPropertyDoc[] = rentResult.hits || [];
 
-  // Residential-only, currency-normalized averages
+  // Residential-only, currency-normalized, outlier-removed medians
   const salePrices = saleHits
     .filter(h => isResidentialType(h.tipo))
     .map(h => {
@@ -1215,8 +1237,8 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
     totalProperties: forSale + forRent,
     forSale,
     forRent,
-    avgPriceSaleUSD: avg(salePrices),
-    avgPriceRentUSD: avg(rentPrices),
+    avgPriceSaleUSD: robustMedian(salePrices),
+    avgPriceRentUSD: robustMedian(rentPrices),
     avgM2: avg(m2Vals),
     avgBedrooms: avg(bedVals),
     types,
