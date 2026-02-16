@@ -3,12 +3,16 @@ import { getTokenFromRequest, getCurrentUser } from '../../lib/auth';
 import type { UserRole } from '../../lib/ubikala-db';
 
 // Si déjà connecté, rediriger vers le tableau de bord
-const token = getTokenFromRequest(Astro.request);
-if (token) {
-  const user = await getCurrentUser(token);
-  if (user) {
-    return Astro.redirect('/admin/dashboard');
+try {
+  const token = getTokenFromRequest(Astro.request);
+  if (token) {
+    const user = await getCurrentUser(token);
+    if (user) {
+      return Astro.redirect('/admin/dashboard');
+    }
   }
+} catch {
+  // Ignorer les erreurs d'auth, afficher le formulaire d'inscription
 }
 
 // Mapper les types URL français aux types internes

@@ -887,6 +887,11 @@ export async function getUbikalaInmobiliarias(options: {
            AND activo = true) as properties_count
         FROM ubikala_users u
         WHERE u.is_active = true AND u.role = 'inmobiliaria' AND u.country_code = ${country_code}
+        AND EXISTS (
+          SELECT 1 FROM ubikala_properties p
+          WHERE (p.created_by = u.id OR p.created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND p.activo = true
+        )
         ORDER BY u.is_verified DESC, (
           SELECT COUNT(*) FROM ubikala_properties
           WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
@@ -903,6 +908,11 @@ export async function getUbikalaInmobiliarias(options: {
            AND activo = true) as properties_count
         FROM ubikala_users u
         WHERE u.is_active = true AND u.role = 'inmobiliaria'
+        AND EXISTS (
+          SELECT 1 FROM ubikala_properties p
+          WHERE (p.created_by = u.id OR p.created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND p.activo = true
+        )
         ORDER BY u.is_verified DESC, (
           SELECT COUNT(*) FROM ubikala_properties
           WHERE (created_by = u.id OR created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
@@ -921,10 +931,20 @@ export async function getUbikalaInmobiliariasCount(country_code?: string): Promi
     ? await ubikalaDb`
         SELECT COUNT(*) as total FROM ubikala_users u
         WHERE u.is_active = true AND u.role = 'inmobiliaria' AND u.country_code = ${country_code}
+        AND EXISTS (
+          SELECT 1 FROM ubikala_properties p
+          WHERE (p.created_by = u.id OR p.created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND p.activo = true
+        )
       `
     : await ubikalaDb`
         SELECT COUNT(*) as total FROM ubikala_users u
         WHERE u.is_active = true AND u.role = 'inmobiliaria'
+        AND EXISTS (
+          SELECT 1 FROM ubikala_properties p
+          WHERE (p.created_by = u.id OR p.created_by IN (SELECT id FROM ubikala_users WHERE parent_user_id = u.id))
+          AND p.activo = true
+        )
       `;
 
   return parseInt(rows[0]?.total || '0');

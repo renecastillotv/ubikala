@@ -32,8 +32,9 @@ try {
   const clicAgents = meiliResult.agents;
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
 
-  // Merge, sort by properties count, then paginate
+  // Merge, filter out agents with no properties, sort by count
   const allAgents = [...clicAgents, ...ubikalaAgents]
+    .filter(a => a.propertiesCount > 0)
     .sort((a, b) => b.propertiesCount - a.propertiesCount);
 
   // Extract unique locations from all agents

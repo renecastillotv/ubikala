@@ -31,10 +31,11 @@ try {
 
   const ubikalaInmobiliarias = transformUbikalaAgents(ubikalaRows);
 
-  // Merge, deduplicate by name, sort by property count
+  // Merge, deduplicate by name, filter out those with no properties, sort
   const seen = new Set<string>();
   const allInmobiliarias: Agent[] = [];
   for (const inmo of [...portalTenants, ...ubikalaInmobiliarias]) {
+    if (inmo.propertiesCount <= 0) continue;
     const key = inmo.name.toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);

@@ -188,12 +188,14 @@ export function getTokenFromRequest(request: Request): string | null {
 
 // Create auth cookie string
 export function createAuthCookie(token: string, maxAge = TOKEN_EXPIRY_DAYS * 24 * 60 * 60): string {
-  return `ubikala_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+  const secure = IS_PRODUCTION ? '; Secure' : '';
+  return `ubikala_token=${token}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${maxAge}`;
 }
 
 // Create logout cookie string
 export function createLogoutCookie(): string {
-  return 'ubikala_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+  const secure = IS_PRODUCTION ? '; Secure' : '';
+  return `ubikala_token=; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=0`;
 }
 
 // Register new user
