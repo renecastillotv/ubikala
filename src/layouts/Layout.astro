@@ -16,11 +16,11 @@ interface Props {
   alternateLanguages?: { lang: Lang; url: string }[];
 }
 
-// Fetch site config from API
-const config = await getSiteConfig();
-
 // Country detection from subdomain
 const country = Astro.locals.country;
+
+// Fetch site config for this country
+const config = await getSiteConfig(country.code);
 
 const {
   title,

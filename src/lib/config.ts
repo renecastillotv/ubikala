@@ -163,16 +163,16 @@ export function invalidateConfigCache(countryCode?: string): void {
 /**
  * Get specific config value
  */
-export async function getConfigValue<K extends keyof SiteConfig>(key: K): Promise<SiteConfig[K]> {
-  const config = await getSiteConfig();
+export async function getConfigValue<K extends keyof SiteConfig>(key: K, countryCode?: string): Promise<SiteConfig[K]> {
+  const config = await getSiteConfig(countryCode);
   return config[key];
 }
 
 /**
  * Get social media links that are configured (non-empty)
  */
-export async function getSocialLinks(): Promise<Array<{ platform: string; url: string; icon: string }>> {
-  const config = await getSiteConfig();
+export async function getSocialLinks(countryCode?: string): Promise<Array<{ platform: string; url: string; icon: string }>> {
+  const config = await getSiteConfig(countryCode);
 
   const socialPlatforms = [
     { key: 'social_facebook', platform: 'Facebook', icon: 'facebook' },
@@ -195,8 +195,8 @@ export async function getSocialLinks(): Promise<Array<{ platform: string; url: s
 /**
  * Get WhatsApp URL with optional message
  */
-export async function getWhatsAppUrl(message?: string): Promise<string> {
-  const config = await getSiteConfig();
+export async function getWhatsAppUrl(message?: string, countryCode?: string): Promise<string> {
+  const config = await getSiteConfig(countryCode);
   const baseUrl = `https://wa.me/${config.whatsapp}`;
   return message ? `${baseUrl}?text=${encodeURIComponent(message)}` : baseUrl;
 }
@@ -204,7 +204,7 @@ export async function getWhatsAppUrl(message?: string): Promise<string> {
 /**
  * Get formatted contact info
  */
-export async function getContactInfo(): Promise<{
+export async function getContactInfo(countryCode?: string): Promise<{
   email: string;
   phone: string;
   phoneDisplay: string;
@@ -213,7 +213,7 @@ export async function getContactInfo(): Promise<{
   businessHours: string;
   address: string;
 }> {
-  const config = await getSiteConfig();
+  const config = await getSiteConfig(countryCode);
 
   const addressParts = [
     config.address_street,

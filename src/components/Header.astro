@@ -6,8 +6,8 @@ import { getSiteConfig } from '../lib/config';
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
-// Fetch site config
-const config = await getSiteConfig();
+// Fetch site config for this country
+const config = await getSiteConfig(Astro.locals.country?.code);
 
 // Generar URLs traducidas para cada idioma
 const languageUrls = getLanguageUrls(Astro.url.pathname);

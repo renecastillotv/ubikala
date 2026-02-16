@@ -8,8 +8,8 @@ const t = useTranslations(lang);
 const currentYear = new Date().getFullYear();
 const pais = Astro.locals.country?.name;
 
-// Fetch site config
-const config = await getSiteConfig();
+// Fetch site config for this country
+const config = await getSiteConfig(Astro.locals.country?.code);
 
 // Obtener ubicaciones populares desde MeiliSearch (filtradas por país)
 let popularLocations: { name: string; slug: string; count: number }[] = [];

@@ -31,26 +31,29 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
     </div>
   </div>
 
-  <!-- Country Tabs -->
-  <div class="country-tabs-container">
-    <div class="country-tabs" id="country-tabs">
-      {countries.map(c => (
-        <button
-          class={`country-tab ${c.code === selectedCountry ? 'active' : ''}`}
-          data-country={c.code}
-        >
-          <span class="country-tab-flag">{c.flag}</span>
-          <span class="country-tab-name">{c.name}</span>
-          {existingConfigs[c.code] && <span class="country-tab-dot"></span>}
-        </button>
-      ))}
+  <!-- Country Selector -->
+  <div class="country-selector-container">
+    <div class="country-selector-row">
+      <label for="country-select" class="country-selector-label">País:</label>
+      <div class="country-select-wrapper">
+        <select id="country-select" class="country-select">
+          {countries.map(c => (
+            <option value={c.code} selected={c.code === selectedCountry}>
+              {c.flag} {c.name} {existingConfigs[c.code] ? '●' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button class="add-country-btn" id="add-country-btn" title="Crear otro país">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        <span>Crear País</span>
+      </button>
     </div>
-    <button class="add-country-btn" id="add-country-btn" title="Crear otro país">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-      </svg>
-      <span>Crear País</span>
-    </button>
+    <p class="country-selector-hint">
+      La configuración se guarda independientemente para cada país. El punto (●) indica que el país ya tiene configuración guardada.
+    </p>
   </div>
 
   <!-- Create Country Modal -->
@@ -368,66 +371,53 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
 </AdminLayout>
 
 <style>
-  .country-tabs-container {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+  .country-selector-container {
     padding: 0 1.5rem;
     margin-bottom: 1.5rem;
   }
 
-  .country-tabs {
-    display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    flex: 1;
-  }
-
-  .country-tab {
+  .country-selector-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .country-selector-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ubikala-olive-dark);
+    white-space: nowrap;
+  }
+
+  .country-select-wrapper {
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .country-select {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
     border: 2px solid var(--ubikala-sand);
     border-radius: 0.5rem;
     background: white;
-    cursor: pointer;
-    white-space: nowrap;
-    font-size: 0.875rem;
+    font-size: 0.9rem;
     font-weight: 500;
-    color: var(--ubikala-warm-gray);
-    transition: all 0.2s;
-    position: relative;
+    color: var(--ubikala-warm-gray-dark);
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: auto;
   }
 
-  .country-tab:hover {
-    border-color: var(--ubikala-olive-light);
-    color: var(--ubikala-olive);
-  }
-
-  .country-tab.active {
+  .country-select:focus {
+    outline: none;
     border-color: var(--ubikala-olive);
-    background: var(--ubikala-olive);
-    color: white;
+    box-shadow: 0 0 0 2px rgba(92, 107, 60, 0.15);
   }
 
-  .country-tab-flag {
-    font-size: 1.25rem;
-  }
-
-  .country-tab-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ubikala-terracotta);
-    position: absolute;
-    top: 4px;
-    right: 4px;
-  }
-
-  .country-tab.active .country-tab-dot {
-    background: white;
+  .country-selector-hint {
+    font-size: 0.75rem;
+    color: var(--ubikala-warm-gray);
+    margin-top: 0.5rem;
   }
 
   .add-country-btn {
@@ -674,10 +664,16 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
     .config-form {
       padding: 0 1rem 2rem;
     }
-    .country-tabs-container {
+    .country-selector-container {
       padding: 0 1rem;
-      flex-direction: column;
-      align-items: stretch;
+    }
+    .country-selector-row {
+      flex-wrap: wrap;
+    }
+    .country-select-wrapper {
+      max-width: none;
+      flex-basis: 100%;
+      order: 3;
     }
     .add-country-btn {
       justify-content: center;
@@ -704,6 +700,8 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
       'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from_email', 'smtp_from_name', 'smtp_encryption'
     ];
 
+    var countrySelect = document.getElementById('country-select');
+
     function loadConfig(countryCode) {
       var config = configs[countryCode] || {};
       fields.forEach(function(field) {
@@ -714,19 +712,11 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
       });
       countryInput.value = countryCode;
       currentCountry = countryCode;
-
-      // Update active tab
-      document.querySelectorAll('.country-tab').forEach(function(tab) {
-        tab.classList.toggle('active', tab.getAttribute('data-country') === countryCode);
-      });
     }
 
-    // Tab click handlers
-    document.querySelectorAll('.country-tab').forEach(function(tab) {
-      tab.addEventListener('click', function() {
-        var cc = this.getAttribute('data-country');
-        loadConfig(cc);
-      });
+    // Dropdown change handler
+    countrySelect.addEventListener('change', function() {
+      loadConfig(this.value);
     });
 
     // Load initial config
@@ -765,12 +755,10 @@ const selectedCountry = Astro.url.searchParams.get('country') || (countries[0]?.
           saveStatus.textContent = 'Guardado correctamente';
           saveStatus.className = 'save-status success';
 
-          // Update dot indicator for this tab
-          var activeTab = document.querySelector('.country-tab[data-country="' + currentCountry + '"]');
-          if (activeTab && !activeTab.querySelector('.country-tab-dot')) {
-            var dot = document.createElement('span');
-            dot.className = 'country-tab-dot';
-            activeTab.appendChild(dot);
+          // Update dropdown indicator for this country
+          var opt = countrySelect.querySelector('option[value="' + currentCountry + '"]');
+          if (opt && !opt.textContent.includes('●')) {
+            opt.textContent = opt.textContent.trim() + ' ●';
           }
         } else {
           var err = await response.json();

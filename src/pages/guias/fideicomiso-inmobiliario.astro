@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getSiteConfig } from '../../lib/config';
 
-const config = await getSiteConfig();
+const config = await getSiteConfig(Astro.locals.country?.code);
 
 // Article Schema for SEO
 const articleSchema = {

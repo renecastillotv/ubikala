@@ -7,8 +7,8 @@ import { getSiteConfig } from '../lib/config';
 
 const t = useTranslations('es');
 
-// Fetch site config
-const config = await getSiteConfig();
+// Fetch site config for this country
+const config = await getSiteConfig(Astro.locals.country?.code);
 ---
 
 <Layout
