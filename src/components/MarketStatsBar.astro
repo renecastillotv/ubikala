@@ -101,7 +101,12 @@ const displayPrice = operacion === 'renta' ? stats.avgPriceRentUSD : stats.avgPr
           </span>
           <div class="flex items-center gap-4 text-sm text-gray-500">
             <span>{city.count} {t.props}</span>
-            {city.avgPrice && <span class="text-gray-700 font-medium">{formatPrice(city.avgPrice)}</span>}
+            {(operacion === 'renta' ? city.avgPriceRent : city.avgPriceSale) && (
+              <span class="text-gray-700 font-medium">
+                {formatPrice(operacion === 'renta' ? city.avgPriceRent : city.avgPriceSale)}
+                {operacion === 'renta' ? '/mes' : ''}
+              </span>
+            )}
           </div>
         </a>
       ))}

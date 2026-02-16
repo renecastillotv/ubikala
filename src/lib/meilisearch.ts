@@ -1020,7 +1020,7 @@ export interface MarketStats {
   avgBathrooms: number | null;
   typeDistribution: Record<string, number>;
   cityDistribution: Record<string, number>;
-  topCities: Array<{ name: string; count: number; avgPrice: number | null }>;
+  topCities: Array<{ name: string; count: number; avgPriceSale: number | null; avgPriceRent: number | null }>;
 }
 
 export interface CityMarketStats {
@@ -1126,14 +1126,24 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
     cityDistribution[k] = (cityDistribution[k] || 0) + (v as number);
   }
 
-  // Top cities with avg price — residential only, currency-normalized
-  const cityPrices = new Map<string, number[]>();
+  // Top cities with sale & rent prices — residential only, currency-normalized
+  const citySalePrices = new Map<string, number[]>();
   for (const h of saleHits) {
     if (h.ciudad && isResidentialType(h.tipo)) {
       const raw = h.precio_venta || h.precio;
       if (raw != null && raw > 0) {
-        if (!cityPrices.has(h.ciudad)) cityPrices.set(h.ciudad, []);
-        cityPrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
+        if (!citySalePrices.has(h.ciudad)) citySalePrices.set(h.ciudad, []);
+        citySalePrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
+      }
+    }
+  }
+  const cityRentPrices = new Map<string, number[]>();
+  for (const h of rentHits) {
+    if (h.ciudad && isResidentialType(h.tipo)) {
+      const raw = h.precio_alquiler || h.precio;
+      if (raw != null && raw > 0) {
+        if (!cityRentPrices.has(h.ciudad)) cityRentPrices.set(h.ciudad, []);
+        cityRentPrices.get(h.ciudad)!.push(normalizeToUSD(raw, h.moneda));
       }
     }
   }
@@ -1141,14 +1151,12 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
   const topCities = Object.entries(cityDistribution)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
-    .map(([name, count]) => {
-      const prices = cityPrices.get(name);
-      return {
-        name,
-        count,
-        avgPrice: prices ? robustMedian(prices) : null,
-      };
-    });
+    .map(([name, count]) => ({
+      name,
+      count,
+      avgPriceSale: citySalePrices.has(name) ? robustMedian(citySalePrices.get(name)!) : null,
+      avgPriceRent: cityRentPrices.has(name) ? robustMedian(cityRentPrices.get(name)!) : null,
+    }));
 
   const data: MarketStats = {
     totalProperties: totalForSale + totalForRent,
