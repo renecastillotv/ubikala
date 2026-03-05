@@ -10,6 +10,8 @@ import type { WebhookPayload } from './webhook-dispatcher';
 
 const RESEND_API_KEY = import.meta.env.RESEND_API_KEY || process.env.RESEND_API_KEY;
 const RESEND_FROM = import.meta.env.RESEND_FROM || process.env.RESEND_FROM || 'Ubikala <noreply@mail.ubikala.com>';
+const CRM_API_URL = import.meta.env.CRM_API_URL || process.env.CRM_API_URL || 'https://api.denlla.com';
+const UBIKALA_WEBHOOK_SECRET = import.meta.env.UBIKALA_WEBHOOK_SECRET || process.env.UBIKALA_WEBHOOK_SECRET;
 
 /** Strip everything except digits and leading + for tel: links */
 function normalizePhone(phone: string): string {
@@ -18,6 +20,22 @@ function normalizePhone(phone: string): string {
   if (/^\d{10}$/.test(cleaned)) return '+1' + cleaned;
   if (/^1\d{10}$/.test(cleaned)) return '+' + cleaned;
   return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+}
+
+/** Fetch CRM leads page URL for a tenant (returns null on failure) */
+async function getCRMLeadsUrl(tenantId: string | null): Promise<string | null> {
+  if (!tenantId || tenantId === 'ubikala' || !UBIKALA_WEBHOOK_SECRET) return null;
+  try {
+    const response = await fetch(`${CRM_API_URL}/api/webhooks/ubikala/tenant-url/${tenantId}`, {
+      headers: { 'x-ubikala-secret': UBIKALA_WEBHOOK_SECRET },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    const data = await response.json() as { url?: string };
+    return data.url || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -42,7 +60,31 @@ export async function sendLeadNotificationEmail(
   const phoneTel = contact.phone ? normalizePhone(contact.phone) : '';
   const whatsappUrl = phoneTel ? `https://wa.me/${phoneTel.replace('+', '')}?text=${encodeURIComponent(`Hola, te escribo por tu propiedad ${property.title || property.slug} en Ubikala`)}` : '';
 
+  // Try to resolve CRM leads URL for the tenant
+  const crmLeadsUrl = await getCRMLeadsUrl(property.tenant_id);
+  const ctaUrl = crmLeadsUrl || 'https://ubikala.com/admin/leads';
+  const ctaLabel = crmLeadsUrl ? 'Ver lead en CRM' : 'Ver leads';
+
   const subject = `Nuevo lead: ${contact.name || 'Contacto'} está interesado en ${property.title || property.slug}`;
+
+  // Build phone action buttons
+  let phoneActions = '';
+  if (contact.phone) {
+    phoneActions = `
+      <tr>
+        <td style="padding:8px 12px;font-size:14px;color:#666;">Teléfono</td>
+        <td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;">
+          ${contact.phone}
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 12px;"></td>
+        <td style="padding:4px 12px;">
+          <a href="tel:${phoneTel}" style="display:inline-block;padding:6px 16px;background-color:#c4704b;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:500;">Llamar</a>${whatsappUrl ? `
+          &nbsp;&nbsp;<a href="${whatsappUrl}" style="display:inline-block;padding:6px 16px;background-color:#25d366;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:500;">WhatsApp</a>` : ''}
+        </td>
+      </tr>`;
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -63,7 +105,7 @@ export async function sendLeadNotificationEmail(
     <div style="background-color:#ffffff;padding:24px;border-radius:0 0 12px 12px;">
       <!-- Property -->
       <div style="margin-bottom:20px;padding:16px;background-color:#faf8f5;border-radius:8px;border-left:4px solid #c4704b;">
-        <h2 style="margin:0 0 4px;font-size:16px;color:#333;">🏠 ${property.title || property.slug}</h2>
+        <h2 style="margin:0 0 4px;font-size:16px;color:#333;">${property.title || property.slug}</h2>
         <p style="margin:0;font-size:13px;color:#666;">Slug: ${property.slug}</p>
       </div>
 
@@ -71,7 +113,7 @@ export async function sendLeadNotificationEmail(
       <h3 style="margin:0 0 12px;font-size:15px;color:#5a5a32;">Datos del contacto</h3>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
         ${contact.name ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;width:100px;">Nombre</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;">${contact.name}</td></tr>` : ''}
-        ${contact.phone ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;">Teléfono</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;"><a href="tel:${phoneTel}" style="color:#c4704b;text-decoration:none;">${contact.phone}</a>${whatsappUrl ? ` &nbsp;<a href="${whatsappUrl}" style="color:#25d366;text-decoration:none;font-size:12px;">WhatsApp</a>` : ''}</td></tr>` : ''}
+        ${phoneActions}
         ${contact.email ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;">Email</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;"><a href="mailto:${contact.email}" style="color:#c4704b;text-decoration:none;">${contact.email}</a></td></tr>` : ''}
         ${contact.message ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;vertical-align:top;">Mensaje</td><td style="padding:8px 12px;font-size:14px;color:#333;">${contact.message}</td></tr>` : ''}
       </table>
@@ -84,8 +126,8 @@ export async function sendLeadNotificationEmail(
 
       <!-- CTA -->
       <div style="margin-top:24px;text-align:center;">
-        <a href="https://ubikala.com/admin/leads" style="display:inline-block;padding:12px 32px;background-color:#c4704b;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
-          Ver en tu panel
+        <a href="${ctaUrl}" style="display:inline-block;padding:12px 32px;background-color:#c4704b;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+          ${ctaLabel}
         </a>
       </div>
     </div>
