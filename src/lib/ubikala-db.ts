@@ -1190,6 +1190,138 @@ export async function getLeadStats(): Promise<LeadStats> {
   };
 }
 
+// ==================== USER WEBHOOKS (CONNECTORS) ====================
+
+export interface UserWebhook {
+  id: number;
+  user_id: string;
+  nombre: string;
+  url: string;
+  secret_key: string | null;
+  eventos: string[];
+  activo: boolean;
+  last_triggered_at: string | null;
+  last_status_code: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Ensure user_webhooks table exists
+export async function ensureUserWebhooksTable(): Promise<void> {
+  if (!ubikalaDb) return;
+  await ubikalaDb`
+    CREATE TABLE IF NOT EXISTS user_webhooks (
+      id SERIAL PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES ubikala_users(id) ON DELETE CASCADE,
+      nombre VARCHAR(100) NOT NULL,
+      url TEXT NOT NULL,
+      secret_key VARCHAR(255),
+      eventos TEXT[] DEFAULT '{lead.new}',
+      activo BOOLEAN DEFAULT true,
+      last_triggered_at TIMESTAMP,
+      last_status_code INT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+  // Index for fast lookup of active webhooks by user
+  await ubikalaDb`
+    CREATE INDEX IF NOT EXISTS idx_user_webhooks_user_active
+    ON user_webhooks(user_id) WHERE activo = true
+  `;
+}
+
+// Get all webhooks for a user
+export async function getUserWebhooks(userId: string): Promise<UserWebhook[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT * FROM user_webhooks
+    WHERE user_id = ${userId}
+    ORDER BY created_at DESC
+  `;
+  return rows as UserWebhook[];
+}
+
+// Get active webhooks for a user filtered by event
+export async function getActiveWebhooksForEvent(userId: string, event: string): Promise<UserWebhook[]> {
+  if (!ubikalaDb) return [];
+  const rows = await ubikalaDb`
+    SELECT * FROM user_webhooks
+    WHERE user_id = ${userId}
+      AND activo = true
+      AND ${event} = ANY(eventos)
+  `;
+  return rows as UserWebhook[];
+}
+
+// Create a webhook
+export async function createUserWebhook(data: {
+  user_id: string;
+  nombre: string;
+  url: string;
+  secret_key?: string;
+  eventos?: string[];
+}): Promise<UserWebhook> {
+  if (!ubikalaDb) throw new Error('Database not configured');
+  const rows = await ubikalaDb`
+    INSERT INTO user_webhooks (user_id, nombre, url, secret_key, eventos)
+    VALUES (
+      ${data.user_id},
+      ${data.nombre},
+      ${data.url},
+      ${data.secret_key || null},
+      ${data.eventos || ['lead.new']}
+    )
+    RETURNING *
+  `;
+  return rows[0] as UserWebhook;
+}
+
+// Update a webhook
+export async function updateUserWebhook(id: number, userId: string, data: {
+  nombre?: string;
+  url?: string;
+  secret_key?: string;
+  eventos?: string[];
+  activo?: boolean;
+}): Promise<UserWebhook | null> {
+  if (!ubikalaDb) return null;
+  const rows = await ubikalaDb`
+    UPDATE user_webhooks
+    SET
+      nombre = COALESCE(${data.nombre ?? null}, nombre),
+      url = COALESCE(${data.url ?? null}, url),
+      secret_key = COALESCE(${data.secret_key ?? null}, secret_key),
+      eventos = COALESCE(${data.eventos ?? null}, eventos),
+      activo = COALESCE(${data.activo ?? null}, activo),
+      updated_at = NOW()
+    WHERE id = ${id} AND user_id = ${userId}
+    RETURNING *
+  `;
+  return (rows[0] as UserWebhook) || null;
+}
+
+// Delete a webhook
+export async function deleteUserWebhook(id: number, userId: string): Promise<boolean> {
+  if (!ubikalaDb) return false;
+  const rows = await ubikalaDb`
+    DELETE FROM user_webhooks
+    WHERE id = ${id} AND user_id = ${userId}
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+// Update webhook trigger status (after firing)
+export async function updateWebhookTriggerStatus(id: number, statusCode: number): Promise<void> {
+  if (!ubikalaDb) return;
+  await ubikalaDb`
+    UPDATE user_webhooks
+    SET last_triggered_at = NOW(), last_status_code = ${statusCode}, updated_at = NOW()
+    WHERE id = ${id}
+  `;
+}
+
 // ==================== PLANS ====================
 
 // Get all plans

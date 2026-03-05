@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: 'home' },
   { href: '/admin/properties', label: 'Propiedades', icon: 'building' },
   { href: '/admin/leads', label: 'Clientes', icon: 'messages' },
+  { href: '/admin/webhooks', label: 'Conectores', icon: 'webhook' },
   ...(user?.role === 'inmobiliaria' ? [{ href: '/admin/team', label: 'Mi Equipo', icon: 'team' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/users', label: 'Usuarios', icon: 'users' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/plans', label: 'Planes', icon: 'plans' }] : []),
@@ -337,6 +338,7 @@ const navItems = [
                 {item.icon === 'activity' && <path d="M22 12h-4l-3 9L9 3l-3 9H2" />}
                 {item.icon === 'content' && <><path d="M4 6h16M4 12h16M4 18h10" /><path d="M20 16l2 2-2 2" /></>}
                 {item.icon === 'globe' && <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>}
+                {item.icon === 'webhook' && <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>}
                 {item.icon === 'account' && <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M6 12h12M6 16h8" /></>}
                 {item.icon === 'profile' && <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>}
               </svg>

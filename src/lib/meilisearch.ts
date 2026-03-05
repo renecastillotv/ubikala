@@ -523,6 +523,19 @@ export async function getPropertyBySlug(slug: string, lang?: string): Promise<Pr
 }
 
 /**
+ * Get raw MeiliSearch property document by slug (for webhook dispatch).
+ * Returns the raw doc with tenant_id, not the mapped Property type.
+ */
+export async function getMeiliPropertyDocBySlug(slug: string): Promise<MeiliPropertyDoc | null> {
+  const filter = `slug = "${slug}"`;
+  const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+    method: 'POST',
+    body: JSON.stringify({ q: '', filter, limit: 1 }),
+  });
+  return result.hits?.[0] || null;
+}
+
+/**
  * Get featured properties.
  */
 export async function getFeaturedProperties(limit: number = 12, pais?: string, lang?: string): Promise<Property[]> {
