@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { createLead, getUbikalaPropertyBySlug } from '../../lib/ubikala-db';
 import { getMeiliPropertyDocBySlug } from '../../lib/meilisearch';
-import { dispatchLeadWebhooks } from '../../lib/webhook-dispatcher';
+import { dispatchLeadWebhooks, dispatchLeadToCRM } from '../../lib/webhook-dispatcher';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -41,37 +41,42 @@ export const POST: APIRoute = async ({ request }) => {
             // Not an Ubikala-native property — check MeiliSearch for CRM property
             const meiliDoc = await getMeiliPropertyDocBySlug(property_slug);
             tenantId = meiliDoc?.tenant_id || null;
-            // CRM properties don't have an Ubikala user owner.
-            // The CRM tenant must configure a webhook in their Ubikala account.
-            if (tenantId && tenantId !== 'ubikala') {
-              console.log(`[Lead Dispatch] CRM property (tenant: ${tenantId}), no Ubikala owner found`);
-            }
           }
 
-          if (ownerId) {
-            await dispatchLeadWebhooks(ownerId, {
-              event: 'lead.new',
-              timestamp: new Date().toISOString(),
-              data: {
-                lead_id: lead.id,
-                property: {
-                  slug: property_slug,
-                  title: property_title || ubikalaProp?.titulo || '',
-                  tenant_id: tenantId,
-                },
-                contact: {
-                  name: name || '',
-                  email: email || '',
-                  phone: phone || '',
-                  message: message || '',
-                },
-                source: 'ubikala',
-                agent: {
-                  name: agent_name || '',
-                  company: agent_company || null,
-                },
+          // Build webhook payload
+          const payload = {
+            event: 'lead.new' as const,
+            timestamp: new Date().toISOString(),
+            data: {
+              lead_id: lead.id,
+              property: {
+                slug: property_slug,
+                title: property_title || ubikalaProp?.titulo || '',
+                tenant_id: tenantId,
               },
-            });
+              contact: {
+                name: name || '',
+                email: email || '',
+                phone: phone || '',
+                message: message || '',
+              },
+              source: 'ubikala' as const,
+              agent: {
+                name: agent_name || '',
+                company: agent_company || null,
+              },
+            },
+          };
+
+          if (ownerId) {
+            // Ubikala-native property → dispatch to owner's webhooks or email
+            await dispatchLeadWebhooks(ownerId, payload);
+          }
+
+          if (tenantId && tenantId !== 'ubikala') {
+            // CRM property → dispatch directly to CRM API
+            console.log(`[Lead Dispatch] CRM property (tenant: ${tenantId}), dispatching to CRM`);
+            await dispatchLeadToCRM(payload);
           }
         } catch (err: any) {
           console.error('[Lead Dispatch] Error:', err.message);

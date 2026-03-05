@@ -4,10 +4,16 @@
  * When a lead is created, dispatches webhooks to all active connectors
  * for the property owner. Falls back to email notification if no
  * webhooks are configured.
+ *
+ * For CRM properties (tenant_id != 'ubikala'), automatically dispatches
+ * to the CRM API lead endpoint using the shared webhook secret.
  */
 
-import { getActiveWebhooksForEvent, updateWebhookTriggerStatus, getUserById } from './ubikala-db';
+import { getActiveWebhooksForEvent, updateWebhookTriggerStatus, ensureUserWebhooksTable } from './ubikala-db';
 import { sendLeadNotificationEmail } from './email-service';
+
+const CRM_API_URL = import.meta.env.CRM_API_URL || process.env.CRM_API_URL || 'https://api.denlla.com';
+const UBIKALA_WEBHOOK_SECRET = import.meta.env.UBIKALA_WEBHOOK_SECRET || process.env.UBIKALA_WEBHOOK_SECRET;
 
 export interface WebhookPayload {
   event: 'lead.new';
@@ -41,6 +47,9 @@ export async function dispatchLeadWebhooks(
   propertyOwnerId: string,
   payload: WebhookPayload
 ): Promise<void> {
+  // Ensure table exists before querying
+  await ensureUserWebhooksTable();
+
   const webhooks = await getActiveWebhooksForEvent(propertyOwnerId, 'lead.new');
 
   if (webhooks.length > 0) {
@@ -90,5 +99,37 @@ export async function dispatchLeadWebhooks(
     // No webhooks configured — send email notification
     console.log(`[Webhook] No active webhooks for user ${propertyOwnerId}, sending email`);
     await sendLeadNotificationEmail(propertyOwnerId, payload);
+  }
+}
+
+/**
+ * Dispatch a lead directly to the CRM API for properties that belong
+ * to a CRM tenant. This is a system-level integration, not user-configured.
+ */
+export async function dispatchLeadToCRM(payload: WebhookPayload): Promise<void> {
+  if (!UBIKALA_WEBHOOK_SECRET) {
+    console.warn('[CRM Lead] UBIKALA_WEBHOOK_SECRET not configured, skipping CRM dispatch');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${CRM_API_URL}/api/webhooks/ubikala/lead`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-ubikala-secret': UBIKALA_WEBHOOK_SECRET,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`[CRM Lead] Error ${response.status}: ${text}`);
+    } else {
+      console.log(`[CRM Lead] Lead ${payload.data.lead_id} dispatched to CRM → OK`);
+    }
+  } catch (error: any) {
+    console.error(`[CRM Lead] Failed to dispatch lead ${payload.data.lead_id}:`, error.message);
   }
 }
