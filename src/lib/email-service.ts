@@ -11,6 +11,15 @@ import type { WebhookPayload } from './webhook-dispatcher';
 const RESEND_API_KEY = import.meta.env.RESEND_API_KEY || process.env.RESEND_API_KEY;
 const RESEND_FROM = import.meta.env.RESEND_FROM || process.env.RESEND_FROM || 'Ubikala <noreply@mail.ubikala.com>';
 
+/** Strip everything except digits and leading + for tel: links */
+function normalizePhone(phone: string): string {
+  const cleaned = phone.replace(/[^\d+]/g, '');
+  // If it's a Dominican number without country code, add +1
+  if (/^\d{10}$/.test(cleaned)) return '+1' + cleaned;
+  if (/^1\d{10}$/.test(cleaned)) return '+' + cleaned;
+  return cleaned.startsWith('+') ? cleaned : '+' + cleaned;
+}
+
 /**
  * Send a lead notification email to the property owner.
  */
@@ -30,6 +39,8 @@ export async function sendLeadNotificationEmail(
   }
 
   const { contact, property, agent } = payload.data;
+  const phoneTel = contact.phone ? normalizePhone(contact.phone) : '';
+  const whatsappUrl = phoneTel ? `https://wa.me/${phoneTel.replace('+', '')}?text=${encodeURIComponent(`Hola, te escribo por tu propiedad ${property.title || property.slug} en Ubikala`)}` : '';
 
   const subject = `Nuevo lead: ${contact.name || 'Contacto'} está interesado en ${property.title || property.slug}`;
 
@@ -60,7 +71,7 @@ export async function sendLeadNotificationEmail(
       <h3 style="margin:0 0 12px;font-size:15px;color:#5a5a32;">Datos del contacto</h3>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
         ${contact.name ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;width:100px;">Nombre</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;">${contact.name}</td></tr>` : ''}
-        ${contact.phone ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;">Teléfono</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;"><a href="tel:${contact.phone}" style="color:#c4704b;text-decoration:none;">${contact.phone}</a></td></tr>` : ''}
+        ${contact.phone ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;">Teléfono</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;"><a href="tel:${phoneTel}" style="color:#c4704b;text-decoration:none;">${contact.phone}</a>${whatsappUrl ? ` &nbsp;<a href="${whatsappUrl}" style="color:#25d366;text-decoration:none;font-size:12px;">WhatsApp</a>` : ''}</td></tr>` : ''}
         ${contact.email ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;">Email</td><td style="padding:8px 12px;font-size:14px;color:#333;font-weight:500;"><a href="mailto:${contact.email}" style="color:#c4704b;text-decoration:none;">${contact.email}</a></td></tr>` : ''}
         ${contact.message ? `<tr><td style="padding:8px 12px;font-size:14px;color:#666;vertical-align:top;">Mensaje</td><td style="padding:8px 12px;font-size:14px;color:#333;">${contact.message}</td></tr>` : ''}
       </table>
