@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { useTranslations, tPais } from '../i18n';
 import { getPlatformStats } from '../lib/meilisearch';
+import { launched } from '../lib/feature-flags';
 
 const t = useTranslations('es');
 const pais = Astro.locals.country?.name || '';
@@ -72,172 +73,201 @@ function formatStatNumber(n: number): string {
     </div>
   </section>
 
-  <!-- User Types - 3 options now -->
+  <!-- User Types / Invitation Only -->
   <section class="section bg-gray-50 -mt-10 relative z-20">
     <div class="container-custom">
-      <div class="text-center mb-12">
-        <h2 class="section-title">{t.publish.userTypes.title}</h2>
-        <p class="section-subtitle mx-auto">
-          Elige la opción que mejor se adapte a tu perfil
-        </p>
-      </div>
+      {launched ? (
+        <Fragment>
+          <div class="text-center mb-12">
+            <h2 class="section-title">{t.publish.userTypes.title}</h2>
+            <p class="section-subtitle mx-auto">
+              Elige la opción que mejor se adapte a tu perfil
+            </p>
+          </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        <!-- Inmobiliaria -->
-        <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-transparent hover:border-primary-500">
-          <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            {t.publish.userTypes.agent}
-          </h3>
-          <p class="text-gray-600 text-sm mb-4">
-            {t.publish.userTypes.agentDesc}
-          </p>
-          <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Publicaciones ilimitadas
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Gestión de equipo
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Estadísticas avanzadas
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Perfil de empresa
-            </li>
-          </ul>
-          {isLoggedIn ? (
-            <a href="/admin/properties/create" class="btn-primary w-full justify-center text-sm">
-              Publicar Propiedad
-            </a>
-          ) : (
-            <a href="/registro?tipo=inmobiliaria" class="btn-primary w-full justify-center text-sm">
-              Registrar Inmobiliaria
-            </a>
-          )}
-        </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <!-- Inmobiliaria -->
+            <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-transparent hover:border-primary-500">
+              <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                {t.publish.userTypes.agent}
+              </h3>
+              <p class="text-gray-600 text-sm mb-4">
+                {t.publish.userTypes.agentDesc}
+              </p>
+              <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Publicaciones ilimitadas
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Gestión de equipo
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Estadísticas avanzadas
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Perfil de empresa
+                </li>
+              </ul>
+              {isLoggedIn ? (
+                <a href="/admin/properties/create" class="btn-primary w-full justify-center text-sm">
+                  Publicar Propiedad
+                </a>
+              ) : (
+                <a href="/registro?tipo=inmobiliaria" class="btn-primary w-full justify-center text-sm">
+                  Registrar Inmobiliaria
+                </a>
+              )}
+            </div>
 
-        <!-- Asesor Independiente - Most Popular -->
-        <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-primary-500 relative">
-          <div class="absolute -top-3 left-1/2 -translate-x-1/2">
-            <span class="bg-accent-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-              Más Popular
-            </span>
-          </div>
-          <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            Asesor Independiente
-          </h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Asesor inmobiliario que trabaja de forma independiente.
-          </p>
-          <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Hasta 50 publicaciones
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Perfil profesional
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Contacto directo
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Sin cuotas mensuales
-            </li>
-          </ul>
-          {isLoggedIn ? (
-            <a href="/admin/properties/create" class="btn-primary w-full justify-center text-sm">
-              Publicar Propiedad
-            </a>
-          ) : (
-            <a href="/registro?tipo=asesor" class="btn-primary w-full justify-center text-sm">
-              Registrarme como Asesor
-            </a>
-          )}
-        </div>
+            <!-- Asesor Independiente - Most Popular -->
+            <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-primary-500 relative">
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span class="bg-accent-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  Más Popular
+                </span>
+              </div>
+              <div class="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg class="w-8 h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                Asesor Independiente
+              </h3>
+              <p class="text-gray-600 text-sm mb-4">
+                Asesor inmobiliario que trabaja de forma independiente.
+              </p>
+              <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Hasta 50 publicaciones
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Perfil profesional
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Contacto directo
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Sin cuotas mensuales
+                </li>
+              </ul>
+              {isLoggedIn ? (
+                <a href="/admin/properties/create" class="btn-primary w-full justify-center text-sm">
+                  Publicar Propiedad
+                </a>
+              ) : (
+                <a href="/registro?tipo=asesor" class="btn-primary w-full justify-center text-sm">
+                  Registrarme como Asesor
+                </a>
+              )}
+            </div>
 
-        <!-- Propietario - NEW -->
-        <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-transparent hover:border-primary-500">
-          <div class="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <svg class="w-8 h-8 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
+            <!-- Propietario - NEW -->
+            <div class="card p-6 text-center hover:shadow-xl transition-shadow border-2 border-transparent hover:border-primary-500">
+              <div class="w-16 h-16 bg-accent-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                <svg class="w-8 h-8 text-accent-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                Propietario
+              </h3>
+              <p class="text-gray-600 text-sm mb-4">
+                Vende o alquila tu propiedad directamente sin intermediarios.
+              </p>
+              <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Primera publicación GRATIS
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Sin comisiones
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Contacto directo
+                </li>
+                <li class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                  </svg>
+                  Fácil y rápido
+                </li>
+              </ul>
+              {isLoggedIn ? (
+                <a href="/admin/properties/create" class="btn-accent w-full justify-center text-sm">
+                  Publicar mi Propiedad
+                </a>
+              ) : (
+                <a href="/registro?tipo=propietario" class="btn-accent w-full justify-center text-sm">
+                  Publicar mi Propiedad
+                </a>
+              )}
+            </div>
           </div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">
-            Propietario
-          </h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Vende o alquila tu propiedad directamente sin intermediarios.
-          </p>
-          <ul class="text-left text-sm text-gray-600 space-y-2 mb-5">
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+        </Fragment>
+      ) : (
+        <div class="max-w-2xl mx-auto text-center">
+          <div class="card p-10 border-2 border-primary-200">
+            <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              Primera publicación GRATIS
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+              Acceso por Invitación
+            </h2>
+            <p class="text-gray-600 text-lg mb-6 leading-relaxed">
+              Por el momento solo creamos cuentas por invitación. Si eres asesor inmobiliario o dueño de una inmobiliaria, escríbenos y te daremos acceso.
+            </p>
+            <a
+              href="mailto:info@ubikala.com"
+              class="btn-primary inline-flex items-center gap-2 text-lg px-8 py-3"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              Sin comisiones
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Contacto directo
-            </li>
-            <li class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-accent-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-              </svg>
-              Fácil y rápido
-            </li>
-          </ul>
-          {isLoggedIn ? (
-            <a href="/admin/properties/create" class="btn-accent w-full justify-center text-sm">
-              Publicar mi Propiedad
+              info@ubikala.com
             </a>
-          ) : (
-            <a href="/registro?tipo=propietario" class="btn-accent w-full justify-center text-sm">
-              Publicar mi Propiedad
-            </a>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   </section>
 
@@ -452,18 +482,27 @@ function formatStatNumber(n: number): string {
       <p class="text-primary-100 text-lg mb-8 max-w-2xl mx-auto">
         Únete a la comunidad de Ubíkala y llega a miles de compradores e inquilinos potenciales
       </p>
-      {isLoggedIn ? (
-        <a href="/admin/properties/create" class="btn-white text-lg px-10 py-4">
-          Publicar Nueva Propiedad
-          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </a>
+      {launched ? (
+        isLoggedIn ? (
+          <a href="/admin/properties/create" class="btn-white text-lg px-10 py-4">
+            Publicar Nueva Propiedad
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        ) : (
+          <a href="/registro" class="btn-white text-lg px-10 py-4">
+            Crear Cuenta Gratis
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        )
       ) : (
-        <a href="/registro" class="btn-white text-lg px-10 py-4">
-          Crear Cuenta Gratis
+        <a href="mailto:info@ubikala.com" class="btn-white text-lg px-10 py-4">
+          Escríbenos a info@ubikala.com
           <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </a>
       )}

@@ -1,6 +1,7 @@
 ---
 import type { Property } from '../data/types';
 import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
+import { launched } from '../lib/feature-flags';
 
 interface Props {
   property: Property;
@@ -135,7 +136,7 @@ const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes]
           </div>
           <span class="agent-name">
             {property.agent.name}
-            {property.agent.parentCompany && (
+            {launched && property.agent.parentCompany && (
               <span class="agent-company"> · {property.agent.parentCompany}</span>
             )}
           </span>

@@ -2,6 +2,7 @@
 import { getLangFromUrl, useTranslations, routeTranslations, defaultLang, type Lang } from '../i18n';
 import { getCitiesWithCounts } from '../lib/meilisearch';
 import { getSiteConfig } from '../lib/config';
+import { launched } from '../lib/feature-flags';
 
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
@@ -109,12 +110,16 @@ const urls = {
           <li>
             <a href={urls.publish} class="hover:text-primary-300 transition-colors">{t.nav.publishProperty}</a>
           </li>
-          <li>
-            <a href={urls.agents} class="hover:text-primary-300 transition-colors">{t.nav.agents}</a>
-          </li>
-          <li>
-            <a href={urls.realEstate} class="hover:text-primary-300 transition-colors">{t.nav.realEstate}</a>
-          </li>
+          {launched && (
+            <li>
+              <a href={urls.agents} class="hover:text-primary-300 transition-colors">{t.nav.agents}</a>
+            </li>
+          )}
+          {launched && (
+            <li>
+              <a href={urls.realEstate} class="hover:text-primary-300 transition-colors">{t.nav.realEstate}</a>
+            </li>
+          )}
           <li>
             <a href={urls.about} class="hover:text-primary-300 transition-colors">{t.nav.about}</a>
           </li>

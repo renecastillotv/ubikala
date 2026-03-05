@@ -1,6 +1,7 @@
 ---
 import type { Agent } from '../data/types';
 import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
+import { launched } from '../lib/feature-flags';
 
 interface Props {
   agent: Agent;
@@ -60,18 +61,20 @@ const cardHref = href ?? localizedUrl(agent.isUbikalaUser ? `/usuario/${agent.sl
     {agent.name}
   </h3>
 
-  <p class="text-sm text-gray-500 mb-2">
-    {agent.isUbikalaUser
-      ? agent.parentCompany
-        ? `${t.agent.agentOf} ${agent.parentCompany}`
-        : agent.userType === 'agent'
-          ? agent.company || t.agent.realEstateCompany
-          : agent.userType === 'independent'
-            ? t.agent.independentAgent
-            : t.agent.propertyOwner
-      : agent.company || t.agent.realEstateAdvisor
-    }
-  </p>
+  {launched && (
+    <p class="text-sm text-gray-500 mb-2">
+      {agent.isUbikalaUser
+        ? agent.parentCompany
+          ? `${t.agent.agentOf} ${agent.parentCompany}`
+          : agent.userType === 'agent'
+            ? agent.company || t.agent.realEstateCompany
+            : agent.userType === 'independent'
+              ? t.agent.independentAgent
+              : t.agent.propertyOwner
+        : agent.company || t.agent.realEstateAdvisor
+      }
+    </p>
+  )}
 
   <p class="text-sm text-gray-600 mb-3">
     {agent.experienceYears} {t.agent.experience}

@@ -12,6 +12,7 @@ import { transformUbikalaAgents } from '../lib/transformers';
 import type { Agent } from '../data/types';
 import SEOBenefits from '../components/SEOBenefits.astro';
 import { getBenefitsContent, getDestinations, getDestinationsHeader, getHeroContent } from '../lib/seo-content-db';
+import { launched } from '../lib/feature-flags';
 
 const t = useTranslations('es');
 const country = Astro.locals.country;
@@ -35,6 +36,7 @@ try {
   const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
   // Merge and sort by properties count, take top 4
   featuredAgents = [...clicAgents, ...ubikalaAgents]
+    .filter(a => a.propertiesCount > 0)
     .sort((a, b) => b.propertiesCount - a.propertiesCount)
     .slice(0, 4);
 } catch (error) {
@@ -190,12 +192,14 @@ const organizationSchema = {
             {t.sections.expertsDesc}
           </p>
         </div>
-        <a href="/asesores" class="btn-outline mt-6 md:mt-0">
-          {t.sections.viewAllAgents}
-          <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </a>
+        {launched && (
+          <a href="/asesores" class="btn-outline mt-6 md:mt-0">
+            {t.sections.viewAllAgents}
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+          </a>
+        )}
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

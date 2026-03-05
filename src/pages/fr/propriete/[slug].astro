@@ -10,6 +10,7 @@ import { getPropertyBySlug, getSimilarProperties, getAgentBySlug, getFeaturedPro
 import PropertyNotFound from '../../../components/PropertyNotFound.astro';
 import { getLocationCoordinates, hasValidCoordinates } from '../../../lib/location-coordinates';
 import type { Property, Agent } from '../../../data/types';
+import { launched } from '../../../lib/feature-flags';
 
 // SSR - no prerender for dynamic property pages
 export const prerender = false;
@@ -396,18 +397,20 @@ if (!property) {
                 )}
                 <div>
                   <h3 class="font-semibold text-gray-900">{agent?.name}</h3>
-                  <p class="text-sm text-gray-500">
-                    {agent?.isUbikalaUser
-                      ? agent?.parentCompany
-                        ? `Agent Immobilier chez ${agent.parentCompany}`
-                        : agent?.userType === 'agent'
-                          ? agent?.company || 'Agence Immobiliere'
-                          : agent?.userType === 'independent'
-                            ? 'Agent Independant'
-                            : 'Proprietaire'
-                      : agent?.company || t.agent.title
-                    }
-                  </p>
+                  {launched && (
+                    <p class="text-sm text-gray-500">
+                      {agent?.isUbikalaUser
+                        ? agent?.parentCompany
+                          ? `Agent Immobilier chez ${agent.parentCompany}`
+                          : agent?.userType === 'agent'
+                            ? agent?.company || 'Agence Immobiliere'
+                            : agent?.userType === 'independent'
+                              ? 'Agent Independant'
+                              : 'Proprietaire'
+                        : agent?.company || t.agent.title
+                      }
+                    </p>
+                  )}
                   {agent?.verified && (
                     <span class="inline-flex items-center gap-1 text-xs text-primary-600">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
