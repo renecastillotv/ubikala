@@ -4,6 +4,7 @@
  * DB is only used for fire-and-forget writes (new properties, registrations).
  */
 import type { Property, Agent, PropertyType, TransactionType, PropertyImage, UserType } from '../data/types';
+import { toSlug } from './slug-utils';
 
 // ============================================================================
 // CONFIG
@@ -396,7 +397,7 @@ export interface SearchOptions {
   operacion?: string;
   pais?: string;
   provincia?: string;
-  ciudad?: string;
+  ciudad?: string | string[];
   sector?: string;
   precioMin?: number;
   precioMax?: number;
@@ -455,7 +456,13 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
   // Location
   if (pais) filters.push(`pais = "${pais}"`);
   if (provincia) filters.push(`provincia = "${provincia}"`);
-  if (ciudad) filters.push(`ciudad = "${ciudad}"`);
+  if (ciudad) {
+    if (Array.isArray(ciudad)) {
+      filters.push(`(${ciudad.map(c => `ciudad = "${c}"`).join(' OR ')})`);
+    } else {
+      filters.push(`ciudad = "${ciudad}"`);
+    }
+  }
   if (sector) filters.push(`sector = "${sector}"`);
 
   // Features
@@ -598,18 +605,20 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
  */
 export async function getPropertiesByLocation(
   locationSlug: string,
-  options: { limit?: number; offset?: number; operacion?: string; lang?: string; pais?: string; cityName?: string } = {}
+  options: { limit?: number; offset?: number; operacion?: string; lang?: string; pais?: string; cityName?: string; cityNames?: string[] } = {}
 ): Promise<{ properties: Property[]; total: number }> {
-  const { limit = 20, offset = 0, operacion, lang, pais, cityName } = options;
+  const { limit = 20, offset = 0, operacion, lang, pais, cityName, cityNames } = options;
 
   const filters = [`(${portalFilter()})`];
   if (operacion) filters.push(`operaciones = "${operacion}"`);
   if (pais) filters.push(`pais = "${pais}"`);
 
-  // If we have the real city name, filter exactly by ciudad field
-  // Otherwise fall back to free-text search with the slug as spaces
+  // If we have multiple city names (aliases), use OR filter
+  // Otherwise filter exactly by ciudad field
   let q = '';
-  if (cityName) {
+  if (cityNames && cityNames.length > 1) {
+    filters.push(`(${cityNames.map(c => `ciudad = "${c}"`).join(' OR ')})`);
+  } else if (cityName) {
     filters.push(`ciudad = "${cityName}"`);
   } else {
     q = locationSlug.replace(/-/g, ' ');
@@ -675,10 +684,45 @@ export async function getCitiesWithCounts(pais?: string): Promise<Array<{ name: 
   return Object.entries(distribution)
     .map(([name, count]) => ({
       name,
-      slug: name.toLowerCase().replace(/\s+/g, '-'),
+      slug: toSlug(name),
       count: count as number,
     }))
     .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Resolve an unrecognized location slug to actual city names via MeiliSearch text search.
+ * When a slug like "distrito-nacional" doesn't match any cached city,
+ * this searches properties with "distrito nacional" as text query and
+ * returns the city names from the top results (via facet distribution).
+ * Works automatically for any country — no static alias maps needed.
+ */
+export async function resolveCityFromText(slug: string, pais?: string): Promise<string[]> {
+  const query = slug.replace(/-/g, ' ');
+  const filters = [`(${portalFilter()})`];
+  if (pais) filters.push(`pais = "${pais}"`);
+
+  try {
+    const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: query,
+        filter: filters.join(' AND '),
+        facets: ['ciudad'],
+        limit: 0,
+      }),
+    });
+
+    const distribution: Record<string, number> = result.facetDistribution?.ciudad || {};
+    const entries = Object.entries(distribution).sort(([, a], [, b]) => b - a);
+    if (entries.length === 0) return [];
+
+    // Return all matching cities. The caller decides how many to use.
+    // slugToName takes [0], slugToCityNames takes all relevant ones.
+    return entries.map(([name]) => name);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -721,7 +765,7 @@ export async function getLocationsWithStats(pais?: string, maxLocations: number 
 
   return Object.entries(distribution)
     .map(([name, count]) => ({
-      slug: name.toLowerCase().replace(/\s+/g, '-').replace(/'/g, ''),
+      slug: toSlug(name),
       name,
       province: provinceByCity.get(name) || '',
       propertyCount: count as number,

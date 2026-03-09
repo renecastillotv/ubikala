@@ -186,6 +186,32 @@ const listingSchema = {
     </section>
   )}
 
+  <!-- Deep SEO Links: Type + Location -->
+  {searchLocations.length > 0 && (
+    <section class="py-12 bg-white">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Buscar por Tipo y Ubicación</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {searchLocations.slice(0, 8).map(loc => (
+            <a href={`/comprar/apartamento/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
+              Apartamentos en {loc.name}
+            </a>
+          ))}
+          {searchLocations.slice(0, 6).map(loc => (
+            <a href={`/comprar/casa/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
+              Casas en {loc.name}
+            </a>
+          ))}
+          {searchLocations.slice(0, 4).map(loc => (
+            <a href={`/comprar/terreno/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
+              Terrenos en {loc.name}
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
   <!-- CTA -->
   {cta ? (
     <section class="py-12 bg-gradient-to-r from-primary-600 to-primary-700">

@@ -9,7 +9,7 @@ import { searchProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 import { getPageFAQs, getEducationalCards, getFAQSchema } from '../lib/seo-content-db';
 import { getCitiesWithCounts } from '../lib/meilisearch';
-import { slugToName } from '../lib/location-utils';
+import { slugToName, slugToCityNames } from '../lib/location-utils';
 import SEOEducationalCards from '../components/SEOEducationalCards.astro';
 import SEOFAQSection from '../components/SEOFAQSection.astro';
 
@@ -48,6 +48,7 @@ const searchLocations = await getCitiesWithCounts(pais);
 // Location param is now a slug (from SearchBox), resolve to real city name
 const locationSlug = params.get('location') || undefined;
 const locationName = locationSlug ? await slugToName(locationSlug, pais) : undefined;
+const locationCityNames = locationSlug ? await slugToCityNames(locationSlug, pais) : undefined;
 
 const filters = {
   query: params.get('q') || undefined,
@@ -80,7 +81,7 @@ try {
     query: filters.query || (filters.locationName ? '' : ''),
     tipo,
     operacion,
-    ciudad: filters.locationName,
+    ciudad: locationCityNames && locationCityNames.length > 1 ? locationCityNames : filters.locationName,
     precioMin: filters.minPrice,
     precioMax: filters.maxPrice,
     habitacionesMin: filters.bedrooms,
@@ -330,19 +331,37 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
     </section>
   )}
 
-  <!-- Internal Links - Ubicaciones Populares -->
+  <!-- Internal Links - Deep SEO Links (type + location) -->
   {searchLocations.length > 0 && (
     <section class="py-12 bg-gray-50">
       <div class="container-custom">
-        <div class="mt-12">
-          <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Explora por Ubicación</h3>
-          <div class="flex flex-wrap justify-center gap-3">
-            {searchLocations.slice(0, 10).map(loc => (
-              <a href={`/propiedades/${loc.slug}`} class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
-                {loc.name}
-              </a>
-            ))}
-          </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Explora por Ubicación</h3>
+        <div class="flex flex-wrap justify-center gap-3 mb-8">
+          {searchLocations.slice(0, 10).map(loc => (
+            <a href={`/propiedades/${loc.slug}`} class="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm">
+              {loc.name}
+            </a>
+          ))}
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Comprar por Tipo y Ubicación</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {searchLocations.slice(0, 6).flatMap(loc => [
+            { label: `Apartamentos en ${loc.name}`, href: `/comprar/apartamento/${loc.slug}` },
+            { label: `Casas en ${loc.name}`, href: `/comprar/casa/${loc.slug}` },
+          ]).map(link => (
+            <a href={link.href} class="px-3 py-2 bg-white rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm text-center">
+              {link.label}
+            </a>
+          ))}
+          {searchLocations.slice(0, 4).flatMap(loc => [
+            { label: `Terrenos en ${loc.name}`, href: `/comprar/terreno/${loc.slug}` },
+            { label: `Villas en ${loc.name}`, href: `/comprar/villa/${loc.slug}` },
+          ]).map(link => (
+            <a href={link.href} class="px-3 py-2 bg-white rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm text-center">
+              {link.label}
+            </a>
+          ))}
         </div>
       </div>
     </section>

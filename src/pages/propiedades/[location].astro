@@ -8,7 +8,7 @@ import { getPropertiesByLocation } from '../../lib/meilisearch';
 import type { Property } from '../../data/types';
 import { getPageFAQs, getFAQSchema } from '../../lib/seo-content-db';
 import SEOFAQSection from '../../components/SEOFAQSection.astro';
-import { slugToName } from '../../lib/location-utils';
+import { slugToName, slugToCityNames } from '../../lib/location-utils';
 
 // SSR for dynamic location pages
 export const prerender = false;
@@ -24,6 +24,7 @@ const pais = Astro.locals.country.name;
 
 // Resolve the real city name from the slug via MeiliSearch facets
 const resolvedName = await slugToName(locationSlug || '', pais);
+const cityNames = await slugToCityNames(locationSlug || '', pais);
 
 // Fetch location and properties from database
 let locationProperties: Property[] = [];
@@ -40,7 +41,7 @@ let locationData = {
 
 try {
   // Get properties for this location via MeiliSearch using exact ciudad filter
-  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, pais, cityName: resolvedName });
+  const result = await getPropertiesByLocation(locationSlug || '', { limit: 200, pais, cityName: resolvedName, cityNames: cityNames.length > 1 ? cityNames : undefined });
   locationProperties = result.properties;
   const totalPropertyCount = result.total;
 

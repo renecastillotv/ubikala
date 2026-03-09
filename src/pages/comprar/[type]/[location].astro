@@ -7,7 +7,7 @@ import Breadcrumb from '../../../components/Breadcrumb.astro';
 import MarketPanorama from '../../../components/MarketPanorama.astro';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
-import { slugToName } from '../../../lib/location-utils';
+import { slugToName, slugToCityNames } from '../../../lib/location-utils';
 
 // SSR para rutas dinámicas
 export const prerender = false;
@@ -54,6 +54,8 @@ const pais = Astro.locals.country.name;
 
 // Resolve real city name from slug via MeiliSearch facets
 const resolvedName = await slugToName(locationSlug || '', pais);
+// Get all equivalent city names for OR filtering (e.g. "Distrito Nacional" + "Santo Domingo D.N.")
+const cityNames = await slugToCityNames(locationSlug || '', pais);
 
 let locationData: { name: string; province: string } = {
   name: resolvedName,
@@ -70,7 +72,7 @@ try {
   const result = await searchProperties({
     operacion: 'venta',
     tipo: typeInfo.dbValue,
-    ciudad: resolvedName,
+    ciudad: cityNames.length > 1 ? cityNames : resolvedName,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,
