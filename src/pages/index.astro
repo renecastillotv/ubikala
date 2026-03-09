@@ -4,15 +4,10 @@ import Hero from '../components/Hero.astro';
 import FeaturedProperties from '../components/FeaturedProperties.astro';
 import LocationsGrid from '../components/LocationsGrid.astro';
 import CTASection from '../components/CTASection.astro';
-import AgentCard from '../components/AgentCard.astro';
 import { useTranslations } from '../i18n';
-import { searchAgents, getCitiesWithCounts } from '../lib/meilisearch';
-import { getUbikalaAgents } from '../lib/ubikala-db';
-import { transformUbikalaAgents } from '../lib/transformers';
-import type { Agent } from '../data/types';
+import { getCitiesWithCounts } from '../lib/meilisearch';
 import SEOBenefits from '../components/SEOBenefits.astro';
 import { getBenefitsContent, getDestinations, getDestinationsHeader, getHeroContent } from '../lib/seo-content-db';
-import { launched } from '../lib/feature-flags';
 
 const t = useTranslations('es');
 const country = Astro.locals.country;
@@ -24,24 +19,6 @@ const destHeader = await getDestinationsHeader(country.code, 'es', pais);
 const homeHero = await getHeroContent(country.code, 'es', 'home', pais);
 
 const searchLocations = await getCitiesWithCounts(pais);
-
-// Fetch agents from both databases and merge
-let featuredAgents: Agent[] = [];
-try {
-  const [meiliResult, ubikalaAgentRows] = await Promise.all([
-    searchAgents({ limit: 4, pais }),
-    getUbikalaAgents({ limit: 4, country_code: country?.code })
-  ]);
-  const clicAgents = meiliResult.agents;
-  const ubikalaAgents = transformUbikalaAgents(ubikalaAgentRows);
-  // Merge and sort by properties count, take top 4
-  featuredAgents = [...clicAgents, ...ubikalaAgents]
-    .filter(a => a.propertiesCount > 0)
-    .sort((a, b) => b.propertiesCount - a.propertiesCount)
-    .slice(0, 4);
-} catch (error) {
-  console.error('Error fetching agents:', error);
-}
 
 const rp = (s: string) => s.replace(/\{pais\}/g, pais);
 
@@ -173,39 +150,6 @@ const organizationSchema = {
           </div>
           <h3 class="font-semibold text-gray-900">{t.propertyTypes.commercial}</h3>
         </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Featured Agents -->
-  <section class="section">
-    <div class="container-custom">
-      <div class="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
-        <div>
-          <span class="text-primary-600 font-semibold text-sm uppercase tracking-wider">
-            {t.sections.verifiedAgents}
-          </span>
-          <h2 class="section-title mt-2">
-            {t.sections.meetOurExperts}
-          </h2>
-          <p class="section-subtitle">
-            {t.sections.expertsDesc}
-          </p>
-        </div>
-        {launched && (
-          <a href="/asesores" class="btn-outline mt-6 md:mt-0">
-            {t.sections.viewAllAgents}
-            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </a>
-        )}
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {featuredAgents.map((agent) => (
-          <AgentCard agent={agent} />
-        ))}
       </div>
     </div>
   </section>
