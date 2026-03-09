@@ -4,7 +4,7 @@ import PropertyCard from '../../../components/PropertyCard.astro';
 import SearchBox from '../../../components/SearchBox.astro';
 import Pagination from '../../../components/Pagination.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
-import { useTranslations } from '../../../i18n';
+import MarketPanorama from '../../../components/MarketPanorama.astro';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
 
@@ -12,7 +12,6 @@ import type { Property } from '../../../data/types';
 export const prerender = false;
 
 const { type: typeSlug, location: locationSlug } = Astro.params;
-const t = useTranslations('es');
 
 // Mapeo de slugs de tipo a valores de BD y nombres legibles
 const propertyTypeMap: Record<string, { dbValue: string; singular: string; plural: string; icon: string }> = {
@@ -60,7 +59,6 @@ const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
 const pais = Astro.locals.country.name;
-const country = Astro.locals.country;
 
 // Intentar obtener info de ubicación
 let locationData: { name: string; province: string } = {
@@ -111,112 +109,6 @@ if (currentPage > totalPages && totalPages > 0) {
 // Títulos y descripciones dinámicas para SEO
 const pageTitle = `${typeInfo.plural} en Venta en ${locationData.name} | Ubíkala`;
 const pageDescription = `Encuentra ${typeInfo.plural.toLowerCase()} en venta en ${locationData.name}, ${locationData.province}. ${totalCount} propiedades disponibles con fotos, precios y contacto directo con asesores.`;
-
-// Contenido SEO específico por combinación tipo+ubicación
-const seoContent: Record<string, Record<string, { intro: string; benefits: string[]; tips: string[] }>> = {
-  'apartamento': {
-    'default': {
-      intro: `Los apartamentos son la opción más popular para quienes buscan comodidad, seguridad y amenidades modernas. Ofrecen mantenimiento reducido y acceso a áreas comunes como piscinas, gimnasios y áreas sociales.`,
-      benefits: [
-        'Seguridad 24/7 y acceso controlado',
-        'Amenidades compartidas (piscina, gimnasio, áreas verdes)',
-        'Menor mantenimiento que una casa',
-        'Ubicaciones céntricas con acceso a servicios'
-      ],
-      tips: [
-        'Verifica el estado del edificio y las áreas comunes',
-        'Pregunta por los gastos de mantenimiento mensual',
-        'Considera la orientación para luz natural y ventilación',
-        'Revisa las reglas del condominio sobre mascotas y alquileres'
-      ]
-    },
-    'punta-cana': {
-      intro: `Los apartamentos en Punta Cana son ideales para inversión turística y segunda residencia. Muchos complejos ofrecen programas de rental pool con excelente retorno de inversión gracias al flujo constante de turistas.`,
-      benefits: [
-        'Alta demanda para alquiler vacacional',
-        'Acceso a playas y resorts de clase mundial',
-        'Programas de administración hotelera disponibles',
-        'Potencial de apreciación por desarrollo turístico'
-      ],
-      tips: [
-        'Considera apartamentos con programa de rental pool',
-        'Verifica la cercanía a la playa y amenidades',
-        'Pregunta por el historial de ocupación si es para inversión',
-        'Revisa los costos de mantenimiento en temporada baja'
-      ]
-    },
-    'santo-domingo': {
-      intro: `Santo Domingo ofrece apartamentos para todos los presupuestos, desde estudios en zonas céntricas hasta lujosos penthouses en Piantini y Naco. La capital tiene el mercado más activo del país con alta demanda de alquiler.`,
-      benefits: [
-        'Mercado más líquido para compra y venta',
-        'Excelente conectividad y servicios',
-        'Variedad de precios y ubicaciones',
-        'Alta demanda de alquiler a largo plazo'
-      ],
-      tips: [
-        'Considera el tráfico y acceso al metro si trabajas en la capital',
-        'Zonas como Evaristo Morales y Bella Vista ofrecen buena relación precio-valor',
-        'Verifica la disponibilidad de estacionamiento',
-        'Pregunta por la seguridad del sector'
-      ]
-    }
-  },
-  'casa': {
-    'default': {
-      intro: `Las casas ofrecen mayor espacio, privacidad y libertad para personalizar tu hogar. Son ideales para familias que buscan patio, área de barbecue y espacio para crecer.`,
-      benefits: [
-        'Mayor espacio interior y exterior',
-        'Privacidad total sin vecinos arriba o abajo',
-        'Libertad para modificar y ampliar',
-        'Ideal para familias con niños o mascotas'
-      ],
-      tips: [
-        'Verifica el estado del techo, plomería y electricidad',
-        'Considera los costos de mantenimiento del jardín',
-        'Revisa la seguridad del sector y accesos',
-        'Pregunta por el historial de inundaciones o problemas estructurales'
-      ]
-    }
-  },
-  'villa': {
-    'default': {
-      intro: `Las villas representan el lujo residencial con amplios espacios, acabados premium y amenidades exclusivas como piscina privada, jardines y vistas panorámicas.`,
-      benefits: [
-        'Acabados de lujo y diseño arquitectónico único',
-        'Piscina privada y amplios jardines',
-        'Mayor privacidad y exclusividad',
-        'Potencial para alquiler vacacional de lujo'
-      ],
-      tips: [
-        'Verifica los costos de mantenimiento de piscina y jardines',
-        'Considera contratar administración si es para alquiler',
-        'Revisa la calidad de los acabados y sistemas',
-        'Pregunta por garantías de construcción'
-      ]
-    }
-  },
-  'terreno': {
-    'default': {
-      intro: `Comprar terreno te permite construir exactamente lo que necesitas. Es una inversión con potencial de apreciación, especialmente en zonas de desarrollo.`,
-      benefits: [
-        'Libertad total para diseñar tu proyecto',
-        'Potencial de apreciación a largo plazo',
-        'Menor inversión inicial que propiedad construida',
-        'Posibilidad de desarrollar en etapas'
-      ],
-      tips: [
-        'Verifica el deslinde y certificación de título',
-        'Consulta el uso de suelo permitido (residencial, comercial, mixto)',
-        'Revisa acceso a servicios (agua, luz, alcantarillado)',
-        'Considera costos de movimiento de tierra si hay pendientes'
-      ]
-    }
-  }
-};
-
-// Obtener contenido SEO específico o default
-const typeContent = seoContent[typeInfo.dbValue] || seoContent['apartamento'];
-const locationContent = typeContent[locationSlug || ''] || typeContent['default'];
 
 // FAQs dinámicas basadas en tipo y ubicación
 const dynamicFAQs = [
@@ -369,62 +261,14 @@ const relatedTypes = Object.entries(propertyTypeMap)
     </div>
   </section>
 
-  <!-- SEO Content Section -->
-  <section class="py-16 bg-gray-50">
-    <div class="container-custom">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
-          Comprar {typeInfo.plural} en {locationData.name}
-        </h2>
-
-        <p class="text-gray-600 text-lg mb-8">
-          {locationContent.intro}
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-          <!-- Beneficios -->
-          <div class="bg-white rounded-xl p-6 shadow-sm">
-            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Ventajas de {typeInfo.plural}
-            </h3>
-            <ul class="space-y-3">
-              {locationContent.benefits.map((benefit) => (
-                <li class="flex items-start gap-2 text-gray-600">
-                  <svg class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                  {benefit}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <!-- Tips -->
-          <div class="bg-white rounded-xl p-6 shadow-sm">
-            <h3 class="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Consejos para Comprar
-            </h3>
-            <ul class="space-y-3">
-              {locationContent.tips.map((tip) => (
-                <li class="flex items-start gap-2 text-gray-600">
-                  <svg class="w-5 h-5 text-secondary-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                  {tip}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Market Panorama SEO Section (data-driven from motor-seo API) -->
+  <MarketPanorama
+    propertyType={typeSlug}
+    locationSlug={locationSlug}
+    operation="comprar"
+    countryCode={Astro.locals.country?.code}
+    language="es"
+  />
 
   <!-- FAQs -->
   <section class="py-16">

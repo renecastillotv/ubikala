@@ -1,0 +1,239 @@
+---
+/**
+ * MarketPanorama.astro — Fetches live market data from the Market Panorama SEO Engine
+ * and renders header, badges, insights, narrative, and related links.
+ *
+ * Styled for Ubikala's earthy palette (olive, terracotta, sand).
+ */
+
+export interface Props {
+  /** Property type slug: 'apartamento', 'casa', 'villa', etc. */
+  propertyType?: string | null;
+  /** Location slug from route: 'punta-cana', 'santo-domingo', etc. */
+  locationSlug?: string | null;
+  /** Operation: 'comprar' | 'alquilar' */
+  operation?: string;
+  /** Country code from Astro.locals.country: 'DO', 'MX', 'PA', etc. */
+  countryCode?: string | null;
+  /** Language: 'es' | 'en' | 'fr' */
+  language?: 'es' | 'en' | 'fr';
+}
+
+const {
+  propertyType,
+  locationSlug,
+  operation = 'comprar',
+  countryCode,
+  language = 'es',
+} = Astro.props;
+
+// ─── Build the API path ─────────────────────────────────────────────────────
+
+// Map country code to API prefix (DO is default, no prefix needed)
+const COUNTRY_PREFIX: Record<string, string> = {
+  'DO': '',
+  'MX': 'mx',
+  'CO': 'co',
+  'PA': 'pa',
+  'AR': 'ar',
+  'CR': 'cr',
+};
+
+const countryPrefix = countryCode ? (COUNTRY_PREFIX[countryCode.toUpperCase()] ?? '') : '';
+
+// Assemble: /{country?}/{operation}/{type?}/{location?}
+let apiPath = countryPrefix ? `/${countryPrefix}` : '';
+apiPath += `/${operation}`;
+if (propertyType) apiPath += `/${propertyType}`;
+if (locationSlug) apiPath += `/${locationSlug}`;
+
+// ─── Fetch from API ──────────────────────────────────────────────────────────
+
+interface Badge { label: string; value: string; raw?: number | null; }
+interface Insight { type: string; title: string; body: string; href?: string; }
+interface RelatedLink { label: string; href: string; }
+interface PanoramaData {
+  header: { title: string; subtitle?: string };
+  badges: Badge[];
+  insights: Insight[];
+  narrative: string;
+  related_links: RelatedLink[];
+  source_note: string;
+}
+
+let panorama: PanoramaData | null = null;
+
+const apiBase = import.meta.env.MARKET_PANORAMA_API_URL || '';
+
+if (apiBase) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const url = `${apiBase}/api/market-panorama?path=${encodeURIComponent(apiPath)}&lang=${language}&brand=ubikala`;
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (res.ok) {
+      panorama = await res.json() as PanoramaData;
+    }
+  } catch (_) {
+    // Silently fail — section simply won't render
+  }
+}
+
+if (!panorama) return;
+
+// ─── Filter related_links: remove 4th-level (sector) URLs ───────────────────
+// Ubikala only supports up to 3 levels: /comprar/type/location
+// Motor-seo may generate 4-level links like /comprar/apartamento/distrito-nacional/naco
+function countPathSegments(href: string): number {
+  return href.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean).length;
+}
+
+const maxSegments = countryPrefix ? 4 : 3; // with country prefix: /mx/comprar/type/location = 4
+const filteredLinks = panorama.related_links.filter(link => countPathSegments(link.href) <= maxSegments);
+
+// ─── Dataset Schema JSON-LD ─────────────────────────────────────────────────
+
+function badgeRaw(label: string): number | null {
+  const b = panorama!.badges.find(b => b.label === label);
+  return b?.raw ?? null;
+}
+
+const inventoryCount = badgeRaw('disponibles') ?? badgeRaw('en oferta') ?? 0;
+const medianPrice = badgeRaw('precio mediano') ?? badgeRaw('precio referencia') ?? 0;
+const pricePerM2 = badgeRaw('precio por m²') ?? badgeRaw('costo por m²') ?? 0;
+const yieldEstimated = badgeRaw('yield estimado') ?? badgeRaw('rentabilidad anual') ?? null;
+
+const datasetSchema = (inventoryCount > 0 || medianPrice > 0) ? {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: panorama.header.title,
+  description: panorama.narrative?.substring(0, 300) || `Real estate market data: ${panorama.header.title}`,
+  url: Astro.url.href,
+  temporalCoverage: '2025/..',
+  variableMeasured: [
+    ...(medianPrice > 0 ? [{ '@type': 'PropertyValue', name: 'Median Price USD', value: medianPrice, unitCode: 'USD' }] : []),
+    ...(pricePerM2 > 0 ? [{ '@type': 'PropertyValue', name: 'Price per m² USD', value: pricePerM2, unitCode: 'USD' }] : []),
+    ...(inventoryCount > 0 ? [{ '@type': 'PropertyValue', name: 'Inventory Count', value: inventoryCount }] : []),
+    ...(yieldEstimated ? [{ '@type': 'PropertyValue', name: 'Estimated Yield %', value: yieldEstimated }] : []),
+  ],
+} : null;
+
+// ─── SVG icon paths by insight type ─────────────────────────────────────────
+
+const INSIGHT_SVG: Record<string, string> = {
+  premium_leader: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  value_entry: 'M7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2zM3 3h18a1 1 0 011 1v16a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z',
+  yield_leader: 'M3 17l6-6 4 4 8-8M14 7h7v7',
+  yield_overview: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V4a2 2 0 00-2-2H6a2 2 0 00-2 2v14a2 2 0 002 2z',
+  supply_leader: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-16 0H3m2-6h4m-4 4h4m6-8h4m-4 4h4',
+  market_breadth: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  vs_parent: 'M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4',
+  price_positioning: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  supply_depth: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
+};
+
+// Color classes per insight type — using ubikala palette
+const INSIGHT_COLORS: Record<string, string> = {
+  premium_leader: 'text-accent-600 bg-accent-50',
+  value_entry: 'text-primary-600 bg-primary-50',
+  yield_leader: 'text-blue-600 bg-blue-50',
+  yield_overview: 'text-indigo-600 bg-indigo-50',
+  supply_leader: 'text-accent-500 bg-accent-50',
+  market_breadth: 'text-primary-700 bg-primary-50',
+  vs_parent: 'text-sky-600 bg-sky-50',
+  price_positioning: 'text-accent-700 bg-accent-50',
+  supply_depth: 'text-teal-600 bg-teal-50',
+};
+
+const badgeCount = panorama.badges.length;
+const badgeGridClass = badgeCount <= 3
+  ? 'grid-cols-1 sm:grid-cols-3'
+  : badgeCount === 4
+    ? 'grid-cols-2 md:grid-cols-4'
+    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5';
+---
+
+<section class="py-10 bg-secondary-50" data-market-panorama>
+  <div class="max-w-5xl mx-auto px-4">
+
+    {/* Header */}
+    <div class="mb-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-gray-900">
+        {panorama.header.title}
+      </h2>
+      {panorama.header.subtitle && (
+        <p class="mt-2 text-gray-500 text-sm md:text-base">{panorama.header.subtitle}</p>
+      )}
+    </div>
+
+    {/* Badges */}
+    {panorama.badges.length > 0 && (
+      <div class={`grid ${badgeGridClass} gap-3 mb-10`}>
+        {panorama.badges.map((badge) => (
+          <div class="bg-white rounded-xl p-4 text-center border border-secondary-200">
+            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">{badge.label}</p>
+            <p class="text-lg md:text-xl font-bold text-gray-900 leading-tight break-words">{badge.value}</p>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* Insights */}
+    {panorama.insights.length > 0 && (
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+        {panorama.insights.map((insight) => {
+          const svgPath = INSIGHT_SVG[insight.type] || INSIGHT_SVG.yield_overview;
+          const colorClass = INSIGHT_COLORS[insight.type] || 'text-gray-600 bg-gray-100';
+          return (
+            <div class="bg-white rounded-xl border border-secondary-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-start gap-3.5">
+                <div class={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${colorClass}`}>
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d={svgPath} />
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <h3 class="font-semibold text-gray-900 text-[15px] leading-snug mb-1">{insight.title}</h3>
+                  <p class="text-sm text-gray-600 leading-relaxed">{insight.body}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {/* Narrative */}
+    {panorama.narrative && (
+      <div class="prose prose-sm md:prose-base max-w-none text-gray-700 mb-8">
+        <p>{panorama.narrative}</p>
+      </div>
+    )}
+
+    {/* Related Links */}
+    {filteredLinks.length > 0 && (
+      <nav class="flex flex-wrap gap-2 mb-6" aria-label="Related market searches">
+        {filteredLinks.map((link) => (
+          <a
+            href={link.href}
+            class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800 transition-colors border border-primary-200"
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+    )}
+
+    {/* Source note */}
+    <p class="text-xs text-gray-400 mt-4">
+      {panorama.source_note}
+    </p>
+
+  </div>
+</section>
+
+{/* Dataset Schema JSON-LD */}
+{datasetSchema && (
+  <script type="application/ld+json" set:html={JSON.stringify(datasetSchema)} />
+)}
