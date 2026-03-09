@@ -1,12 +1,14 @@
 ---
 import { getLangFromUrl, useTranslations, localizedUrl } from '../i18n';
+import { getCitiesWithCounts } from '../lib/meilisearch';
 
 interface Props {
   variant?: 'hero' | 'inline' | 'compact';
   locations?: Array<{ name: string; slug: string; count: number }>;
 }
 
-const { variant = 'hero', locations = [] } = Astro.props;
+const { variant = 'hero', locations: passedLocations } = Astro.props;
+const locations = passedLocations?.length ? passedLocations : await getCitiesWithCounts(Astro.locals.country?.name);
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 
