@@ -1,0 +1,139 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Breadcrumb from '../../../components/Breadcrumb.astro';
+import { getSiteConfig } from '../../../lib/config';
+import { getGuideBySlug } from '../../../lib/guides-db';
+
+const { slug } = Astro.params;
+const country = Astro.locals.country;
+const lang = 'en';
+
+const config = await getSiteConfig(country?.code);
+let guide = await getGuideBySlug(country?.code || 'DO', lang, slug || '');
+
+// Fallback to Spanish guide if no English version exists
+if (!guide) {
+  guide = await getGuideBySlug(country?.code || 'DO', 'es', slug || '');
+}
+
+if (!guide) {
+  return Astro.redirect('/en/guides');
+}
+
+// Article Schema for SEO
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": guide.title,
+  "description": guide.description,
+  "image": `${config.site_url}/images/guias/${slug}.jpg`,
+  "author": {
+    "@type": "Organization",
+    "name": config.company_name,
+    "url": config.site_url
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": config.company_name,
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${config.site_url}${config.logo_url}`
+    }
+  },
+  "datePublished": "2024-01-15",
+  "dateModified": new Date().toISOString().split('T')[0],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": `${config.site_url}/en/guides/${slug}`
+  }
+};
+
+// FAQ Schema for SEO
+const faqSchema = guide.faqs.length > 0 ? {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": guide.faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+} : null;
+---
+
+<Layout
+  title={`${guide.title} | ${config.company_name}`}
+  description={guide.description}
+  keywords={guide.keywords}
+>
+  <script is:inline type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+  {faqSchema && <script is:inline type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
+  <Breadcrumb items={[
+    { label: 'Home', href: '/en' },
+    { label: 'Guides', href: '/en/guides' },
+    { label: guide.title }
+  ]} />
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <span class="inline-block px-3 py-1 bg-white/20 rounded-full text-white text-sm mb-4">{guide.tag}</span>
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        {guide.title}
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        {guide.hero_description}
+      </p>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <article class="section">
+    <div class="container-custom">
+      <div class="max-w-4xl mx-auto">
+        {/* Table of Contents */}
+        {guide.toc.length > 0 && (
+          <div class="bg-gray-50 rounded-lg p-6 mb-8">
+            <h2 class="font-semibold text-gray-900 mb-4">Contents</h2>
+            <ul class="space-y-2 text-sm">
+              {guide.toc.map(item => (
+                <li><a href={`#${item.id}`} class="text-primary-600 hover:underline">{item.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Dynamic body content from DB */}
+        <div set:html={guide.body_html} />
+
+        {/* CTA */}
+        {guide.cta_title && (
+          <div class="bg-gray-50 rounded-lg p-8 text-center">
+            <h3 class="text-xl font-bold text-gray-900 mb-4">{guide.cta_title}</h3>
+            <p class="text-gray-600 mb-6">{guide.cta_description}</p>
+            <a href={guide.cta_link} class="btn-primary">{guide.cta_link_text}</a>
+          </div>
+        )}
+      </div>
+    </div>
+  </article>
+
+  {/* Related Guides */}
+  {guide.related_guides.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Related Guides</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+          {guide.related_guides.map(rel => (
+            <a href={`/en/guides/${rel.slug}`} class="card p-6 hover:shadow-lg transition-shadow">
+              <h3 class="font-semibold text-gray-900 mb-2">{rel.title}</h3>
+              <p class="text-sm text-gray-600">{rel.description}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Layout>

@@ -110,6 +110,7 @@ export const routeTranslations: Record<string, Record<Lang, string>> = {
   'privacidad': { es: 'privacidad', en: 'privacy', fr: 'confidentialite' },
   'terminos': { es: 'terminos', en: 'terms', fr: 'conditions' },
   'login': { es: 'login', en: 'login', fr: 'connexion' },
+  'guias': { es: 'guias', en: 'guides', fr: 'guides' },
 };
 
 /**
@@ -159,15 +160,15 @@ export function translateRoute(path: string, fromLang: Lang, toLang: Lang): stri
  */
 const availableRoutes: Record<Lang, Set<string>> = {
   es: new Set(), // ES is default, all routes exist
-  en: new Set(['about', 'agents', 'buy', 'contact', 'list', 'privacy', 'properties', 'real-estate', 'rent', 'search', 'terms', 'login']),
-  fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'immobilieres', 'louer', 'proprietes', 'publier', 'recherche']),
+  en: new Set(['about', 'agents', 'buy', 'contact', 'guides', 'list', 'privacy', 'properties', 'real-estate', 'rent', 'search', 'terms', 'login']),
+  fr: new Set(['acheter', 'agents', 'a-propos', 'conditions', 'confidentialite', 'contact', 'guides', 'immobilieres', 'louer', 'proprietes', 'publier', 'recherche']),
 };
 
 /** Route prefixes that have dynamic sub-routes (e.g. /en/agent/[slug]) */
 const nestedRoutePrefixes: Record<Lang, Set<string>> = {
   es: new Set(), // ES is default
-  en: new Set(['agent', 'user', 'property', 'real-estate', 'properties', 'buy']),
-  fr: new Set(['acheter', 'agent', 'utilisateur', 'propriete', 'immobilieres', 'proprietes']),
+  en: new Set(['agent', 'user', 'property', 'real-estate', 'properties', 'buy', 'guides']),
+  fr: new Set(['acheter', 'agent', 'utilisateur', 'propriete', 'immobilieres', 'proprietes', 'guides']),
 };
 
 function isRouteAvailable(path: string, lang: Lang): boolean {
