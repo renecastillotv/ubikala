@@ -41,7 +41,7 @@ const containerClass = {
         <select name="location" class="select py-2 text-sm flex-1">
           <option value="">{t.filters.location}</option>
           {locations.map(loc => (
-            <option value={loc.name}>{loc.name}</option>
+            <option value={loc.slug}>{loc.name}</option>
           ))}
         </select>
       ) : (
@@ -102,7 +102,7 @@ const containerClass = {
         <select id="location" name="location" class="select">
           <option value="">{t.filters.allLocations}</option>
           {locations.map(loc => (
-            <option value={loc.name}>{loc.name}</option>
+            <option value={loc.slug}>{loc.name}</option>
           ))}
         </select>
       ) : (

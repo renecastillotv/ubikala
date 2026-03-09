@@ -593,26 +593,32 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
 }
 
 /**
- * Get properties by location (city or sector slug).
+ * Get properties by location (city name or slug).
+ * Uses exact ciudad filter when cityName is provided, falls back to free-text search with slug.
  */
 export async function getPropertiesByLocation(
   locationSlug: string,
-  options: { limit?: number; offset?: number; operacion?: string; lang?: string; pais?: string } = {}
+  options: { limit?: number; offset?: number; operacion?: string; lang?: string; pais?: string; cityName?: string } = {}
 ): Promise<{ properties: Property[]; total: number }> {
-  const { limit = 20, offset = 0, operacion, lang, pais } = options;
-
-  // Normalize slug to match city/sector (replace hyphens with spaces for search)
-  const locationName = locationSlug.replace(/-/g, ' ');
+  const { limit = 20, offset = 0, operacion, lang, pais, cityName } = options;
 
   const filters = [`(${portalFilter()})`];
   if (operacion) filters.push(`operaciones = "${operacion}"`);
   if (pais) filters.push(`pais = "${pais}"`);
 
-  // Search by city or sector text
+  // If we have the real city name, filter exactly by ciudad field
+  // Otherwise fall back to free-text search with the slug as spaces
+  let q = '';
+  if (cityName) {
+    filters.push(`ciudad = "${cityName}"`);
+  } else {
+    q = locationSlug.replace(/-/g, ' ');
+  }
+
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({
-      q: locationName,
+      q,
       filter: filters.join(' AND '),
       sort: ['destacada:desc', 'updated_at:desc'],
       limit,

@@ -9,6 +9,7 @@ import { searchProperties } from '../lib/meilisearch';
 import type { Property } from '../data/types';
 import { getPageFAQs, getEducationalCards, getFAQSchema } from '../lib/seo-content-db';
 import { getCitiesWithCounts } from '../lib/meilisearch';
+import { slugToName } from '../lib/location-utils';
 import SEOEducationalCards from '../components/SEOEducationalCards.astro';
 import SEOFAQSection from '../components/SEOFAQSection.astro';
 
@@ -36,18 +37,6 @@ const typeToDb: Record<string, string> = {
   'office': 'oficina',
 };
 
-const filters = {
-  query: params.get('q') || undefined,
-  transactionType: (params.get('transactionType') as 'sale' | 'rent' | 'all') || 'all',
-  propertyType: params.get('propertyType') || 'all',
-  location: params.get('location') || undefined,
-  minPrice: params.get('minPrice') ? parseInt(params.get('minPrice')!) : undefined,
-  maxPrice: params.get('maxPrice') ? parseInt(params.get('maxPrice')!) : undefined,
-  bedrooms: params.get('bedrooms') ? parseInt(params.get('bedrooms')!) : undefined,
-  bathrooms: params.get('bathrooms') ? parseInt(params.get('bathrooms')!) : undefined,
-  tenantId: params.get('tenant_id') || undefined,
-};
-
 const pais = Astro.locals.country.name;
 const country = Astro.locals.country;
 
@@ -55,6 +44,23 @@ const country = Astro.locals.country;
 const faqs = await getPageFAQs(country.code, 'es', 'search', pais);
 const eduCards = await getEducationalCards(country.code, 'es', pais);
 const searchLocations = await getCitiesWithCounts(pais);
+
+// Location param is now a slug (from SearchBox), resolve to real city name
+const locationSlug = params.get('location') || undefined;
+const locationName = locationSlug ? await slugToName(locationSlug, pais) : undefined;
+
+const filters = {
+  query: params.get('q') || undefined,
+  transactionType: (params.get('transactionType') as 'sale' | 'rent' | 'all') || 'all',
+  propertyType: params.get('propertyType') || 'all',
+  locationSlug,
+  locationName,
+  minPrice: params.get('minPrice') ? parseInt(params.get('minPrice')!) : undefined,
+  maxPrice: params.get('maxPrice') ? parseInt(params.get('maxPrice')!) : undefined,
+  bedrooms: params.get('bedrooms') ? parseInt(params.get('bedrooms')!) : undefined,
+  bathrooms: params.get('bathrooms') ? parseInt(params.get('bathrooms')!) : undefined,
+  tenantId: params.get('tenant_id') || undefined,
+};
 
 // Buscar propiedades via MeiliSearch
 let results: Property[] = [];
@@ -71,9 +77,10 @@ try {
     : undefined;
 
   const searchResult = await searchProperties({
-    query: filters.query || filters.location || '',
+    query: filters.query || (filters.locationName ? '' : ''),
     tipo,
     operacion,
+    ciudad: filters.locationName,
     precioMin: filters.minPrice,
     precioMax: filters.maxPrice,
     habitacionesMin: filters.bedrooms,
@@ -97,15 +104,15 @@ const preserveParams: Record<string, string> = {};
 if (filters.query) preserveParams.q = filters.query;
 if (filters.transactionType !== 'all') preserveParams.transactionType = filters.transactionType;
 if (filters.propertyType !== 'all') preserveParams.propertyType = filters.propertyType;
-if (filters.location) preserveParams.location = filters.location;
+if (filters.locationSlug) preserveParams.location = filters.locationSlug;
 if (filters.minPrice) preserveParams.minPrice = String(filters.minPrice);
 if (filters.maxPrice) preserveParams.maxPrice = String(filters.maxPrice);
 if (filters.bedrooms) preserveParams.bedrooms = String(filters.bedrooms);
 
 // Generar título dinámico
 let pageTitle = 'Buscar Propiedades';
-if (filters.location) {
-  pageTitle = `Propiedades en ${filters.location}`;
+if (filters.locationName) {
+  pageTitle = `Propiedades en ${filters.locationName}`;
 }
 if (filters.propertyType && filters.propertyType !== 'all') {
   const typeNames: Record<string, string> = {
@@ -118,8 +125,8 @@ if (filters.propertyType && filters.propertyType !== 'all') {
     office: 'Oficinas',
   };
   pageTitle = typeNames[filters.propertyType] || pageTitle;
-  if (filters.location) {
-    pageTitle += ` en ${filters.location}`;
+  if (filters.locationName) {
+    pageTitle += ` en ${filters.locationName}`;
   }
 }
 
@@ -157,7 +164,7 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
           <select name="location" class="select py-1.5 px-3 text-sm w-auto hidden sm:block" onchange="this.form.submit()">
             <option value="">Ubicación</option>
             {searchLocations.map(loc => (
-              <option value={loc.slug} selected={filters.location === loc.slug}>{loc.name}</option>
+              <option value={loc.slug} selected={filters.locationSlug === loc.slug}>{loc.name}</option>
             ))}
           </select>
           <noscript><button type="submit" class="btn-primary py-1.5 px-3 text-sm">Filtrar</button></noscript>
@@ -184,20 +191,20 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
         <!-- Active Filters -->
         <div class="flex flex-wrap items-center gap-2">
           {filters.transactionType !== 'all' && (
-            <a href={`/buscar?propertyType=${filters.propertyType}&location=${filters.location || ''}`} class="badge-primary flex items-center gap-1">
+            <a href={`/buscar?propertyType=${filters.propertyType}&location=${filters.locationSlug || ''}`} class="badge-primary flex items-center gap-1">
               {filters.transactionType === 'sale' ? 'En Venta' : 'En Alquiler'}
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </a>
           )}
           {filters.propertyType !== 'all' && (
-            <a href={`/buscar?transactionType=${filters.transactionType}&location=${filters.location || ''}`} class="badge-secondary flex items-center gap-1">
+            <a href={`/buscar?transactionType=${filters.transactionType}&location=${filters.locationSlug || ''}`} class="badge-secondary flex items-center gap-1">
               {t.propertyTypes[filters.propertyType as keyof typeof t.propertyTypes] || filters.propertyType}
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </a>
           )}
-          {filters.location && (
+          {filters.locationName && (
             <a href={`/buscar?transactionType=${filters.transactionType}&propertyType=${filters.propertyType}`} class="badge bg-gray-200 text-gray-700 flex items-center gap-1">
-              {filters.location}
+              {filters.locationName}
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </a>
           )}
@@ -255,18 +262,18 @@ const description = `Encuentra ${totalCount} propiedades disponibles. Busca casa
   <section class="py-12 bg-white">
     <div class="container-custom">
       <div class="prose prose-lg max-w-4xl mx-auto">
-        {filters.location ? (
+        {filters.locationName ? (
           <>
-            <h2>Propiedades en {filters.location}, {pais}</h2>
+            <h2>Propiedades en {filters.locationName}, {pais}</h2>
             <p>
-              Explora nuestra selección de {totalCount} propiedades disponibles en {filters.location}.
+              Explora nuestra selección de {totalCount} propiedades disponibles en {filters.locationName}.
               Ya sea que busques una casa familiar, un apartamento moderno, una villa de lujo o un terreno
               para construir, en Ubikala.com encontrarás opciones verificadas por asesores inmobiliarios profesionales.
             </p>
             <p>
-              {filters.location} es una de las zonas más buscadas de {pais},
-              conocida por su {filters.location.toLowerCase().includes('punta') ? 'cercanía a las playas y atractivo turístico' :
-              filters.location.toLowerCase().includes('santiago') ? 'desarrollo comercial y calidad de vida' :
+              {filters.locationName} es una de las zonas más buscadas de {pais},
+              conocida por su {(filters.locationSlug || '').includes('punta') ? 'cercanía a las playas y atractivo turístico' :
+              (filters.locationSlug || '').includes('santiago') ? 'desarrollo comercial y calidad de vida' :
               'excelente ubicación y conectividad'}.
               Cada listado incluye fotos, descripción detallada y contacto directo con el asesor.
             </p>

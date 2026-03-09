@@ -7,6 +7,7 @@ import Breadcrumb from '../../../components/Breadcrumb.astro';
 import MarketPanorama from '../../../components/MarketPanorama.astro';
 import { searchProperties } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
+import { slugToName } from '../../../lib/location-utils';
 
 // SSR para rutas dinámicas
 export const prerender = false;
@@ -45,24 +46,17 @@ if (!typeInfo) {
   return Astro.redirect('/comprar');
 }
 
-// Formatear nombre de ubicación desde slug
-const formatLocationName = (slug: string) => {
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase());
-};
-
-const locationName = formatLocationName(locationSlug || '');
-
 // Configuración de paginación
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
 const pais = Astro.locals.country.name;
 
-// Intentar obtener info de ubicación
+// Resolve real city name from slug via MeiliSearch facets
+const resolvedName = await slugToName(locationSlug || '', pais);
+
 let locationData: { name: string; province: string } = {
-  name: locationName,
+  name: resolvedName,
   province: pais
 };
 
@@ -76,7 +70,7 @@ try {
   const result = await searchProperties({
     operacion: 'venta',
     tipo: typeInfo.dbValue,
-    query: locationSlug?.replace(/-/g, ' '),
+    ciudad: resolvedName,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,

@@ -11,6 +11,7 @@ import PropertyNotFound from '../../components/PropertyNotFound.astro';
 import { getLocationCoordinates, hasValidCoordinates } from '../../lib/location-coordinates';
 import type { Property, Agent } from '../../data/types';
 import { launched } from '../../lib/feature-flags';
+import { nameToSlug } from '../../lib/location-utils';
 
 // SSR - no prerender for dynamic property pages
 export const prerender = false;
@@ -137,7 +138,7 @@ if (!property) {
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: property.transactionType === 'sale' ? 'Comprar' : 'Alquilar', href: property.transactionType === 'sale' ? '/comprar' : '/alquilar' },
-    { label: property.location.city, href: `/propiedades/${property.location.city.toLowerCase().replace(/\s+/g, '-')}` },
+    { label: property.location.city, href: `/propiedades/${nameToSlug(property.location.city)}` },
     { label: property.title }
   ]} />
 
