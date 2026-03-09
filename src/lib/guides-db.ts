@@ -160,13 +160,12 @@ export async function seedGuides(): Promise<void> {
   if (!ubikalaDb) return;
   await ensureGuidesTable();
 
-  // Check if already seeded
-  const count = await ubikalaDb`SELECT COUNT(*) as c FROM ubikala_guias`;
-  if (Number(count[0]?.c) > 0) return;
-
-  // Import seeds
+  // Import all seeds
   const { guideSeedsDO } = await import('./guides-seeds-do');
-  for (const guide of guideSeedsDO) {
+  const { guideSeedsDO_EN } = await import('./guides-seeds-do-en');
+  const allSeeds = [...guideSeedsDO, ...guideSeedsDO_EN];
+
+  for (const guide of allSeeds) {
     await ubikalaDb`
       INSERT INTO ubikala_guias (
         country_code, lang, slug, title, description, keywords,
