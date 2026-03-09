@@ -1,64 +1,15 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getSiteConfig } from '../../lib/config';
+import { getGuidesForCountry } from '../../lib/guides-db';
 
-const config = await getSiteConfig(Astro.locals.country?.code);
+const country = Astro.locals.country;
+const config = await getSiteConfig(country?.code);
+const lang = 'es';
 
-const guides = [
-  {
-    slug: 'bono-primera-vivienda',
-    title: 'Bono de Primera Vivienda',
-    description: 'Recibe hasta RD$1,500,000 de subsidio del gobierno para comprar tu primera casa. Requisitos y proceso.',
-    icon: 'money',
-    category: 'Comprar'
-  },
-  {
-    slug: 'fideicomiso-inmobiliario',
-    title: 'Fideicomiso Inmobiliario en RD',
-    description: 'Todo lo que necesitas saber sobre comprar propiedades mediante fideicomiso en Republica Dominicana.',
-    icon: 'shield',
-    category: 'Legal'
-  },
-  {
-    slug: 'proceso-compra-propiedad',
-    title: 'Proceso de Compra de Propiedad',
-    description: 'Guia paso a paso para comprar una propiedad en Republica Dominicana.',
-    icon: 'house',
-    category: 'Comprar'
-  },
-  {
-    slug: 'documentos-compra-venta',
-    title: 'Documentos para Compra-Venta',
-    description: 'Lista completa de documentos necesarios para comprar o vender una propiedad.',
-    icon: 'document',
-    category: 'Legal'
-  },
-  {
-    slug: 'impuestos-inmobiliarios',
-    title: 'Impuestos Inmobiliarios',
-    description: 'Guia sobre impuestos de transferencia, IPI y otros costos al comprar propiedades.',
-    icon: 'calculator',
-    category: 'Legal'
-  },
-  {
-    slug: 'extranjeros-comprando-rd',
-    title: 'Extranjeros Comprando en RD',
-    description: 'Requisitos y proceso para que extranjeros compren propiedades en Republica Dominicana.',
-    icon: 'globe',
-    category: 'Comprar'
-  },
-  {
-    slug: 'invertir-punta-cana',
-    title: 'Invertir en Punta Cana',
-    description: 'Guia de inversion inmobiliaria en Punta Cana: zonas, rentabilidad y consejos.',
-    icon: 'trending',
-    category: 'Inversion'
-  }
-];
-
-const categories = [...new Set(guides.map(g => g.category))];
+const guides = await getGuidesForCountry(country?.code || 'DO', lang);
+const categories = [...new Set(guides.map(g => g.category).filter(Boolean))];
 ---
 
 <Layout
@@ -78,7 +29,7 @@ const categories = [...new Set(guides.map(g => g.category))];
         Guias Inmobiliarias
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
-        Recursos y guias para ayudarte en tu proceso de compra, venta o inversion inmobiliaria en Republica Dominicana.
+        Recursos y guias para ayudarte en tu proceso de compra, venta o inversion inmobiliaria en {country?.name || 'tu pais'}.
       </p>
     </div>
   </section>

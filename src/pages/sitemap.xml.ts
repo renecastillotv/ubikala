@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { neon } from '@neondatabase/serverless';
+import { getGuideSlugsForCountry } from '../lib/guides-db';
 
 const DATABASE_URL = import.meta.env.DATABASE_URL || process.env.DATABASE_URL;
 const UBIKALA_DATABASE_URL = import.meta.env.UBIKALA_DATABASE_URL || process.env.UBIKALA_DATABASE_URL;
@@ -33,12 +34,6 @@ const STATIC_PAGES: { url: string; priority: string; changefreq: string }[] = [
   { url: '/contacto', priority: '0.6', changefreq: 'monthly' },
   { url: '/nosotros', priority: '0.5', changefreq: 'monthly' },
   { url: '/guias', priority: '0.7', changefreq: 'monthly' },
-  { url: '/guias/proceso-compra-propiedad', priority: '0.6', changefreq: 'monthly' },
-  { url: '/guias/documentos-compra-venta', priority: '0.6', changefreq: 'monthly' },
-  { url: '/guias/fideicomiso-inmobiliario', priority: '0.6', changefreq: 'monthly' },
-  { url: '/guias/impuestos-inmobiliarios', priority: '0.6', changefreq: 'monthly' },
-  { url: '/guias/invertir-punta-cana', priority: '0.6', changefreq: 'monthly' },
-  { url: '/guias/extranjeros-comprando-rd', priority: '0.6', changefreq: 'monthly' },
   { url: '/privacidad', priority: '0.3', changefreq: 'yearly' },
   { url: '/terminos', priority: '0.3', changefreq: 'yearly' },
 
@@ -312,6 +307,11 @@ export const GET: APIRoute = async (context) => {
           : today;
         entries.push(urlEntry(SITE, `/usuario/${user.slug}`, lastmod, 'weekly', '0.6'));
       }
+    }
+    // 11. Dynamic guide pages from DB
+    const guideSlugs = await getGuideSlugsForCountry(country?.code || 'DO', 'es');
+    for (const guideSlug of guideSlugs) {
+      entries.push(urlEntry(SITE, `/guias/${guideSlug}`, today, 'monthly', '0.6'));
     }
   } catch (error) {
     console.error('Error generating sitemap:', error);
