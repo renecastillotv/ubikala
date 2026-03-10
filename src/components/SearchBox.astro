@@ -50,44 +50,18 @@ const containerClass = {
       if (maxArea) params.set('area_max', maxArea);
       const qs = params.toString() ? `?${params.toString()}` : '';
 
-      const opSlug = transaction && transaction !== 'all' ? operationToSlug[transaction] : null;
+      // Default to 'comprar' when transaction is 'all' or not selected
+      const opSlug = operationToSlug[transaction] || 'comprar';
       const tSlug = propType && propType !== 'all' ? typeToSlug[propType] : null;
 
-      // operation + type + location → /comprar/apartamento/santo-domingo(?filters)
-      if (opSlug && tSlug && location) {
-        e.preventDefault();
-        window.location.href = `/${opSlug}/${tSlug}/${location}${qs}`;
-        return;
-      }
+      // Always build clean SEO URL: /comprar/[type]/[city]
+      e.preventDefault();
 
-      // operation + type (no location) → /comprar/apartamento(?filters)
-      if (opSlug && tSlug) {
-        e.preventDefault();
-        window.location.href = `/${opSlug}/${tSlug}${qs}`;
-        return;
-      }
+      const parts = ['', opSlug];
+      if (tSlug) parts.push(tSlug);
+      if (location) parts.push(location);
 
-      // operation + location (no type) → /comprar?ubicacion=location(&filters)
-      if (opSlug && location) {
-        params.set('ubicacion', location);
-        e.preventDefault();
-        window.location.href = `/${opSlug}?${params.toString()}`;
-        return;
-      }
-
-      // location only → /propiedades/location(?filters)
-      if (location && !opSlug && !tSlug) {
-        e.preventDefault();
-        window.location.href = `/propiedades/${location}${qs}`;
-        return;
-      }
-
-      // operation only → /comprar(?filters)
-      if (opSlug) {
-        e.preventDefault();
-        window.location.href = `/${opSlug}${qs}`;
-        return;
-      }
+      window.location.href = parts.join('/') + qs;
     });
   });
 </script>
