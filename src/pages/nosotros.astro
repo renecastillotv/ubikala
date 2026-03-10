@@ -19,9 +19,9 @@ function formatStatNumber(n: number): string {
 ---
 
 <Layout
-  title="Sobre Ubíkala | Tu Portal Inmobiliario de Confianza"
-  description="Conoce Ubíkala, el portal que conecta a compradores e inquilinos con asesores inmobiliarios, agencias y propietarios."
-  keywords="portal inmobiliario, sobre ubíkala, quienes somos, inmobiliarias"
+  title={`Sobre Ubikala | Portal Inmobiliario en ${pais}`}
+  description={`Conoce Ubikala, el portal que conecta compradores e inquilinos con asesores inmobiliarios en ${pais}. ${stats.totalProperties} propiedades, ${stats.totalAgents} asesores, ${stats.totalCities} ciudades.`}
+  keywords={`portal inmobiliario ${pais.toLowerCase()}, sobre ubikala, quienes somos, inmobiliarias ${pais.toLowerCase()}`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

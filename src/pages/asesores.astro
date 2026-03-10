@@ -66,7 +66,7 @@ if (currentPage > totalPages && totalPages > 0) {
 <Layout
   title={t.pages.agents.title}
   description={t.pages.agents.description}
-  keywords="asesores inmobiliarios republica dominicana, agentes bienes raices rd, inmobiliarias santo domingo, corredores punta cana"
+  keywords={`asesores inmobiliarios ${pais?.toLowerCase() || ''}, agentes bienes raices ${pais?.toLowerCase() || ''}, inmobiliarias, corredores inmobiliarios`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

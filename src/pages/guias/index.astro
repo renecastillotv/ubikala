@@ -13,9 +13,9 @@ const categories = [...new Set(guides.map(g => g.category).filter(Boolean))];
 ---
 
 <Layout
-  title={`Guias Inmobiliarias | ${config.company_name}`}
-  description="Guias y recursos para comprar, vender o invertir en propiedades en Republica Dominicana. Aprende sobre fideicomisos, impuestos y mas."
-  keywords="guias inmobiliarias rd, fideicomiso republica dominicana, comprar propiedad rd, impuestos inmobiliarios"
+  title={`Guias Inmobiliarias en ${country?.name || 'Latinoamerica'} | ${config.company_name}`}
+  description={`Guias y recursos para comprar, vender o invertir en propiedades en ${country?.name || 'Latinoamerica'}. Aprende sobre financiamiento, impuestos, fideicomisos y mas.`}
+  keywords={`guias inmobiliarias ${country?.name?.toLowerCase() || ''}, comprar propiedad ${country?.name?.toLowerCase() || ''}, inversion inmobiliaria, impuestos inmobiliarios`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

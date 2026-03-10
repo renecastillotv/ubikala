@@ -9,12 +9,13 @@ const t = useTranslations('es');
 
 // Fetch site config for this country
 const config = await getSiteConfig(Astro.locals.country?.code);
+const pais = Astro.locals.country?.name || '';
 ---
 
 <Layout
   title={`Contacto | ${config.company_name}`}
-  description={`Contáctanos para soporte, consultas o información sobre cómo publicar en ${config.company_name}. Estamos aquí para ayudarte.`}
-  keywords="contacto ubikala, soporte inmobiliario, ayuda portal inmobiliario"
+  description={`Contactanos para soporte, consultas o informacion sobre como publicar en ${config.company_name}. Estamos aqui para ayudarte.`}
+  keywords={`contacto ubikala, soporte inmobiliario ${pais.toLowerCase()}, ayuda portal inmobiliario`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
