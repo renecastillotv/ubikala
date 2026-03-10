@@ -10,14 +10,13 @@ import { toSlug } from './slug-utils';
 // CONFIG
 // ============================================================================
 
-const MEILI_HOST = import.meta.env.MEILISEARCH_HOST || process.env.MEILISEARCH_HOST || 'https://search.denlla.com';
-const MEILI_KEY = import.meta.env.MEILISEARCH_API_KEY || process.env.MEILISEARCH_API_KEY || 'wLuzP8L5iwszZsNbWRPZjCY3vi92SCCv';
+const MEILI_HOST = import.meta.env.MEILISEARCH_HOST || process.env.MEILISEARCH_HOST || 'https://search.ubikala.com';
+const MEILI_KEY = import.meta.env.MEILISEARCH_API_KEY || process.env.MEILISEARCH_API_KEY || '';
 
 const PROPIEDADES_INDEX = 'propiedades';
 const ASESORES_INDEX = 'asesores';
 
-// Portal keys — properties must have one of these to appear on Ubikala
-const PORTAL_KEYS = ['ubikala', 'ubika', 'propiedadenrd'] as const;
+// Dedicated Ubikala MeiliSearch — no portal filter needed, all docs belong to Ubikala
 
 // ============================================================================
 // MEILI PROPERTY DOCUMENT (matches CRM API MeiliPropiedadDocument)
@@ -386,10 +385,7 @@ export function meiliToAgent(doc: MeiliAgentDoc): Agent {
 // SEARCH FUNCTIONS
 // ============================================================================
 
-/** Portal filter: uses computed boolean that includes ubikala/ubika/propiedadenrd/null */
-function portalFilter(): string {
-  return 'en_portal_ubikala = true';
-}
+// No portal filter needed — dedicated Ubikala MeiliSearch instance
 
 export interface SearchOptions {
   query?: string;
@@ -434,8 +430,8 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
 
   const filters: string[] = [];
 
-  // Portal filter (required for Ubikala)
-  filters.push(`(${portalFilter()})`);
+  // Only show published properties
+  filters.push(`estado_propiedad = "publicada"`);
 
   // Property filters
   if (tipo) filters.push(`tipo = "${tipo}"`);
@@ -508,7 +504,7 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
  */
 export async function getPropertyBySlug(slug: string, lang?: string): Promise<Property | null> {
   // Search by slug or by translated slug
-  let filter = `slug = "${slug}" AND (${portalFilter()})`;
+  let filter = `slug = "${slug}" AND estado_propiedad = "publicada"`;
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
     method: 'POST',
     body: JSON.stringify({ q: '', filter, limit: 1 }),
@@ -518,7 +514,7 @@ export async function getPropertyBySlug(slug: string, lang?: string): Promise<Pr
 
   // If not found by main slug, try translated slug
   if (!hit && lang && lang !== 'es') {
-    const altFilter = `slug_traducciones.${lang} = "${slug}" AND (${portalFilter()})`;
+    const altFilter = `slug_traducciones.${lang} = "${slug}" AND estado_propiedad = "publicada"`;
     const altResult = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
       method: 'POST',
       body: JSON.stringify({ q: '', filter: altFilter, limit: 1 }),
@@ -546,7 +542,7 @@ export async function getMeiliPropertyDocBySlug(slug: string): Promise<MeiliProp
  * Get featured properties.
  */
 export async function getFeaturedProperties(limit: number = 12, pais?: string, lang?: string): Promise<Property[]> {
-  const filters = [`(${portalFilter()})`, 'destacada = true'];
+  const filters = [`estado_propiedad = "publicada"`, 'destacada = true'];
   if (pais) filters.push(`pais = "${pais}"`);
 
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -566,7 +562,7 @@ export async function getFeaturedProperties(limit: number = 12, pais?: string, l
  * Get recent properties.
  */
 export async function getRecentProperties(limit: number = 12, pais?: string, lang?: string): Promise<Property[]> {
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (pais) filters.push(`pais = "${pais}"`);
 
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -590,7 +586,7 @@ export async function getPropertiesByAgent(agentSlug: string, limit: number = 50
     method: 'POST',
     body: JSON.stringify({
       q: '',
-      filter: `agente_slug = "${agentSlug}" AND (${portalFilter()})`,
+      filter: `agente_slug = "${agentSlug}" AND estado_propiedad = "publicada"`,
       sort: ['destacada:desc', 'created_at:desc'],
       limit,
     }),
@@ -609,7 +605,7 @@ export async function getPropertiesByLocation(
 ): Promise<{ properties: Property[]; total: number }> {
   const { limit = 20, offset = 0, operacion, lang, pais, cityName, cityNames } = options;
 
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (operacion) filters.push(`operaciones = "${operacion}"`);
   if (pais) filters.push(`pais = "${pais}"`);
 
@@ -645,7 +641,7 @@ export async function getPropertiesByLocation(
  * Get similar properties (same city/type, excluding current).
  */
 export async function getSimilarProperties(property: Property, limit: number = 6, lang?: string): Promise<Property[]> {
-  const filters: string[] = [`(${portalFilter()})`, `id != "${property.id}"`];
+  const filters: string[] = [`estado_propiedad = "publicada"`, `id != "${property.id}"`];
   if (property.location.city) {
     filters.push(`ciudad = "${property.location.city}"`);
   }
@@ -667,7 +663,7 @@ export async function getSimilarProperties(property: Property, limit: number = 6
  * Get cities with property counts (facet distribution).
  */
 export async function getCitiesWithCounts(pais?: string): Promise<Array<{ name: string; slug: string; count: number }>> {
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (pais) filters.push(`pais = "${pais}"`);
 
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -699,7 +695,7 @@ export async function getCitiesWithCounts(pais?: string): Promise<Array<{ name: 
  */
 export async function resolveCityFromText(slug: string, pais?: string): Promise<string[]> {
   const query = slug.replace(/-/g, ' ');
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (pais) filters.push(`pais = "${pais}"`);
 
   try {
@@ -732,7 +728,7 @@ export async function resolveCityFromText(slug: string, pais?: string): Promise<
 export async function getLocationsWithStats(pais?: string, maxLocations: number = 12): Promise<
   Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }>
 > {
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (pais) filters.push(`pais = "${pais}"`);
 
   // Single query: get facet counts + enough hits to extract sample images per city
@@ -779,7 +775,7 @@ export async function getLocationsWithStats(pais?: string, maxLocations: number 
  * Get total property count for portal.
  */
 export async function getTotalPropertyCount(pais?: string): Promise<number> {
-  const filters = [`(${portalFilter()})`];
+  const filters = [`estado_propiedad = "publicada"`];
   if (pais) filters.push(`pais = "${pais}"`);
 
   const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
@@ -879,7 +875,7 @@ export async function getPlatformStats(pais?: string): Promise<{
   totalAgents: number;
   totalCities: number;
 }> {
-  const propFilters = [`(${portalFilter()})`];
+  const propFilters = [`estado_propiedad = "publicada"`];
   if (pais) propFilters.push(`pais = "${pais}"`);
 
   // Query properties and agents separately so one failure doesn't break both
@@ -945,7 +941,7 @@ export async function getPortalInmobiliarias(pais?: string): Promise<Agent[]> {
     method: 'POST',
     body: JSON.stringify({
       q: '',
-      filter: pais ? `${portalFilter()} AND pais = "${pais}"` : portalFilter(),
+      filter: pais ? `estado_propiedad = "publicada" AND pais = "${pais}"` : 'estado_propiedad = "publicada"',
       facets: ['tenant_id'],
       limit: 300,
       attributesToRetrieve: ['tenant_id', 'tenant_nombre', 'tenant_logo', 'agente_slug'],
@@ -1130,7 +1126,7 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
       method: 'POST',
       body: JSON.stringify({
         q: '',
-        filter: `(${portalFilter()})${paisFilter} AND operaciones = "venta"`,
+        filter: `estado_propiedad = "publicada"${paisFilter} AND operaciones = "venta"`,
         facets: ['tipo', 'ciudad'],
         sort: ['updated_at:desc'],
         limit: 500,
@@ -1141,7 +1137,7 @@ export async function getMarketStats(pais?: string): Promise<MarketStats> {
       method: 'POST',
       body: JSON.stringify({
         q: '',
-        filter: `(${portalFilter()})${paisFilter} AND operaciones = "renta"`,
+        filter: `estado_propiedad = "publicada"${paisFilter} AND operaciones = "renta"`,
         facets: ['tipo', 'ciudad'],
         limit: 500,
         attributesToRetrieve: ['precio_alquiler', 'precio', 'moneda', 'm2_construccion', 'habitaciones', 'banos', 'ciudad', 'tipo'],
@@ -1285,7 +1281,7 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
       method: 'POST',
       body: JSON.stringify({
         q: '',
-        filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "venta"`,
+        filter: `estado_propiedad = "publicada"${paisFilter} AND ciudad = "${city}" AND operaciones = "venta"`,
         facets: ['tipo'],
         limit: 200,
         attributesToRetrieve: ['precio_venta', 'precio', 'moneda', 'tipo', 'm2_construccion', 'habitaciones'],
@@ -1295,7 +1291,7 @@ export async function getCityMarketStats(city: string, pais?: string): Promise<C
       method: 'POST',
       body: JSON.stringify({
         q: '',
-        filter: `(${portalFilter()})${paisFilter} AND ciudad = "${city}" AND operaciones = "renta"`,
+        filter: `estado_propiedad = "publicada"${paisFilter} AND ciudad = "${city}" AND operaciones = "renta"`,
         facets: ['tipo'],
         limit: 200,
         attributesToRetrieve: ['precio_alquiler', 'precio', 'moneda', 'tipo', 'm2_construccion', 'habitaciones'],
