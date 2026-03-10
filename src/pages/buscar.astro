@@ -46,6 +46,34 @@ const faqs = await getPageFAQs(country.code, 'es', 'search', pais);
 const eduCards = await getEducationalCards(country.code, 'es', pais);
 const searchLocations = await getCitiesWithCounts(pais);
 
+// Verified SEO links (only combos with real inventory)
+const seoLinkTypes = ['apartamento', 'casa', 'terreno', 'villa'] as const;
+const seoLinkLabels: Record<string, string> = {
+  apartamento: 'Apartamentos', casa: 'Casas', terreno: 'Terrenos', villa: 'Villas',
+};
+type SeoLink = { label: string; href: string };
+let verifiedSeoLinks: SeoLink[] = [];
+try {
+  const seoResults = await Promise.all(
+    seoLinkTypes.map(tipo =>
+      searchProperties({ tipo, operacion: 'venta', pais, limit: 0, facets: ['ciudad'] })
+    )
+  );
+  for (let i = 0; i < seoLinkTypes.length; i++) {
+    const tipo = seoLinkTypes[i];
+    const dist = seoResults[i].facetDistribution?.ciudad || {};
+    for (const [cityName, count] of Object.entries(dist)) {
+      if ((count as number) > 0) {
+        verifiedSeoLinks.push({
+          label: `${seoLinkLabels[tipo]} en ${cityName}`,
+          href: `/comprar/${tipo}/${toSlug(cityName)}`,
+        });
+      }
+    }
+  }
+  verifiedSeoLinks.sort((a, b) => a.label.localeCompare(b.label));
+} catch { /* ignore */ }
+
 // Location param is now a slug (from SearchBox), resolve to real city name
 const locationSlug = params.get('location') || undefined;
 const locationName = locationSlug ? await slugToName(locationSlug, pais) : undefined;
@@ -367,25 +395,18 @@ if (opSlug && tipo) {
           ))}
         </div>
 
-        <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Comprar por Tipo y Ubicación</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {searchLocations.slice(0, 6).flatMap(loc => [
-            { label: `Apartamentos en ${loc.name}`, href: `/comprar/apartamento/${loc.slug}` },
-            { label: `Casas en ${loc.name}`, href: `/comprar/casa/${loc.slug}` },
-          ]).map(link => (
-            <a href={link.href} class="px-3 py-2 bg-white rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm text-center">
-              {link.label}
-            </a>
-          ))}
-          {searchLocations.slice(0, 4).flatMap(loc => [
-            { label: `Terrenos en ${loc.name}`, href: `/comprar/terreno/${loc.slug}` },
-            { label: `Villas en ${loc.name}`, href: `/comprar/villa/${loc.slug}` },
-          ]).map(link => (
-            <a href={link.href} class="px-3 py-2 bg-white rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm text-center">
-              {link.label}
-            </a>
-          ))}
-        </div>
+        {verifiedSeoLinks.length > 0 && (
+          <>
+            <h3 class="text-xl font-semibold text-gray-900 mb-6 text-center">Comprar por Tipo y Ubicacion</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {verifiedSeoLinks.map(link => (
+                <a href={link.href} class="px-3 py-2 bg-white rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors shadow-sm text-center">
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </section>
   )}

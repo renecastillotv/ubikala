@@ -5,7 +5,8 @@ import FeaturedProperties from '../components/FeaturedProperties.astro';
 import LocationsGrid from '../components/LocationsGrid.astro';
 import CTASection from '../components/CTASection.astro';
 import { useTranslations, getAlternateUrls } from '../i18n';
-import { getCitiesWithCounts } from '../lib/meilisearch';
+import { getCitiesWithCounts, searchProperties } from '../lib/meilisearch';
+import { toSlug } from '../lib/slug-utils';
 import SEOBenefits from '../components/SEOBenefits.astro';
 import { getBenefitsContent, getDestinations, getDestinationsHeader, getHeroContent } from '../lib/seo-content-db';
 
@@ -20,6 +21,36 @@ const destHeader = await getDestinationsHeader(country.code, 'es', pais);
 const homeHero = await getHeroContent(country.code, 'es', 'home', pais);
 
 const searchLocations = await getCitiesWithCounts(pais);
+
+// Fetch real type+city combinations with inventory for SEO links
+const seoLinkTypes = ['apartamento', 'casa', 'terreno', 'villa'] as const;
+const seoLinkLabels: Record<string, string> = {
+  apartamento: 'Apartamentos', casa: 'Casas', terreno: 'Terrenos', villa: 'Villas',
+};
+
+type SeoLink = { label: string; href: string };
+let verifiedSeoLinks: SeoLink[] = [];
+try {
+  const results = await Promise.all(
+    seoLinkTypes.map(tipo =>
+      searchProperties({ tipo, operacion: 'venta', pais, limit: 0, facets: ['ciudad'] })
+    )
+  );
+  for (let i = 0; i < seoLinkTypes.length; i++) {
+    const tipo = seoLinkTypes[i];
+    const dist = results[i].facetDistribution?.ciudad || {};
+    for (const [cityName, count] of Object.entries(dist)) {
+      if ((count as number) > 0) {
+        verifiedSeoLinks.push({
+          label: `${seoLinkLabels[tipo]} en ${cityName}`,
+          href: `/comprar/${tipo}/${toSlug(cityName)}`,
+        });
+      }
+    }
+  }
+  // Sort by label for consistent display
+  verifiedSeoLinks.sort((a, b) => a.label.localeCompare(b.label));
+} catch { /* ignore */ }
 
 const rp = (s: string) => s.replace(/\{pais\}/g, pais);
 
@@ -156,31 +187,16 @@ const organizationSchema = {
     </div>
   </section>
 
-  <!-- Deep SEO Links: Type + Location combinations -->
-  {searchLocations.length > 0 && (
+  <!-- Deep SEO Links: Only type+city combos with real inventory -->
+  {verifiedSeoLinks.length > 0 && (
     <section class="py-12 bg-white">
       <div class="container-custom">
         <h2 class="text-2xl font-bold text-gray-900 mb-2 text-center">Propiedades en Venta por Zona</h2>
         <p class="text-gray-600 text-center mb-8">Encuentra lo que buscas directamente</p>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {searchLocations.slice(0, 8).map(loc => (
-            <a href={`/comprar/apartamento/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
-              Apartamentos en {loc.name}
-            </a>
-          ))}
-          {searchLocations.slice(0, 6).map(loc => (
-            <a href={`/comprar/casa/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
-              Casas en {loc.name}
-            </a>
-          ))}
-          {searchLocations.slice(0, 4).map(loc => (
-            <a href={`/comprar/terreno/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
-              Terrenos en {loc.name}
-            </a>
-          ))}
-          {searchLocations.slice(0, 3).map(loc => (
-            <a href={`/comprar/villa/${loc.slug}`} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
-              Villas en {loc.name}
+          {verifiedSeoLinks.map(link => (
+            <a href={link.href} class="px-3 py-2.5 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors text-center">
+              {link.label}
             </a>
           ))}
         </div>
