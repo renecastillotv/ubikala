@@ -115,6 +115,30 @@ try {
 } catch { /* ignore */ }
 
 const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
+
+// Schema ItemList
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `${typeName} en Venta en ${pais}`,
+  description: typeDescription,
+  numberOfItems: totalCount,
+  itemListElement: typeProperties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      url: `https://ubikala.com/propiedad/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
 ---
 
 <Layout
@@ -122,6 +146,7 @@ const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
   description={typeDescription}
   keywords={`${typeName.toLowerCase()} en venta ${pais.toLowerCase()}, comprar ${typeName.toLowerCase()} ${pais.toLowerCase()}${citiesWithType.length > 0 ? `, ${typeName.toLowerCase()} ${citiesWithType[0].name.toLowerCase()}` : ''}`}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: 'Comprar', href: '/comprar' },

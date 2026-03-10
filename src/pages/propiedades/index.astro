@@ -1,68 +1,254 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations } from '../../i18n';
-import { getLocationsWithStats } from '../../lib/meilisearch';
+import SearchBox from '../../components/SearchBox.astro';
+import { searchProperties, getLocationsWithStats } from '../../lib/meilisearch';
+import { toSlug } from '../../lib/slug-utils';
 
-// SSR para datos dinámicos
 export const prerender = false;
 
-const t = useTranslations('es');
-const pais = Astro.locals.country.name;
+const country = Astro.locals.country;
+const pais = country.name;
+const countryCode = country.code;
 
-// Obtener todas las ubicaciones con conteos
-let locations: Array<{ slug: string; name: string; province: string; propertyCount: number; sampleImage: string | null }> = [];
-try {
-  locations = await getLocationsWithStats();
-} catch (error) {
-  console.error('Error fetching locations:', error);
+// ── Fetch all data in parallel ───────────────────────────────────────────────
+
+const [locations, ventaResult, rentaResult] = await Promise.all([
+  getLocationsWithStats(pais).catch(() => []),
+  searchProperties({ operacion: 'venta', pais, limit: 0, facets: ['tipo', 'ciudad'] }).catch(() => ({ total: 0, properties: [], facetDistribution: {} })),
+  searchProperties({ operacion: 'renta', pais, limit: 0, facets: ['tipo', 'ciudad'] }).catch(() => ({ total: 0, properties: [], facetDistribution: {} })),
+]);
+
+const ventaTotal = ventaResult.total || 0;
+const rentaTotal = rentaResult.total || 0;
+const totalProps = ventaTotal + rentaTotal;
+
+// Types for sale with counts
+const ventaTipos = ventaResult.facetDistribution?.tipo || {};
+const rentaTipos = rentaResult.facetDistribution?.tipo || {};
+
+const tipoDisplay: Record<string, { plural: string; slug: string; icon: string }> = {
+  'apartamento': { plural: 'Apartamentos', slug: 'apartamento', icon: '🏢' },
+  'casa': { plural: 'Casas', slug: 'casa', icon: '🏠' },
+  'villa': { plural: 'Villas', slug: 'villa', icon: '🏡' },
+  'penthouse': { plural: 'Penthouses', slug: 'penthouse', icon: '🌆' },
+  'terreno': { plural: 'Terrenos', slug: 'terreno', icon: '🌳' },
+  'solar': { plural: 'Solares', slug: 'solar', icon: '🌳' },
+  'local comercial': { plural: 'Locales Comerciales', slug: 'local-comercial', icon: '🏪' },
+  'oficina': { plural: 'Oficinas', slug: 'oficina', icon: '🏛️' },
+  'nave': { plural: 'Naves Industriales', slug: 'nave', icon: '🏭' },
+  'finca': { plural: 'Fincas', slug: 'finca', icon: '🌾' },
+  'estudio': { plural: 'Estudios', slug: 'estudio', icon: '🛏️' },
+};
+
+// Build combined type list with sale + rent counts
+const allTypes = new Set([...Object.keys(ventaTipos), ...Object.keys(rentaTipos)]);
+const typesList = Array.from(allTypes)
+  .filter(t => tipoDisplay[t])
+  .map(t => ({
+    dbValue: t,
+    ...tipoDisplay[t],
+    ventaCount: (ventaTipos[t] as number) || 0,
+    rentaCount: (rentaTipos[t] as number) || 0,
+  }))
+  .sort((a, b) => (b.ventaCount + b.rentaCount) - (a.ventaCount + a.rentaCount));
+
+// Top cities for sale (for interlinking matrix)
+const topCities = Object.entries(ventaResult.facetDistribution?.ciudad || {})
+  .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 6);
+
+// ── Country-specific SEO content ─────────────────────────────────────────────
+
+interface CountrySEO {
+  marketTitle: string;
+  marketBody: string;
+  highlights: Array<{ title: string; text: string }>;
+  investorNote: string;
 }
 
-// Imagen placeholder
-const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
+const countrySEOContent: Record<string, CountrySEO> = {
+  'DO': {
+    marketTitle: `Mercado Inmobiliario en República Dominicana`,
+    marketBody: `República Dominicana se ha consolidado como uno de los destinos de inversión inmobiliaria más atractivos del Caribe. Con un crecimiento del PIB sostenido, incentivos fiscales como la Ley CONFOTUR que exonera de impuestos por hasta 15 años, y una demanda creciente tanto de residentes como de compradores internacionales, el mercado ofrece oportunidades en zonas turísticas como Punta Cana y Cap Cana, centros urbanos como Santo Domingo y Santiago, y destinos emergentes como Samaná y Las Terrenas.`,
+    highlights: [
+      { title: 'Ley CONFOTUR', text: 'Exoneración de impuestos de transferencia y propiedad inmobiliaria por hasta 15 años en proyectos turísticos aprobados.' },
+      { title: 'Fideicomiso Inmobiliario', text: 'Protección legal del comprador en proyectos en construcción mediante la Ley 189-11.' },
+      { title: 'Bono Primera Vivienda', text: 'Subsidio gubernamental de hasta RD$1,500,000 para compradores de primera vivienda con valores hasta RD$5,500,000.' },
+      { title: 'Mercado en USD', text: 'La mayoría de propiedades turísticas y de lujo se comercializan en dólares, protegiendo la inversión.' },
+    ],
+    investorNote: 'El rendimiento por alquiler vacacional en zonas como Punta Cana promedia 6-10% anual, posicionando a RD como líder en el Caribe para inversión inmobiliaria.',
+  },
+  'PA': {
+    marketTitle: `Mercado Inmobiliario en Panamá`,
+    marketBody: `Panamá ofrece un mercado inmobiliario estable respaldado por el uso del dólar estadounidense, un hub bancario internacional y la Ley de Sedes de Empresas Multinacionales (SEM). La ciudad de Panamá concentra rascacielos modernos y opciones de inversión, mientras que destinos como Bocas del Toro y Coronado atraen compradores internacionales buscando estilo de vida costero.`,
+    highlights: [
+      { title: 'Dolarizado', text: 'Economía dolarizada que elimina el riesgo cambiario para inversores internacionales.' },
+      { title: 'Visa de Inversionista', text: 'Residencia permanente mediante inversión inmobiliaria desde USD $300,000.' },
+      { title: 'Exoneración Fiscal', text: 'Propiedades nuevas gozan de exoneración del impuesto de inmuebles por hasta 20 años.' },
+      { title: 'Hub Regional', text: 'Centro de negocios de las Américas con conectividad aérea a toda la región.' },
+    ],
+    investorNote: 'El mercado de alquiler en Panamá City ofrece rendimientos de 5-8% anual, con alta demanda de ejecutivos y diplomáticos internacionales.',
+  },
+  'MX': {
+    marketTitle: `Mercado Inmobiliario en México`,
+    marketBody: `México cuenta con uno de los mercados inmobiliarios más grandes y diversificados de Latinoamérica. Desde la Riviera Maya y Los Cabos para inversión turística, hasta Ciudad de México, Guadalajara y Monterrey como centros urbanos con alta demanda de vivienda y oficinas. El fideicomiso bancario permite a extranjeros adquirir propiedades en zonas restringidas como costas y fronteras.`,
+    highlights: [
+      { title: 'Fideicomiso Bancario', text: 'Mecanismo legal que permite a extranjeros comprar en zona restringida (costas y fronteras) con plenos derechos.' },
+      { title: 'Nearshoring', text: 'La tendencia de relocalización industrial está impulsando el mercado inmobiliario en ciudades del norte del país.' },
+      { title: 'Diversidad de Mercado', text: 'Desde departamentos en CDMX hasta villas frente al mar en la Riviera Maya.' },
+      { title: 'Plusvalía Sostenida', text: 'Zonas turísticas premium han registrado apreciación anual de 8-12% en la última década.' },
+    ],
+    investorNote: 'La Riviera Maya lidera el rendimiento por alquiler vacacional en México con promedios de 7-12% anual en zonas como Tulum y Playa del Carmen.',
+  },
+  'CO': {
+    marketTitle: `Mercado Inmobiliario en Colombia`,
+    marketBody: `Colombia ha experimentado una transformación notable en su mercado inmobiliario. Medellín se posiciona como hub de nómadas digitales, Cartagena como destino turístico de lujo, Bogotá como centro de negocios y el Eje Cafetero como opción de retiro. La Ley 1943 de financiamiento ofrece beneficios fiscales para inversión en vivienda de interés social.`,
+    highlights: [
+      { title: 'Visa de Inversionista', text: 'Residencia mediante inversión inmobiliaria desde aproximadamente USD $90,000.' },
+      { title: 'Medellín Global', text: 'Reconocida como ciudad más innovadora del mundo, atrae inversión y talento internacional.' },
+      { title: 'Leasing Habitacional', text: 'Esquema de financiamiento flexible con beneficios tributarios para el comprador.' },
+      { title: 'Subsidios Mi Casa Ya', text: 'Programa gubernamental que subsidia la cuota inicial para vivienda de interés social.' },
+    ],
+    investorNote: 'El alquiler de corta estancia en Medellín y Cartagena genera rendimientos de 6-9% anual, con ocupación alta durante todo el año.',
+  },
+  'CR': {
+    marketTitle: `Mercado Inmobiliario en Costa Rica`,
+    marketBody: `Costa Rica ofrece un mercado inmobiliario atractivo para jubilados y amantes de la naturaleza. Con estabilidad política, sistema de salud de calidad y biodiversidad única, destinos como Guanacaste, Manuel Antonio y el Valle Central atraen compradores de Norteamérica y Europa. Los extranjeros pueden comprar propiedad con los mismos derechos que los nacionales.`,
+    highlights: [
+      { title: 'Igualdad Legal', text: 'Extranjeros tienen exactamente los mismos derechos de propiedad que ciudadanos costarricenses.' },
+      { title: 'Visa de Rentista', text: 'Residencia para quienes demuestren ingresos mensuales de al menos USD $2,500.' },
+      { title: 'Zona Franca', text: 'Beneficios fiscales en desarrollos dentro de zonas francas turísticas.' },
+      { title: 'Pura Vida', text: 'Calidad de vida reconocida mundialmente con énfasis en sostenibilidad y naturaleza.' },
+    ],
+    investorNote: 'Propiedades en Guanacaste y la costa Pacífica generan rendimientos de 5-8% anual por alquiler vacacional.',
+  },
+};
 
-const pageTitle = `Propiedades por Ubicación en ${pais} | Ubíkala.com`;
-const pageDescription = `Explora propiedades en venta y alquiler en las principales ciudades y zonas de ${pais}.`;
+const seo = countrySEOContent[countryCode] || null;
+
+// ── SEO metadata ─────────────────────────────────────────────────────────────
+
+const pageTitle = `Propiedades en ${pais} — ${totalProps} Inmuebles en Venta y Alquiler | Ubikala`;
+const pageDescription = `Explora ${totalProps} propiedades en ${pais}: ${ventaTotal} en venta y ${rentaTotal} en alquiler. Apartamentos, casas, villas y más en las principales ciudades. Contacto directo con asesores.`;
+
+// Schema
+const pageSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `Propiedades en ${pais}`,
+  description: pageDescription,
+  url: Astro.url.href,
+  numberOfItems: totalProps,
+  about: {
+    '@type': 'Place',
+    name: pais,
+  },
+};
+
+const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords={`propiedades ${pais}, inmuebles por ubicacion, casas en venta, apartamentos, ubikala`}
+  keywords={`propiedades ${pais.toLowerCase()}, inmuebles ${pais.toLowerCase()}, comprar ${pais.toLowerCase()}, alquilar ${pais.toLowerCase()}, casas, apartamentos, ubikala`}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(pageSchema)} slot="head" />
+
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: 'Propiedades' }
   ]} />
 
-  <!-- Hero -->
-  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+  <!-- Hero with stats -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-14">
     <div class="container-custom">
-      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        Propiedades por Ubicación
+      <h1 class="text-3xl md:text-5xl font-bold text-white mb-4">
+        Propiedades en {pais}
       </h1>
-      <p class="text-primary-100 text-lg max-w-3xl">
-        Explora las principales ciudades y zonas de {pais} donde tenemos propiedades disponibles para ti.
+      <p class="text-primary-100 text-lg max-w-2xl mb-8">
+        Encuentra tu próxima propiedad entre {totalProps} opciones disponibles
+        en {locations.length} {locations.length === 1 ? 'ciudad' : 'ciudades'} de {pais}.
       </p>
+      <div class="flex flex-wrap gap-4">
+        <a href="/comprar" class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-full hover:bg-white/30 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          {ventaTotal} en venta
+        </a>
+        <a href="/alquilar" class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-5 py-2.5 rounded-full hover:bg-white/30 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          {rentaTotal} en alquiler
+        </a>
+      </div>
     </div>
   </section>
 
-  <!-- Locations Grid -->
-  <section class="section">
+  <!-- Search -->
+  <section class="py-4 bg-white shadow-sm">
     <div class="container-custom">
-      <div class="flex items-center justify-between mb-8">
-        <p class="text-gray-600">
-          <span class="font-semibold text-gray-900">{locations.length}</span> ubicaciones disponibles
-        </p>
-      </div>
+      <SearchBox variant="compact" />
+    </div>
+  </section>
 
-      {locations.length > 0 ? (
+  <!-- Browse by Type -->
+  {typesList.length > 0 && (
+    <section class="py-12">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Buscar por Tipo de Propiedad</h2>
+        <p class="text-gray-600 mb-8">
+          {typesList.length} tipos de propiedad disponibles en {pais}.
+        </p>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {typesList.map((tipo) => (
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <span class="text-2xl block mb-3">{tipo.icon}</span>
+              <h3 class="font-semibold text-gray-900 mb-2">{tipo.plural}</h3>
+              <div class="space-y-1">
+                {tipo.ventaCount > 0 && (
+                  <a
+                    href={`/comprar/${tipo.slug}`}
+                    class="flex items-center justify-between text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                  >
+                    <span>En venta</span>
+                    <span class="font-medium">{tipo.ventaCount}</span>
+                  </a>
+                )}
+                {tipo.rentaCount > 0 && (
+                  <a
+                    href={`/alquilar/${tipo.slug}`}
+                    class="flex items-center justify-between text-sm text-gray-600 hover:text-secondary-600 transition-colors"
+                  >
+                    <span>En alquiler</span>
+                    <span class="font-medium">{tipo.rentaCount}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Locations Grid -->
+  {locations.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Propiedades por Ciudad</h2>
+        <p class="text-gray-600 mb-8">
+          {locations.length} ciudades con propiedades disponibles en {pais}.
+        </p>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
             <a
               href={`/propiedades/${location.slug}`}
-              class="group relative overflow-hidden rounded-2xl h-[250px]"
+              class="group relative overflow-hidden rounded-2xl h-[220px]"
             >
               <img
                 src={location.sampleImage || defaultImage}
@@ -71,29 +257,130 @@ const pageDescription = `Explora propiedades en venta y alquiler en las principa
                 loading="lazy"
               />
               <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div class="absolute bottom-0 left-0 right-0 p-6">
-                <h3 class="text-white font-bold text-xl mb-1">
-                  {location.name}
-                </h3>
-                <p class="text-gray-200 text-sm mb-3">
-                  {location.province}
-                </p>
-                <span class="inline-flex items-center gap-2 text-white text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                  </svg>
+              <div class="absolute bottom-0 left-0 right-0 p-5">
+                <h3 class="text-white font-bold text-lg mb-1">{location.name}</h3>
+                <p class="text-gray-300 text-sm">{location.province}</p>
+                <span class="inline-flex items-center gap-1.5 text-white text-sm bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full mt-2">
                   {location.propertyCount} {location.propertyCount === 1 ? 'propiedad' : 'propiedades'}
                 </span>
               </div>
             </a>
           ))}
         </div>
-      ) : (
-        <div class="card p-12 text-center">
-          <p class="text-gray-600">No hay ubicaciones disponibles.</p>
+      </div>
+    </section>
+  )}
+
+  <!-- Interlinking Matrix: Type x City -->
+  {topCities.length > 0 && typesList.length > 0 && (
+    <section class="py-12">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Explorar por Tipo y Ciudad</h2>
+        <p class="text-gray-600 mb-8">
+          Accede directamente a las combinaciones más buscadas en {pais}.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left py-3 px-4 font-semibold text-gray-900">Tipo</th>
+                {topCities.map((city) => (
+                  <th class="text-center py-3 px-3 font-semibold text-gray-900">
+                    <a href={`/propiedades/${city.slug}`} class="hover:text-primary-600 transition-colors">
+                      {city.name}
+                    </a>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {typesList.filter(t => t.ventaCount > 0).slice(0, 6).map((tipo) => (
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 font-medium text-gray-900">
+                    <a href={`/comprar/${tipo.slug}`} class="hover:text-primary-600 transition-colors">
+                      {tipo.icon} {tipo.plural}
+                    </a>
+                  </td>
+                  {topCities.map((city) => (
+                    <td class="text-center py-3 px-3">
+                      <a
+                        href={`/comprar/${tipo.slug}/${city.slug}`}
+                        class="text-primary-600 hover:text-primary-800 hover:underline transition-colors"
+                      >
+                        Ver
+                      </a>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
+    </section>
+  )}
+
+  <!-- Country-specific SEO content -->
+  {seo && (
+    <section class="py-14 bg-gray-50">
+      <div class="container-custom">
+        <div class="max-w-4xl mx-auto">
+          <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">{seo.marketTitle}</h2>
+          <p class="text-gray-700 text-lg leading-relaxed mb-10">{seo.marketBody}</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+            {seo.highlights.map((h) => (
+              <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+                <h3 class="font-semibold text-gray-900 mb-2">{h.title}</h3>
+                <p class="text-gray-600 text-sm leading-relaxed">{h.text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div class="bg-primary-50 border-l-4 border-primary-500 rounded-r-xl p-5">
+            <p class="text-gray-800 text-sm leading-relaxed">
+              <strong>Para inversores:</strong> {seo.investorNote}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Quick links -->
+  <section class="py-12 {seo ? '' : 'bg-gray-50'}">
+    <div class="container-custom">
+      <div class="grid md:grid-cols-3 gap-6">
+        <a href="/comprar" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group">
+          <div class="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 group-hover:text-primary-600 mb-1">Comprar</h3>
+          <p class="text-sm text-gray-600">{ventaTotal} propiedades en venta en {pais}</p>
+        </a>
+
+        <a href="/alquilar" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-secondary-200 transition-all group">
+          <div class="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 group-hover:text-secondary-600 mb-1">Alquilar</h3>
+          <p class="text-sm text-gray-600">{rentaTotal} propiedades en alquiler en {pais}</p>
+        </a>
+
+        <a href="/guias" class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all group">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-gray-900 group-hover:text-green-600 mb-1">Guias</h3>
+          <p class="text-sm text-gray-600">Aprende sobre compra, inversión y financiamiento</p>
+        </a>
+      </div>
     </div>
   </section>
-
 </Layout>
