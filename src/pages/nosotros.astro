@@ -3,8 +3,10 @@ import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getPlatformStats } from '../lib/meilisearch';
+import { getSiteConfig } from '../lib/config';
 
 const pais = Astro.locals.country?.name || '';
+const config = await getSiteConfig(Astro.locals.country?.code);
 
 let stats = { totalProperties: 0, totalAgents: 0, totalCities: 0 };
 try {
@@ -16,6 +18,36 @@ try {
 function formatStatNumber(n: number): string {
   return n.toLocaleString('es-DO');
 }
+
+const socialLinks = [
+  config.social_facebook,
+  config.social_instagram,
+  config.social_linkedin,
+  config.social_youtube,
+  config.social_twitter,
+  config.social_tiktok,
+].filter(Boolean);
+
+const organizationSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: config.company_name,
+  url: config.site_url,
+  logo: config.logo_url.startsWith('http') ? config.logo_url : `${config.site_url}${config.logo_url}`,
+  description: `Portal inmobiliario en ${pais}. Conectamos compradores e inquilinos con asesores inmobiliarios profesionales.`,
+  email: config.email,
+  telephone: config.phone,
+  sameAs: socialLinks,
+  ...(config.address_city && {
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: config.address_city,
+      addressCountry: config.address_country_code || Astro.locals.country?.code,
+    },
+  }),
+  aggregateRating: stats.totalProperties > 0 ? undefined : undefined,
+  numberOfEmployees: stats.totalAgents > 0 ? { '@type': 'QuantitativeValue', value: stats.totalAgents } : undefined,
+};
 ---
 
 <Layout
@@ -23,6 +55,7 @@ function formatStatNumber(n: number): string {
   description={`Conoce Ubikala, el portal que conecta compradores e inquilinos con asesores inmobiliarios en ${pais}. ${stats.totalProperties} propiedades, ${stats.totalAgents} asesores, ${stats.totalCities} ciudades.`}
   keywords={`portal inmobiliario ${pais.toLowerCase()}, sobre ubikala, quienes somos, inmobiliarias ${pais.toLowerCase()}`}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} slot="head" />
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: 'Sobre el Portal' }

@@ -10,6 +10,7 @@ import type { Property } from '../data/types';
 import { getPageFAQs, getEducationalCards, getFAQSchema } from '../lib/seo-content-db';
 import { getCitiesWithCounts } from '../lib/meilisearch';
 import { slugToName, slugToCityNames } from '../lib/location-utils';
+import { toSlug } from '../lib/slug-utils';
 import SEOEducationalCards from '../components/SEOEducationalCards.astro';
 import SEOFAQSection from '../components/SEOFAQSection.astro';
 
@@ -133,12 +134,33 @@ if (filters.propertyType && filters.propertyType !== 'all') {
 
 const fullTitle = `${pageTitle} | Ubíkala.com`;
 const description = `Encuentra ${totalCount} propiedades disponibles. Busca casas, apartamentos, villas y más en ${pais}.`;
+
+// Build canonical URL pointing to clean SEO route when possible
+const dbToSlug: Record<string, string> = {
+  'casa': 'casas', 'apartamento': 'apartamentos', 'villa': 'villas',
+  'penthouse': 'penthouses', 'terreno': 'terrenos', 'local': 'locales-comerciales',
+  'oficina': 'oficinas',
+};
+let canonicalUrl: string | undefined;
+const tipo = (filters.propertyType && filters.propertyType !== 'all')
+  ? (typeToDb[filters.propertyType] || filters.propertyType)
+  : undefined;
+const opSlug = filters.transactionType === 'sale' ? 'comprar' : filters.transactionType === 'rent' ? 'alquilar' : undefined;
+if (opSlug && tipo) {
+  const typeSlug = dbToSlug[tipo] || tipo;
+  canonicalUrl = filters.locationSlug
+    ? `${country.subdomain ? `https://${country.subdomain}.ubikala.com` : 'https://ubikala.com'}/${opSlug}/${typeSlug}/${filters.locationSlug}`
+    : `${country.subdomain ? `https://${country.subdomain}.ubikala.com` : 'https://ubikala.com'}/${opSlug}/${typeSlug}`;
+} else if (opSlug && filters.locationSlug) {
+  canonicalUrl = `${country.subdomain ? `https://${country.subdomain}.ubikala.com` : 'https://ubikala.com'}/${opSlug}/${filters.locationSlug}`;
+}
 ---
 
 <Layout
   title={fullTitle}
   description={description}
   noindex={true}
+  canonicalUrl={canonicalUrl}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

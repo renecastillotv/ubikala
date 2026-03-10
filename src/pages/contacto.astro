@@ -10,6 +10,61 @@ const t = useTranslations('es');
 // Fetch site config for this country
 const config = await getSiteConfig(Astro.locals.country?.code);
 const pais = Astro.locals.country?.name || '';
+
+const contactSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: `Contacto | ${config.company_name}`,
+  url: `${config.site_url}/contacto`,
+  mainEntity: {
+    '@type': 'Organization',
+    name: config.company_name,
+    email: config.email,
+    telephone: config.phone,
+    url: config.site_url,
+    ...(config.address_city && {
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: config.address_city,
+        addressCountry: config.address_country_code || Astro.locals.country?.code,
+      },
+    }),
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: config.phone,
+      email: config.email,
+      contactType: 'customer service',
+      availableLanguage: ['Spanish', 'English'],
+    },
+  },
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: '¿Cómo publico una propiedad?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Regístrate como asesor, independiente o propietario, y sigue los pasos para subir tu propiedad con fotos y detalles.' },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Cuánto cuesta publicar?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Propietarios pueden publicar gratis sus primeras propiedades. Asesores y agencias tienen planes mensuales accesibles.' },
+    },
+    {
+      '@type': 'Question',
+      name: '¿Cómo contacto a un asesor?',
+      acceptedAnswer: { '@type': 'Answer', text: 'Cada propiedad muestra los datos del asesor o propietario. Puedes contactarlo por WhatsApp, teléfono o formulario.' },
+    },
+    {
+      '@type': 'Question',
+      name: '¿El portal cobra comisión?',
+      acceptedAnswer: { '@type': 'Answer', text: 'No. Ubikala.com solo cobra por publicación. Las comisiones de venta/alquiler se negocian directamente con el asesor.' },
+    },
+  ],
+};
 ---
 
 <Layout
@@ -17,6 +72,8 @@ const pais = Astro.locals.country?.name || '';
   description={`Contactanos para soporte, consultas o informacion sobre como publicar en ${config.company_name}. Estamos aqui para ayudarte.`}
   keywords={`contacto ubikala, soporte inmobiliario ${pais.toLowerCase()}, ayuda portal inmobiliario`}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(contactSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: 'Contacto' }
