@@ -4,7 +4,8 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations } from '../../i18n';
-import { searchProperties } from '../../lib/meilisearch';
+import { searchProperties, getCitiesWithCounts } from '../../lib/meilisearch';
+import { toSlug } from '../../lib/slug-utils';
 import type { Property, PropertyType } from '../../data/types';
 
 // SSR para páginas dinámicas por tipo
@@ -96,6 +97,23 @@ try {
   console.error('Error fetching properties by type:', error);
 }
 
+// Fetch cities that have this property type for sale (dynamic SEO links)
+let citiesWithType: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  const cityResult = await searchProperties({
+    tipo: dbType,
+    operacion: 'venta',
+    pais,
+    limit: 0,
+    facets: ['ciudad'],
+  });
+  const distribution = cityResult.facetDistribution?.ciudad || {};
+  citiesWithType = Object.entries(distribution)
+    .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+} catch { /* ignore */ }
+
 const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
 ---
 
@@ -158,25 +176,30 @@ const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
     </div>
   </section>
 
-  <!-- SEO Content -->
-  <section class="py-12 bg-gray-50">
-    <div class="container-custom">
-      <div class="prose prose-lg max-w-4xl mx-auto">
-        <h2>Comprar {typeName} en {pais}</h2>
-        <p>
-          {typeDescription} En Ubikala.com, asesores inmobiliarios y propietarios publican
-          {typeName.toLowerCase()} en todo el país. Contacta directamente al publicador para
-          obtener más información y agendar visitas.
+  <!-- Dynamic city links for this property type -->
+  {citiesWithType.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">
+          {typeName} en Venta por Ciudad
+        </h2>
+        <p class="text-gray-600 mb-8">
+          Explora {typeName.toLowerCase()} disponibles en las principales ciudades de {pais}.
         </p>
-
-        <h3>Zonas Populares para {typeName}</h3>
-        <ul>
-          <li><strong>Santo Domingo:</strong> Piantini, Naco, Bella Vista, Arroyo Hondo, Ensanche Paraíso</li>
-          <li><strong>Punta Cana:</strong> Cap Cana, Bávaro, Cocotal, Punta Cana Village</li>
-          <li><strong>Santiago:</strong> Cerros de Gurabo, Jardines Metropolitanos, Los Jardines</li>
-          <li><strong>Puerto Plata:</strong> Sosúa, Cabarete, Costámbar</li>
-        </ul>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {citiesWithType.map((city) => (
+            <a
+              href={`/comprar/${typeSlug}/${city.slug}`}
+              class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600 block">
+                {city.name}
+              </span>
+              <span class="text-sm text-gray-500">{city.count} {typeName.toLowerCase()}</span>
+            </a>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  )}
 </Layout>
