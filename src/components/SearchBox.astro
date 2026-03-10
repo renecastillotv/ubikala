@@ -25,10 +25,102 @@ const containerClass = {
     house: 'casa', apartment: 'apartamento', villa: 'villa',
     penthouse: 'penthouse', land: 'terreno', commercial: 'local-comercial', office: 'oficina',
   };
+  const slugToType: Record<string, string> = {
+    casa: 'house', casas: 'house',
+    apartamento: 'apartment', apartamentos: 'apartment',
+    villa: 'villa', villas: 'villa',
+    penthouse: 'penthouse', penthouses: 'penthouse',
+    terreno: 'land', terrenos: 'land', solar: 'land', solares: 'land',
+    'local-comercial': 'commercial', 'locales-comerciales': 'commercial', local: 'commercial', locales: 'commercial',
+    oficina: 'office', oficinas: 'office',
+  };
   const operationToSlug: Record<string, string> = {
     sale: 'comprar', rent: 'alquilar',
   };
+  const slugToOperation: Record<string, string> = {
+    comprar: 'sale', alquilar: 'rent',
+  };
 
+  // Pre-select dropdowns from current URL
+  function preselectFromUrl() {
+    const path = window.location.pathname.replace(/\/$/, '');
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length === 0) return;
+
+    let detectedOp = '';
+    let detectedType = '';
+    let detectedLocation = '';
+
+    // First segment: operation
+    if (segments[0] === 'comprar' || segments[0] === 'alquilar') {
+      detectedOp = slugToOperation[segments[0]] || '';
+
+      // Remaining segments: classify as type or location
+      for (let i = 1; i < segments.length; i++) {
+        const seg = segments[i];
+        if (!detectedType && slugToType[seg]) {
+          detectedType = slugToType[seg];
+        } else if (!detectedLocation) {
+          detectedLocation = seg;
+        }
+      }
+    }
+
+    // Pre-select query params for advanced filters
+    const params = new URLSearchParams(window.location.search);
+    const precio = params.get('precio') || '';
+    const habitaciones = params.get('habitaciones') || '';
+    const banos = params.get('banos') || '';
+    const areaMin = params.get('area_min') || '';
+    const areaMax = params.get('area_max') || '';
+
+    document.querySelectorAll<HTMLFormElement>('form[data-search-form]').forEach(form => {
+      // Operation
+      if (detectedOp) {
+        const opSelect = form.querySelector<HTMLSelectElement>('[name="transactionType"]');
+        if (opSelect) opSelect.value = detectedOp;
+      }
+      // Type
+      if (detectedType) {
+        const typeSelect = form.querySelector<HTMLSelectElement>('[name="propertyType"]');
+        if (typeSelect) typeSelect.value = detectedType;
+      }
+      // Location
+      if (detectedLocation) {
+        const locSelect = form.querySelector<HTMLSelectElement>('[name="location"]');
+        if (locSelect) {
+          // Match by value (slug)
+          const option = locSelect.querySelector<HTMLOptionElement>(`option[value="${detectedLocation}"]`);
+          if (option) locSelect.value = detectedLocation;
+        }
+      }
+      // Advanced filters
+      if (precio) {
+        const priceSelect = form.querySelector<HTMLSelectElement>('[name="priceRange"]');
+        if (priceSelect) priceSelect.value = precio;
+      }
+      if (habitaciones) {
+        const bedSelect = form.querySelector<HTMLSelectElement>('[name="bedrooms"]');
+        if (bedSelect) bedSelect.value = habitaciones;
+      }
+      if (banos) {
+        const bathSelect = form.querySelector<HTMLSelectElement>('[name="bathrooms"]');
+        if (bathSelect) bathSelect.value = banos;
+      }
+      if (areaMin) {
+        const minInput = form.querySelector<HTMLInputElement>('[name="minArea"]');
+        if (minInput) minInput.value = areaMin;
+      }
+      if (areaMax) {
+        const maxInput = form.querySelector<HTMLInputElement>('[name="maxArea"]');
+        if (maxInput) maxInput.value = areaMax;
+      }
+    });
+  }
+
+  preselectFromUrl();
+
+  // Submit handler: build clean SEO URL
   document.querySelectorAll<HTMLFormElement>('form[data-search-form]').forEach(form => {
     form.addEventListener('submit', (e) => {
       const data = new FormData(form);
