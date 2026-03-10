@@ -722,6 +722,78 @@ export async function resolveCityFromText(slug: string, pais?: string): Promise<
 }
 
 /**
+ * Get sectors with property counts for a given city (facet distribution).
+ */
+export async function getSectorsWithCounts(cityNames: string | string[], pais?: string): Promise<Array<{ name: string; slug: string; count: number }>> {
+  const filters = [`estado_propiedad = "disponible"`];
+  if (pais) filters.push(`pais = "${pais}"`);
+
+  const cities = Array.isArray(cityNames) ? cityNames : [cityNames];
+  if (cities.length === 1) {
+    filters.push(`ciudad = "${cities[0]}"`);
+  } else if (cities.length > 1) {
+    filters.push(`(${cities.map(c => `ciudad = "${c}"`).join(' OR ')})`);
+  }
+
+  const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+    method: 'POST',
+    body: JSON.stringify({
+      q: '',
+      filter: filters.join(' AND '),
+      facets: ['sector'],
+      limit: 0,
+    }),
+  });
+
+  const distribution = result.facetDistribution?.sector || {};
+  return Object.entries(distribution)
+    .filter(([name]) => name && name.trim() !== '')
+    .map(([name, count]) => ({
+      name,
+      slug: toSlug(name),
+      count: count as number,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Resolve a sector slug to the real sector name via MeiliSearch facets.
+ * Searches within a specific city context.
+ */
+export async function resolveSectorFromText(sectorSlug: string, cityNames: string | string[], pais?: string): Promise<string[]> {
+  const query = sectorSlug.replace(/-/g, ' ');
+  const filters = [`estado_propiedad = "disponible"`];
+  if (pais) filters.push(`pais = "${pais}"`);
+
+  const cities = Array.isArray(cityNames) ? cityNames : [cityNames];
+  if (cities.length === 1) {
+    filters.push(`ciudad = "${cities[0]}"`);
+  } else if (cities.length > 1) {
+    filters.push(`(${cities.map(c => `ciudad = "${c}"`).join(' OR ')})`);
+  }
+
+  try {
+    const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: query,
+        filter: filters.join(' AND '),
+        facets: ['sector'],
+        limit: 0,
+      }),
+    });
+
+    const distribution: Record<string, number> = result.facetDistribution?.sector || {};
+    const entries = Object.entries(distribution)
+      .filter(([name]) => name && name.trim() !== '')
+      .sort(([, a], [, b]) => b - a);
+    return entries.map(([name]) => name);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Get popular locations with property counts and sample images.
  * Compatible with LocationsGrid component.
  */

@@ -1,4 +1,4 @@
-import { getCitiesWithCounts, resolveCityFromText } from './meilisearch';
+import { getCitiesWithCounts, resolveCityFromText, getSectorsWithCounts, resolveSectorFromText } from './meilisearch';
 import { toSlug } from './slug-utils';
 
 // Re-export toSlug for backward compatibility
@@ -131,4 +131,87 @@ export async function getAllCities(pais?: string): Promise<Array<{ slug: string;
     }
   }
   return result;
+}
+
+// ============================================================================
+// SECTOR SLUG RESOLUTION
+// ============================================================================
+
+// Sector cache: keyed by "citySlug" → Map<sectorSlug, sectorName>
+const _sectorCache = new Map<string, Map<string, string>>();
+const _sectorCacheTime = new Map<string, number>();
+const _resolvedSectorCache = new Map<string, string[]>();
+
+async function ensureSectorCache(cityNames: string | string[], pais?: string): Promise<Map<string, string>> {
+  const cacheKey = Array.isArray(cityNames) ? cityNames.sort().join('|') : cityNames;
+
+  const cached = _sectorCache.get(cacheKey);
+  const cacheTime = _sectorCacheTime.get(cacheKey) || 0;
+  if (cached && Date.now() - cacheTime < CACHE_TTL) return cached;
+
+  const sectors = await getSectorsWithCounts(cityNames, pais);
+  const map = new Map<string, string>();
+  for (const s of sectors) {
+    map.set(toSlug(s.name), s.name);
+  }
+  _sectorCache.set(cacheKey, map);
+  _sectorCacheTime.set(cacheKey, Date.now());
+  return map;
+}
+
+/**
+ * Resolve a sector URL slug to the real sector name.
+ * Requires city context (city names) for accurate resolution.
+ */
+export async function sectorSlugToName(sectorSlug: string, cityNames: string | string[], pais?: string): Promise<string> {
+  const cache = await ensureSectorCache(cityNames, pais);
+
+  // 1. Direct match
+  const direct = cache.get(sectorSlug);
+  if (direct) return direct;
+
+  // 2. Dynamic resolution via MeiliSearch text search within city
+  const resolveKey = `${sectorSlug}|${Array.isArray(cityNames) ? cityNames.join('|') : cityNames}`;
+  if (!_resolvedSectorCache.has(resolveKey)) {
+    const resolved = await resolveSectorFromText(sectorSlug, cityNames, pais);
+    _resolvedSectorCache.set(resolveKey, resolved);
+  }
+
+  const resolved = _resolvedSectorCache.get(resolveKey);
+  if (resolved && resolved.length > 0) return resolved[0];
+
+  // 3. Fallback: title-case
+  return sectorSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+/**
+ * Resolve a sector slug to ALL equivalent sector names for MeiliSearch filtering.
+ */
+export async function sectorSlugToNames(sectorSlug: string, cityNames: string | string[], pais?: string): Promise<string[]> {
+  const cache = await ensureSectorCache(cityNames, pais);
+
+  // Direct match
+  const direct = cache.get(sectorSlug);
+  if (direct) return [direct];
+
+  // Dynamic resolution
+  const resolveKey = `${sectorSlug}|${Array.isArray(cityNames) ? cityNames.join('|') : cityNames}`;
+  if (!_resolvedSectorCache.has(resolveKey)) {
+    const resolved = await resolveSectorFromText(sectorSlug, cityNames, pais);
+    _resolvedSectorCache.set(resolveKey, resolved);
+  }
+
+  const resolved = _resolvedSectorCache.get(resolveKey);
+  if (resolved && resolved.length > 0) {
+    const slugWords = sectorSlug.split('-').filter(w => w.length > 2);
+    const primary = resolved[0];
+    const related = resolved.slice(1).filter(name => {
+      const nameLower = name.toLowerCase();
+      return slugWords.some(w => nameLower.includes(w));
+    });
+    return [primary, ...related].slice(0, 5);
+  }
+
+  const titleCased = sectorSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  return [titleCased];
 }

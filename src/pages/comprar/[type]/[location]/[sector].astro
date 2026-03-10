@@ -1,20 +1,20 @@
 ---
-import Layout from '../../../layouts/Layout.astro';
-import PropertyCard from '../../../components/PropertyCard.astro';
-import SearchBox from '../../../components/SearchBox.astro';
-import Pagination from '../../../components/Pagination.astro';
-import Breadcrumb from '../../../components/Breadcrumb.astro';
-import MarketPanorama from '../../../components/MarketPanorama.astro';
-import { searchProperties, getSectorsWithCounts } from '../../../lib/meilisearch';
-import type { Property } from '../../../data/types';
-import { slugToName, slugToCityNames } from '../../../lib/location-utils';
+import Layout from '../../../../layouts/Layout.astro';
+import PropertyCard from '../../../../components/PropertyCard.astro';
+import SearchBox from '../../../../components/SearchBox.astro';
+import Pagination from '../../../../components/Pagination.astro';
+import Breadcrumb from '../../../../components/Breadcrumb.astro';
+import MarketPanorama from '../../../../components/MarketPanorama.astro';
+import { searchProperties, getSectorsWithCounts } from '../../../../lib/meilisearch';
+import type { Property } from '../../../../data/types';
+import { slugToName, slugToCityNames, sectorSlugToName } from '../../../../lib/location-utils';
+import { toSlug } from '../../../../lib/slug-utils';
 
-// SSR para rutas dinámicas
 export const prerender = false;
 
-const { type: typeSlug, location: locationSlug } = Astro.params;
+const { type: typeSlug, location: locationSlug, sector: sectorSlug } = Astro.params;
 
-// Mapeo de slugs de tipo a valores de BD y nombres legibles
+// Property type mapping (dynamic, no hardcoded countries)
 const propertyTypeMap: Record<string, { dbValue: string; singular: string; plural: string; icon: string }> = {
   'apartamento': { dbValue: 'apartamento', singular: 'Apartamento', plural: 'Apartamentos', icon: '🏢' },
   'apartamentos': { dbValue: 'apartamento', singular: 'Apartamento', plural: 'Apartamentos', icon: '🏢' },
@@ -39,30 +39,30 @@ const propertyTypeMap: Record<string, { dbValue: string; singular: string; plura
   'fincas': { dbValue: 'finca', singular: 'Finca', plural: 'Fincas', icon: '🌾' },
 };
 
-// Validar tipo de propiedad
 const typeInfo = propertyTypeMap[typeSlug?.toLowerCase() || ''];
 if (!typeInfo) {
-  // Redirigir a la página general de comprar si el tipo no es válido
   return Astro.redirect('/comprar');
 }
 
-// Configuración de paginación
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-const pais = Astro.locals.country.name;
+const pais = Astro.locals.country?.name;
 
-// Resolve real city name from slug via MeiliSearch facets
-const resolvedName = await slugToName(locationSlug || '', pais);
-// Get all equivalent city names for OR filtering (e.g. "Distrito Nacional" + "Santo Domingo D.N.")
+// Resolve city from slug
+const resolvedCityName = await slugToName(locationSlug || '', pais);
 const cityNames = await slugToCityNames(locationSlug || '', pais);
 
-let locationData: { name: string; province: string } = {
-  name: resolvedName,
-  province: pais
+// Resolve sector from slug (within city context)
+const resolvedSectorName = await sectorSlugToName(sectorSlug || '', cityNames, pais);
+
+let locationData = {
+  city: resolvedCityName,
+  sector: resolvedSectorName,
+  province: pais || '',
 };
 
-// Fetch properties con filtros de tipo y ubicación via MeiliSearch
+// Search with type + city + sector filters
 let properties: Property[] = [];
 let totalCount = 0;
 
@@ -72,7 +72,8 @@ try {
   const result = await searchProperties({
     operacion: 'venta',
     tipo: typeInfo.dbValue,
-    ciudad: cityNames.length > 1 ? cityNames : resolvedName,
+    ciudad: cityNames.length > 1 ? cityNames : resolvedCityName,
+    sector: resolvedSectorName,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,
@@ -81,15 +82,11 @@ try {
   properties = result.properties;
   totalCount = result.total;
 
-  // Update location data from first property if available
   if (properties.length > 0) {
     const firstProp = properties[0];
-    if (firstProp.location.city) {
-      locationData.name = firstProp.location.city;
-    }
-    if (firstProp.location.province) {
-      locationData.province = firstProp.location.province;
-    }
+    if (firstProp.location.city) locationData.city = firstProp.location.city;
+    if (firstProp.location.province) locationData.province = firstProp.location.province;
+    if (firstProp.location.sector) locationData.sector = firstProp.location.sector;
   }
 } catch (error) {
   console.error('Error fetching properties:', error);
@@ -97,40 +94,39 @@ try {
 
 const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
-// Redirect si la página está fuera de rango
 if (currentPage > totalPages && totalPages > 0) {
-  return Astro.redirect(`/comprar/${typeSlug}/${locationSlug}`);
+  return Astro.redirect(`/comprar/${typeSlug}/${locationSlug}/${sectorSlug}`);
 }
 
-// Títulos y descripciones dinámicas para SEO
-const pageTitle = `${typeInfo.plural} en Venta en ${locationData.name} | Ubíkala`;
-const pageDescription = `Encuentra ${typeInfo.plural.toLowerCase()} en venta en ${locationData.name}, ${locationData.province}. ${totalCount} propiedades disponibles con fotos, precios y contacto directo con asesores.`;
+// SEO
+const pageTitle = `${typeInfo.plural} en Venta en ${locationData.sector}, ${locationData.city} | Ubikala`;
+const pageDescription = `Encuentra ${typeInfo.plural.toLowerCase()} en venta en ${locationData.sector}, ${locationData.city}. ${totalCount} propiedades disponibles con fotos, precios y contacto directo.`;
 
-// FAQs dinámicas basadas en tipo y ubicación
+// FAQs
 const dynamicFAQs = [
   {
-    question: `¿Cuánto cuesta un ${typeInfo.singular.toLowerCase()} en ${locationData.name}?`,
-    answer: `Los precios de ${typeInfo.plural.toLowerCase()} en ${locationData.name} varían según la ubicación exacta, tamaño y amenidades. Actualmente tenemos ${totalCount} opciones disponibles. Te recomendamos explorar el listado y contactar a los asesores para obtener información actualizada de precios.`
+    question: `¿Cuanto cuesta un ${typeInfo.singular.toLowerCase()} en ${locationData.sector}?`,
+    answer: `Los precios de ${typeInfo.plural.toLowerCase()} en ${locationData.sector}, ${locationData.city} varian segun el tamano, piso y amenidades. Actualmente tenemos ${totalCount} opciones disponibles. Explora el listado y contacta a los asesores para precios actualizados.`
   },
   {
-    question: `¿Es buena inversión comprar ${typeInfo.singular.toLowerCase()} en ${locationData.name}?`,
-    answer: `${locationData.name} es una zona con demanda estable de ${typeInfo.plural.toLowerCase()}. Para evaluar si es buena inversión, considera factores como la plusvalía histórica del sector, demanda de alquiler, desarrollo de infraestructura y tus objetivos financieros. Un asesor inmobiliario puede darte información específica del mercado local.`
+    question: `¿Es buena zona ${locationData.sector} para comprar?`,
+    answer: `${locationData.sector} es un sector de ${locationData.city} con demanda de ${typeInfo.plural.toLowerCase()}. Factores clave incluyen la plusvalia historica, servicios cercanos, transporte y seguridad. Un asesor inmobiliario local puede darte informacion especifica del mercado en ${locationData.sector}.`
   },
   {
-    question: `¿Qué documentos necesito para comprar un ${typeInfo.singular.toLowerCase()}?`,
-    answer: `Para comprar un ${typeInfo.singular.toLowerCase()} en ${pais} necesitas: cédula o pasaporte, constancia de ingresos o estados de cuenta, y el inicial (generalmente 10-30% del valor). El vendedor debe proveer título de propiedad certificado, plano catastral y certificación de no gravamen.`
+    question: `¿Que servicios hay cerca de ${locationData.sector}?`,
+    answer: `${locationData.sector} cuenta con acceso a servicios como supermercados, centros comerciales, escuelas, hospitales y transporte publico. La disponibilidad exacta varia, te recomendamos consultar con un asesor para conocer los detalles del area.`
   },
   {
-    question: `¿Puedo financiar un ${typeInfo.singular.toLowerCase()} en ${locationData.name}?`,
-    answer: `Sí, la mayoría de los ${typeInfo.plural.toLowerCase()} pueden financiarse a través de bancos locales. Las tasas actuales rondan el 9-12% anual para plazos de 15-25 años. Algunos proyectos nuevos ofrecen financiamiento directo con el desarrollador con condiciones más flexibles.`
-  }
+    question: `¿Puedo financiar un ${typeInfo.singular.toLowerCase()} en ${locationData.sector}?`,
+    answer: `Si, la mayoria de los ${typeInfo.plural.toLowerCase()} en ${locationData.sector} pueden financiarse a traves de bancos locales. Las tasas y plazos varian segun el banco y el proyecto. Algunos desarrolladores ofrecen financiamiento directo con condiciones flexibles.`
+  },
 ];
 
-// Schema para SEO
+// Schema
 const listingSchema = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: `${typeInfo.plural} en Venta en ${locationData.name}`,
+  name: `${typeInfo.plural} en Venta en ${locationData.sector}, ${locationData.city}`,
   description: pageDescription,
   numberOfItems: totalCount,
   itemListElement: properties.slice(0, 10).map((property, index) => ({
@@ -139,7 +135,7 @@ const listingSchema = {
     item: {
       '@type': 'RealEstateListing',
       name: property.title,
-      description: property.description.substring(0, 160),
+      description: property.description?.substring(0, 160),
       url: `https://ubikala.com/propiedad/${property.slug}`,
       image: property.images[0]?.url,
       offers: {
@@ -159,29 +155,31 @@ const faqSchema = {
     name: faq.question,
     acceptedAnswer: {
       '@type': 'Answer',
-      text: faq.answer
-    }
-  }))
+      text: faq.answer,
+    },
+  })),
 };
 
-// Tipos relacionados para sugerencias
+// Related sectors in same city for internal linking
+let relatedSectors: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  const allSectors = await getSectorsWithCounts(cityNames.length > 1 ? cityNames : resolvedCityName, pais);
+  relatedSectors = allSectors
+    .filter(s => toSlug(s.name) !== sectorSlug)
+    .slice(0, 8);
+} catch { /* ignore */ }
+
+// Related types for same sector
 const relatedTypes = Object.entries(propertyTypeMap)
-  .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue && !slug.endsWith('s'))
+  .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue && !slug.endsWith('s') && slug !== 'solar' && slug !== 'local')
   .slice(0, 4)
   .map(([slug, info]) => ({ slug, ...info }));
-
-// Sectors in this city for deep internal links
-let popularSectors: Array<{ name: string; slug: string; count: number }> = [];
-try {
-  popularSectors = await getSectorsWithCounts(cityNames.length > 1 ? cityNames : resolvedName, pais);
-  popularSectors = popularSectors.slice(0, 12);
-} catch { /* ignore */ }
 ---
 
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords={`${typeInfo.plural.toLowerCase()} ${locationData.name.toLowerCase()}, comprar ${typeInfo.singular.toLowerCase()} ${locationData.name.toLowerCase()}, ${typeInfo.plural.toLowerCase()} venta ${locationData.name.toLowerCase()}`}
+  keywords={`${typeInfo.plural.toLowerCase()} ${locationData.sector.toLowerCase()}, comprar ${typeInfo.singular.toLowerCase()} ${locationData.sector.toLowerCase()} ${locationData.city.toLowerCase()}, ${typeInfo.plural.toLowerCase()} venta ${locationData.sector.toLowerCase()}`}
 >
   <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
@@ -189,20 +187,21 @@ try {
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
     { label: 'Comprar', href: '/comprar' },
-    { label: typeInfo.plural, href: `/comprar?tipo=${typeInfo.dbValue}` },
-    { label: locationData.name }
+    { label: typeInfo.plural, href: `/comprar/${typeSlug}` },
+    { label: locationData.city, href: `/comprar/${typeSlug}/${locationSlug}` },
+    { label: locationData.sector },
   ]} />
 
   <!-- Hero -->
   <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
     <div class="container-custom">
       <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
-        {typeInfo.plural} en Venta en {locationData.name}
+        {typeInfo.plural} en Venta en {locationData.sector}
       </h1>
       <p class="text-primary-100 text-lg max-w-3xl">
         {totalCount > 0
-          ? `Explora ${totalCount} ${typeInfo.plural.toLowerCase()} disponibles para compra en ${locationData.name}, ${locationData.province}.`
-          : `Actualmente no hay ${typeInfo.plural.toLowerCase()} disponibles en ${locationData.name}. Explora otras zonas o tipos de propiedad.`
+          ? `Explora ${totalCount} ${typeInfo.plural.toLowerCase()} disponibles en ${locationData.sector}, ${locationData.city}.`
+          : `Actualmente no hay ${typeInfo.plural.toLowerCase()} disponibles en ${locationData.sector}. Explora otros sectores o tipos de propiedad.`
         }
       </p>
     </div>
@@ -232,7 +231,7 @@ try {
         <>
           <div class="flex items-center justify-between mb-8">
             <p class="text-gray-600">
-              <span class="font-semibold text-gray-900">{totalCount}</span> {typeInfo.plural.toLowerCase()} en venta
+              <span class="font-semibold text-gray-900">{totalCount}</span> {typeInfo.plural.toLowerCase()} en venta en {locationData.sector}
             </p>
           </div>
 
@@ -244,7 +243,7 @@ try {
 
           {totalPages > 1 && (
             <div class="mt-12">
-              <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={`/comprar/${typeSlug}/${locationSlug}`} />
+              <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={`/comprar/${typeSlug}/${locationSlug}/${sectorSlug}`} />
             </div>
           )}
         </>
@@ -256,17 +255,17 @@ try {
             </svg>
           </div>
           <h2 class="text-2xl font-bold text-gray-900 mb-4">
-            No encontramos {typeInfo.plural.toLowerCase()} en {locationData.name}
+            No encontramos {typeInfo.plural.toLowerCase()} en {locationData.sector}
           </h2>
           <p class="text-gray-600 mb-8 max-w-md mx-auto">
-            Actualmente no hay {typeInfo.plural.toLowerCase()} disponibles en esta zona. Prueba con otra ubicación o tipo de propiedad.
+            Prueba con otro sector o explora todas las propiedades en {locationData.city}.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/comprar" class="btn-primary">
-              Ver Todas las Propiedades
+            <a href={`/comprar/${typeSlug}/${locationSlug}`} class="btn-primary">
+              Ver en {locationData.city}
             </a>
-            <a href={`/propiedades/${locationSlug}`} class="btn-outline">
-              Ver Todo en {locationData.name}
+            <a href="/comprar" class="btn-outline">
+              Ver Todas las Propiedades
             </a>
           </div>
         </div>
@@ -274,10 +273,10 @@ try {
     </div>
   </section>
 
-  <!-- Market Panorama SEO Section (data-driven from motor-seo API) -->
+  <!-- Market Panorama SEO Section -->
   <MarketPanorama
     propertyType={typeSlug}
-    locationSlug={locationSlug}
+    locationSlug={`${locationSlug}/${sectorSlug}`}
     operation="comprar"
     countryCode={Astro.locals.country?.code}
     language="es"
@@ -290,7 +289,7 @@ try {
         Preguntas Frecuentes
       </h2>
       <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
-        Resolvemos tus dudas sobre comprar {typeInfo.plural.toLowerCase()} en {locationData.name}
+        Resolvemos tus dudas sobre comprar {typeInfo.plural.toLowerCase()} en {locationData.sector}
       </p>
 
       <div class="max-w-3xl mx-auto space-y-4">
@@ -311,15 +310,15 @@ try {
     </div>
   </section>
 
-  <!-- Sectors in this city (deep SEO links) -->
-  {popularSectors.length > 0 && (
+  <!-- Other sectors in same city (internal links for SEO) -->
+  {relatedSectors.length > 0 && (
     <section class="py-16 bg-gray-50">
       <div class="container-custom">
         <h2 class="text-2xl font-bold text-gray-900 mb-6">
-          {typeInfo.plural} en Venta por Sector en {locationData.name}
+          Otros Sectores en {locationData.city}
         </h2>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {popularSectors.map((s) => (
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {relatedSectors.map((s) => (
             <a
               href={`/comprar/${typeSlug}/${locationSlug}/${s.slug}`}
               class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group"
@@ -335,16 +334,16 @@ try {
     </section>
   )}
 
-  <!-- Otros tipos de propiedad -->
-  <section class="py-16 {popularSectors.length === 0 ? 'bg-gray-50' : ''}">
+  <!-- Other property types in same sector -->
+  <section class="py-16 {relatedSectors.length > 0 ? '' : 'bg-gray-50'}">
     <div class="container-custom">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">
-        Otros Tipos de Propiedad en {locationData.name}
+        Otros Tipos de Propiedad en {locationData.sector}
       </h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         {relatedTypes.map((type) => (
           <a
-            href={`/comprar/${type.slug}/${locationSlug}`}
+            href={`/comprar/${type.slug}/${locationSlug}/${sectorSlug}`}
             class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-center group"
           >
             <span class="text-3xl block mb-2">{type.icon}</span>
@@ -362,61 +361,61 @@ try {
     <div class="container-custom">
       <div class="max-w-3xl mx-auto text-center">
         <h2 class="text-3xl font-bold text-white mb-4">
-          ¿Necesitas ayuda para encontrar tu {typeInfo.singular.toLowerCase()}?
+          ¿Necesitas ayuda para encontrar tu {typeInfo.singular.toLowerCase()} en {locationData.sector}?
         </h2>
         <p class="text-primary-100 text-lg mb-8">
-          Nuestros asesores conocen {locationData.name} y pueden ayudarte a encontrar la propiedad perfecta según tu presupuesto y necesidades.
+          Nuestros asesores conocen {locationData.sector} y pueden ayudarte a encontrar la propiedad ideal.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a href="/asesores" class="bg-white text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3 rounded-lg transition-colors">
             Contactar un Asesor
           </a>
-          <a href="/comprar" class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
-            Ver Más Propiedades
+          <a href={`/comprar/${typeSlug}/${locationSlug}`} class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Ver Todo en {locationData.city}
           </a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Links Relacionados -->
+  <!-- Related Links -->
   <section class="py-12">
     <div class="container-custom">
       <h2 class="text-xl font-bold text-gray-900 mb-6">Enlaces Relacionados</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href={`/propiedades/${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+        <a href={`/comprar/${typeSlug}/${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
           <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
             <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             </svg>
           </div>
           <div>
-            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Todo en {locationData.name}</span>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">{typeInfo.plural} en {locationData.city}</span>
+            <p class="text-sm text-gray-500">Toda la ciudad</p>
+          </div>
+        </a>
+
+        <a href={`/propiedades/${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Todo en {locationData.city}</span>
             <p class="text-sm text-gray-500">Todas las propiedades</p>
           </div>
         </a>
 
-        <a href={`/alquilar?ubicacion=${locationSlug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
-          <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
-            <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Alquilar en {locationData.name}</span>
-            <p class="text-sm text-gray-500">Propiedades en alquiler</p>
-          </div>
-        </a>
-
-        <a href="/guias/como-comprar" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+        <a href="/comprar" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
           <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
             <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
           <div>
-            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Guía de Compra</span>
-            <p class="text-sm text-gray-500">Paso a paso</p>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Todas las Propiedades</span>
+            <p class="text-sm text-gray-500">Buscar en todo el pais</p>
           </div>
         </a>
       </div>

@@ -1,9 +1,7 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { locationData, getProvinces } from '../../../lib/location-data';
 
 const user = Astro.locals.user;
-const provinces = getProvinces();
 ---
 
 <AdminLayout title="Nueva Propiedad">
@@ -88,16 +86,15 @@ const provinces = getProvinces();
         <h4>Ubicación</h4>
         <div class="form-grid location-grid">
           <div class="form-group">
-            <label for="pais">País</label>
-            <input type="text" id="pais" name="pais" value="República Dominicana" readonly class="readonly-field" />
+            <label for="pais">País *</label>
+            <select id="pais" name="pais" required>
+              <option value="">Cargando países...</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="provincia">Provincia *</label>
-            <select id="provincia" name="provincia" required>
-              <option value="">Seleccionar provincia...</option>
-              {provinces.map(p => (
-                <option value={p}>{p}</option>
-              ))}
+            <select id="provincia" name="provincia" required disabled>
+              <option value="">Primero selecciona país</option>
             </select>
           </div>
           <div class="form-group">
@@ -542,73 +539,88 @@ const provinces = getProvinces();
     }
   </style>
 
-  <script define:vars={{ locationDataJson: JSON.stringify(locationData) }}>
-    // Parse location data from server
-    const locationData = JSON.parse(locationDataJson);
-
-    // Helper functions for cascading dropdowns
-    function getCitiesByProvince(provinceName) {
-      const province = locationData.provinces.find(
-        p => p.name.toLowerCase() === provinceName.toLowerCase()
-      );
-      return province ? province.cities.map(c => c.name) : [];
-    }
-
-    function getSectorsByCity(provinceName, cityName) {
-      const province = locationData.provinces.find(
-        p => p.name.toLowerCase() === provinceName.toLowerCase()
-      );
-      if (!province) return [];
-      const city = province.cities.find(
-        c => c.name.toLowerCase() === cityName.toLowerCase()
-      );
-      return city ? city.sectors : [];
-    }
-
+  <script>
+    // Dynamic location cascading dropdowns via API
+    const paisSelect = document.getElementById('pais');
     const provinciaSelect = document.getElementById('provincia');
     const ciudadSelect = document.getElementById('ciudad');
     const sectorSelect = document.getElementById('sector');
 
-    // Handle province change
-    provinciaSelect.addEventListener('change', () => {
-      const selectedProvince = provinciaSelect.value;
+    // Fetch locations from API
+    async function fetchLocations(params) {
+      const qs = new URLSearchParams(params).toString();
+      const res = await fetch(`/api/admin/locations?${qs}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.locations || [];
+    }
 
-      // Reset and enable city dropdown
-      ciudadSelect.innerHTML = '<option value="">Seleccionar ciudad...</option>';
+    function populateSelect(select, items, placeholder, valueField = 'nombre') {
+      select.innerHTML = `<option value="">${placeholder}</option>`;
+      items.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueField];
+        option.dataset.id = item.id;
+        option.textContent = item.nombre;
+        select.appendChild(option);
+      });
+      select.disabled = items.length === 0;
+    }
+
+    // Load countries on page load
+    (async () => {
+      const paises = await fetchLocations({ tipo: 'pais' });
+      populateSelect(paisSelect, paises, 'Seleccionar país...');
+    })();
+
+    // País → Provincias
+    paisSelect.addEventListener('change', async () => {
+      const selected = paisSelect.options[paisSelect.selectedIndex];
+      const parentId = selected?.dataset?.id;
+
+      provinciaSelect.innerHTML = '<option value="">Cargando...</option>';
+      ciudadSelect.innerHTML = '<option value="">Primero selecciona provincia</option>';
+      ciudadSelect.disabled = true;
       sectorSelect.innerHTML = '<option value="">Primero selecciona ciudad</option>';
       sectorSelect.disabled = true;
 
-      if (selectedProvince) {
-        const cities = getCitiesByProvince(selectedProvince);
-        cities.forEach(city => {
-          const option = document.createElement('option');
-          option.value = city;
-          option.textContent = city;
-          ciudadSelect.appendChild(option);
-        });
-        ciudadSelect.disabled = false;
+      if (parentId) {
+        const provincias = await fetchLocations({ parent_id: parentId });
+        populateSelect(provinciaSelect, provincias, 'Seleccionar provincia...');
       } else {
+        provinciaSelect.innerHTML = '<option value="">Primero selecciona país</option>';
+        provinciaSelect.disabled = true;
+      }
+    });
+
+    // Provincia → Ciudades
+    provinciaSelect.addEventListener('change', async () => {
+      const selected = provinciaSelect.options[provinciaSelect.selectedIndex];
+      const parentId = selected?.dataset?.id;
+
+      ciudadSelect.innerHTML = '<option value="">Cargando...</option>';
+      sectorSelect.innerHTML = '<option value="">Primero selecciona ciudad</option>';
+      sectorSelect.disabled = true;
+
+      if (parentId) {
+        const ciudades = await fetchLocations({ parent_id: parentId });
+        populateSelect(ciudadSelect, ciudades, 'Seleccionar ciudad...');
+      } else {
+        ciudadSelect.innerHTML = '<option value="">Primero selecciona provincia</option>';
         ciudadSelect.disabled = true;
       }
     });
 
-    // Handle city change
-    ciudadSelect.addEventListener('change', () => {
-      const selectedProvince = provinciaSelect.value;
-      const selectedCity = ciudadSelect.value;
+    // Ciudad → Sectores
+    ciudadSelect.addEventListener('change', async () => {
+      const selected = ciudadSelect.options[ciudadSelect.selectedIndex];
+      const parentId = selected?.dataset?.id;
 
-      // Reset and enable sector dropdown
-      sectorSelect.innerHTML = '<option value="">Seleccionar sector...</option>';
+      sectorSelect.innerHTML = '<option value="">Cargando...</option>';
 
-      if (selectedProvince && selectedCity) {
-        const sectors = getSectorsByCity(selectedProvince, selectedCity);
-        sectors.forEach(sector => {
-          const option = document.createElement('option');
-          option.value = sector;
-          option.textContent = sector;
-          sectorSelect.appendChild(option);
-        });
-        sectorSelect.disabled = false;
+      if (parentId) {
+        const sectores = await fetchLocations({ parent_id: parentId });
+        populateSelect(sectorSelect, sectores, 'Seleccionar sector...');
       } else {
         sectorSelect.innerHTML = '<option value="">Primero selecciona ciudad</option>';
         sectorSelect.disabled = true;

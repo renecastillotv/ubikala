@@ -5,8 +5,9 @@ import SearchBox from '../../../components/SearchBox.astro';
 import Pagination from '../../../components/Pagination.astro';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 import { useTranslations } from '../../../i18n';
-import { searchProperties } from '../../../lib/meilisearch';
+import { searchProperties, getSectorsWithCounts } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
+import { slugToName, slugToCityNames } from '../../../lib/location-utils';
 
 // SSR para rutas dinámicas
 export const prerender = false;
@@ -41,25 +42,18 @@ if (!typeInfo) {
   return Astro.redirect('/alquilar');
 }
 
-// Formatear nombre de ubicación desde slug
-const formatLocationName = (slug: string) => {
-  return slug
-    .replace(/-/g, ' ')
-    .replace(/\b\w/g, l => l.toUpperCase());
-};
-
-const locationName = formatLocationName(locationSlug || '');
-
-// Configuración de paginación
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
-const pais = Astro.locals.country.name;
+const pais = Astro.locals.country?.name;
 
-// Intentar obtener info de ubicación
+// Resolve real city name from slug via MeiliSearch facets
+const resolvedName = await slugToName(locationSlug || '', pais);
+const cityNames = await slugToCityNames(locationSlug || '', pais);
+
 let locationData: { name: string; province: string } = {
-  name: locationName,
-  province: pais
+  name: resolvedName,
+  province: pais || '',
 };
 
 // Fetch properties con filtros de tipo y ubicación via MeiliSearch
@@ -72,7 +66,7 @@ try {
   const result = await searchProperties({
     operacion: 'renta',
     tipo: typeInfo.dbValue,
-    query: locationSlug?.replace(/-/g, ' '),
+    ciudad: cityNames.length > 1 ? cityNames : resolvedName,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,
@@ -235,6 +229,13 @@ const relatedTypes = Object.entries(propertyTypeMap)
   .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue && !slug.endsWith('s'))
   .slice(0, 4)
   .map(([slug, info]) => ({ slug, ...info }));
+
+// Sectors in this city for deep internal links
+let popularSectors: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  popularSectors = await getSectorsWithCounts(cityNames.length > 1 ? cityNames : resolvedName, pais);
+  popularSectors = popularSectors.slice(0, 12);
+} catch { /* ignore */ }
 ---
 
 <Layout
@@ -418,8 +419,32 @@ const relatedTypes = Object.entries(propertyTypeMap)
     </div>
   </section>
 
+  <!-- Sectors in this city (deep SEO links) -->
+  {popularSectors.length > 0 && (
+    <section class="py-16 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+          {typeInfo.plural} en Alquiler por Sector en {locationData.name}
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {popularSectors.map((s) => (
+            <a
+              href={`/alquilar/${typeSlug}/${locationSlug}/${s.slug}`}
+              class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <span class="font-semibold text-gray-900 group-hover:text-secondary-600 block">
+                {s.name}
+              </span>
+              <span class="text-sm text-gray-500">{s.count} {typeInfo.plural.toLowerCase()}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
   <!-- Otros tipos de propiedad -->
-  <section class="py-16 bg-gray-50">
+  <section class="py-16 {popularSectors.length === 0 ? 'bg-gray-50' : ''}">
     <div class="container-custom">
       <h2 class="text-2xl font-bold text-gray-900 mb-6">
         Otros Tipos de Propiedad en Alquiler en {locationData.name}
