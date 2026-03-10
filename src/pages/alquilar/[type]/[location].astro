@@ -8,6 +8,7 @@ import { useTranslations } from '../../../i18n';
 import { searchProperties, getSectorsWithCounts } from '../../../lib/meilisearch';
 import type { Property } from '../../../data/types';
 import { slugToName, slugToCityNames } from '../../../lib/location-utils';
+import { toSlug } from '../../../lib/slug-utils';
 
 // SSR para rutas dinámicas
 export const prerender = false;
@@ -245,18 +246,74 @@ const faqSchema = {
   }))
 };
 
-// Tipos relacionados para sugerencias
-const relatedTypes = Object.entries(propertyTypeMap)
-  .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue && !slug.endsWith('s'))
-  .slice(0, 4)
-  .map(([slug, info]) => ({ slug, ...info }));
+// When empty: fetch alternatives
+let altCitiesForType: Array<{ name: string; slug: string; count: number }> = [];
+let altTypesInCity: Array<{ name: string; slug: string; count: number; icon: string }> = [];
 
-// Sectors in this city for deep internal links
+if (totalCount === 0) {
+  try {
+    const citiesResult = await searchProperties({
+      tipo: typeInfo.dbValue,
+      operacion: 'renta',
+      pais,
+      limit: 0,
+      facets: ['ciudad'],
+    });
+    const cityDist = citiesResult.facetDistribution?.ciudad || {};
+    altCitiesForType = Object.entries(cityDist)
+      .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    const typesResult = await searchProperties({
+      operacion: 'renta',
+      ciudad: cityNames.length > 1 ? cityNames : resolvedName,
+      pais,
+      limit: 0,
+      facets: ['tipo'],
+    });
+    const typeDist = typesResult.facetDistribution?.tipo || {};
+    const tipoDisplay: Record<string, { plural: string; slug: string; icon: string }> = {
+      'apartamento': { plural: 'Apartamentos', slug: 'apartamento', icon: '🏢' },
+      'casa': { plural: 'Casas', slug: 'casa', icon: '🏠' },
+      'villa': { plural: 'Villas', slug: 'villa', icon: '🏡' },
+      'penthouse': { plural: 'Penthouses', slug: 'penthouse', icon: '🌆' },
+      'terreno': { plural: 'Terrenos', slug: 'terreno', icon: '🌳' },
+      'local comercial': { plural: 'Locales Comerciales', slug: 'local-comercial', icon: '🏪' },
+      'oficina': { plural: 'Oficinas', slug: 'oficina', icon: '🏛️' },
+      'nave': { plural: 'Naves Industriales', slug: 'nave', icon: '🏭' },
+      'finca': { plural: 'Fincas', slug: 'finca', icon: '🌾' },
+      'estudio': { plural: 'Estudios', slug: 'estudio', icon: '🛏️' },
+    };
+    altTypesInCity = Object.entries(typeDist)
+      .filter(([dbType]) => dbType !== typeInfo.dbValue && tipoDisplay[dbType])
+      .map(([dbType, count]) => ({
+        name: tipoDisplay[dbType].plural,
+        slug: tipoDisplay[dbType].slug,
+        count: count as number,
+        icon: tipoDisplay[dbType].icon,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  } catch { /* ignore */ }
+}
+
+// Tipos relacionados (only when there ARE results)
+const relatedTypes = totalCount > 0
+  ? Object.entries(propertyTypeMap)
+      .filter(([slug, info]) => info.dbValue !== typeInfo.dbValue && !slug.endsWith('s'))
+      .slice(0, 4)
+      .map(([slug, info]) => ({ slug, ...info }))
+  : [];
+
+// Sectors (only when there are results)
 let popularSectors: Array<{ name: string; slug: string; count: number }> = [];
-try {
-  popularSectors = await getSectorsWithCounts(cityNames.length > 1 ? cityNames : resolvedName, pais);
-  popularSectors = popularSectors.slice(0, 12);
-} catch { /* ignore */ }
+if (totalCount > 0) {
+  try {
+    popularSectors = await getSectorsWithCounts(cityNames.length > 1 ? cityNames : resolvedName, pais);
+    popularSectors = popularSectors.slice(0, 12);
+  } catch { /* ignore */ }
+}
 ---
 
 <Layout
@@ -330,26 +387,71 @@ try {
           )}
         </>
       ) : (
-        <div class="text-center py-16">
-          <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
+        <div class="py-12">
+          <div class="text-center mb-12">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+              No hay {typeInfo.plural.toLowerCase()} en alquiler en {locationData.name}
+            </h2>
+            <p class="text-gray-600 max-w-md mx-auto">
+              Pero puedes explorar estas alternativas:
+            </p>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900 mb-4">
-            No encontramos {typeInfo.plural.toLowerCase()} en alquiler en {locationData.name}
-          </h2>
-          <p class="text-gray-600 mb-8 max-w-md mx-auto">
-            Actualmente no hay {typeInfo.plural.toLowerCase()} disponibles en esta zona. Prueba con otra ubicación o tipo de propiedad.
-          </p>
-          <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="/alquilar" class="bg-secondary-600 text-white hover:bg-secondary-700 font-semibold px-6 py-3 rounded-lg transition-colors">
-              Ver Todas las Propiedades
-            </a>
-            <a href={`/propiedades/${locationSlug}`} class="btn-outline">
-              Ver Todo en {locationData.name}
-            </a>
-          </div>
+
+          {altCitiesForType.length > 0 && (
+            <div class="mb-10">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                {typeInfo.plural} en alquiler en otras ciudades
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {altCitiesForType.map((city) => (
+                  <a
+                    href={`/alquilar/${typeSlug}/${city.slug}`}
+                    class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-secondary-200 transition-all group"
+                  >
+                    <span class="font-semibold text-gray-900 group-hover:text-secondary-600 block">
+                      {city.name}
+                    </span>
+                    <span class="text-sm text-gray-500">{city.count} {typeInfo.plural.toLowerCase()}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {altTypesInCity.length > 0 && (
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Otros tipos en alquiler en {locationData.name}
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {altTypesInCity.map((tipo) => (
+                  <a
+                    href={`/alquilar/${tipo.slug}/${locationSlug}`}
+                    class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-secondary-200 transition-all group"
+                  >
+                    <span class="text-xl mr-2">{tipo.icon}</span>
+                    <span class="font-semibold text-gray-900 group-hover:text-secondary-600">
+                      {tipo.name}
+                    </span>
+                    <span class="text-sm text-gray-500 block">{tipo.count} en alquiler</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {altCitiesForType.length === 0 && altTypesInCity.length === 0 && (
+            <div class="text-center">
+              <a href="/alquilar" class="bg-secondary-600 text-white hover:bg-secondary-700 font-semibold px-6 py-3 rounded-lg transition-colors">
+                Ver todas las propiedades en alquiler
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>

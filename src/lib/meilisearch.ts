@@ -208,9 +208,10 @@ async function meiliRequest(path: string, options: RequestInit = {}): Promise<an
 /**
  * Transform a MeiliSearch property document into Ubikala's Property interface.
  */
-export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = false, lang?: string): Property {
+export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = false, lang?: string, forceSale: boolean = false): Property {
   const operacionLower = doc.operacion?.toLowerCase() || '';
-  const isRentalContext = forceRental || operacionLower === 'renta' || operacionLower === 'alquiler';
+  // forceSale takes priority: when searching for venta, show as sale even if doc.operacion is renta
+  const isRentalContext = forceSale ? false : (forceRental || operacionLower === 'renta' || operacionLower === 'alquiler');
 
   // Apply translations for non-Spanish languages
   const t = (lang && lang !== 'es' && doc.traducciones?.[lang]) || null;
@@ -218,9 +219,11 @@ export function meiliToProperty(doc: MeiliPropertyDoc, forceRental: boolean = fa
   const descripcion = (t?.descripcion as string) || doc.descripcion || '';
   const slug = (lang && lang !== 'es' && doc.slug_traducciones?.[lang]) || doc.slug;
 
-  const effectivePrice = (isRentalContext && doc.precio_alquiler)
-    ? doc.precio_alquiler
-    : (doc.precio || 0);
+  const effectivePrice = isRentalContext
+    ? (doc.precio_alquiler || doc.precio || 0)
+    : forceSale
+      ? (doc.precio_venta || doc.precio || 0)
+      : (doc.precio || 0);
 
   const currency = (doc.moneda?.toUpperCase() === 'DOP' ? 'DOP' : 'USD') as 'USD' | 'DOP';
   const transactionType = isRentalContext ? 'rent' : (transactionMap[operacionLower] || 'sale');
@@ -491,9 +494,10 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
   });
 
   const isRental = operacion === 'renta';
+  const isSale = operacion === 'venta';
 
   return {
-    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, isRental, lang)),
+    properties: (result.hits || []).map((hit: MeiliPropertyDoc) => meiliToProperty(hit, isRental, lang, isSale)),
     total: result.estimatedTotalHits || result.totalHits || 0,
     facetDistribution: result.facetDistribution,
   };

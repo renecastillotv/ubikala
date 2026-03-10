@@ -120,7 +120,7 @@ const pageTitle = `${typeName} en Venta en ${pais} | Ubíkala.com`;
 <Layout
   title={pageTitle}
   description={typeDescription}
-  keywords={`${typeName.toLowerCase()} en venta republica dominicana, comprar ${typeName.toLowerCase()} rd, ${typeName.toLowerCase()} santo domingo, ${typeName.toLowerCase()} punta cana`}
+  keywords={`${typeName.toLowerCase()} en venta ${pais.toLowerCase()}, comprar ${typeName.toLowerCase()} ${pais.toLowerCase()}${citiesWithType.length > 0 ? `, ${typeName.toLowerCase()} ${citiesWithType[0].name.toLowerCase()}` : ''}`}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },
