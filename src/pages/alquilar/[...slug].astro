@@ -1,0 +1,673 @@
+---
+/**
+ * /alquilar/[...slug].astro — Smart catch-all route for property rentals
+ *
+ * Handles any combination of segments:
+ *   /alquilar/apartamento              → type only
+ *   /alquilar/boca-chica               → city only
+ *   /alquilar/apartamento/boca-chica   → type + city
+ *   /alquilar/apartamento/boca-chica/naco → type + city + sector
+ */
+
+import Layout from '../../layouts/Layout.astro';
+import PropertyCard from '../../components/PropertyCard.astro';
+import SearchBox from '../../components/SearchBox.astro';
+import Pagination from '../../components/Pagination.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import MarketPanorama from '../../components/MarketPanorama.astro';
+import { searchProperties, getCitiesWithCounts, getSectorsWithCounts } from '../../lib/meilisearch';
+import type { Property } from '../../data/types';
+import { classifySegments, PROPERTY_TYPE_MAP } from '../../lib/segment-classifier';
+import { toSlug } from '../../lib/slug-utils';
+import { getAlternateUrls } from '../../i18n';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const segments = slug ? slug.split('/').filter(Boolean) : [];
+
+if (segments.length === 0) {
+  return Astro.redirect('/alquilar');
+}
+
+const pais = Astro.locals.country?.name;
+
+// Classify all segments
+const classified = await classifySegments(segments, pais);
+
+// If there are unmatched segments, redirect
+if (classified.unmatched.length > 0 && !classified.type && !classified.city) {
+  return Astro.redirect('/alquilar');
+}
+
+const typeInfo = classified.type;
+const cityInfo = classified.city;
+const sectorInfo = classified.sector;
+
+// Build canonical URL (normalized order: type/city/sector)
+const canonicalParts = ['/alquilar'];
+if (typeInfo) canonicalParts.push(typeInfo.slug);
+if (cityInfo) canonicalParts.push(cityInfo.slug);
+if (sectorInfo) canonicalParts.push(sectorInfo.slug);
+const canonicalPath = canonicalParts.join('/');
+
+// Redirect to canonical order if URL differs
+const currentPath = `/alquilar/${segments.join('/')}`;
+if (currentPath !== canonicalPath && segments.length > 1) {
+  return Astro.redirect(canonicalPath, 301);
+}
+
+const alternateUrls = getAlternateUrls(canonicalPath);
+
+// Pagination & filters
+const ITEMS_PER_PAGE = 24;
+const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
+const precioParam = Astro.url.searchParams.get('precio');
+const habitacionesParam = Astro.url.searchParams.get('habitaciones');
+const banosParam = Astro.url.searchParams.get('banos');
+
+let precioMin: number | undefined;
+let precioMax: number | undefined;
+if (precioParam) {
+  if (precioParam.endsWith('+')) {
+    precioMin = parseInt(precioParam);
+  } else if (precioParam.includes('-')) {
+    const [min, max] = precioParam.split('-').map(Number);
+    precioMin = min || undefined;
+    precioMax = max || undefined;
+  }
+}
+
+// ============================================================================
+// FETCH PROPERTIES
+// ============================================================================
+
+let properties: Property[] = [];
+let totalCount = 0;
+
+try {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const result = await searchProperties({
+    operacion: 'renta',
+    tipo: typeInfo?.dbValue,
+    ciudad: cityInfo ? (cityInfo.names.length > 1 ? cityInfo.names : cityInfo.name) : undefined,
+    sector: sectorInfo?.name,
+    precioMin,
+    precioMax,
+    habitacionesMin: habitacionesParam ? parseInt(habitacionesParam) : undefined,
+    banosMin: banosParam ? parseInt(banosParam) : undefined,
+    limit: ITEMS_PER_PAGE,
+    offset,
+    pais,
+  });
+  properties = result.properties;
+  totalCount = result.total;
+
+  if (properties.length > 0 && cityInfo) {
+    const firstProp = properties[0];
+    if (firstProp.location.city) cityInfo.name = firstProp.location.city;
+  }
+  if (properties.length > 0 && sectorInfo) {
+    const firstProp = properties[0];
+    if (firstProp.location.sector) sectorInfo.name = firstProp.location.sector;
+  }
+} catch (error) {
+  console.error('Error fetching properties:', error);
+}
+
+const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+if (currentPage > totalPages && totalPages > 0) {
+  return Astro.redirect(canonicalPath);
+}
+
+// ============================================================================
+// BUILD DISPLAY STRINGS
+// ============================================================================
+
+const typeName = typeInfo?.plural || 'Propiedades';
+const typeSingular = typeInfo?.singular || 'Propiedad';
+const cityName = cityInfo?.name || '';
+const sectorName = sectorInfo?.name || '';
+
+let titleParts: string[] = [];
+titleParts.push(typeName);
+titleParts.push('en Alquiler');
+if (sectorName) {
+  titleParts.push(`en ${sectorName}, ${cityName}`);
+} else if (cityName) {
+  titleParts.push(`en ${cityName}`);
+} else {
+  titleParts.push(`en ${pais}`);
+}
+
+const pageTitle = `${titleParts.join(' ')} | Ubikala`;
+const locationLabel = sectorName ? `${sectorName}, ${cityName}` : cityName || pais || '';
+
+const pageDescription = totalCount > 0
+  ? `Encuentra ${typeName.toLowerCase()} en alquiler en ${locationLabel}. ${totalCount} propiedades disponibles con fotos, precios y contacto directo con asesores.`
+  : `Busca ${typeName.toLowerCase()} en alquiler en ${locationLabel}. Explora opciones y contacta asesores inmobiliarios.`;
+
+// ============================================================================
+// DYNAMIC FAQS
+// ============================================================================
+
+const faqLocation = sectorName || cityName || pais || '';
+const dynamicFAQs = [
+  {
+    question: `¿Cuanto cuesta alquilar un ${typeSingular.toLowerCase()} en ${faqLocation}?`,
+    answer: `Los precios de alquiler de ${typeName.toLowerCase()} en ${faqLocation} varian segun la ubicacion, tamano, si esta amueblado y las amenidades. Actualmente tenemos ${totalCount} opciones disponibles. Explora el listado y contacta a los asesores para precios actualizados.`
+  },
+  {
+    question: `¿Que necesito para alquilar un ${typeSingular.toLowerCase()} en ${faqLocation}?`,
+    answer: `Generalmente necesitas: cedula o pasaporte, carta de trabajo o comprobante de ingresos, referencias personales y deposito de seguridad (usualmente 1-2 meses). Algunos propietarios solicitan fiador o garantia adicional.`
+  },
+  {
+    question: `¿Los ${typeName.toLowerCase()} en ${faqLocation} vienen amueblados?`,
+    answer: `Dependiendo de la propiedad, puedes encontrar opciones amuebladas, semi-amuebladas o sin amueblar. Te recomendamos revisar los detalles de cada listado o contactar directamente al asesor para confirmar.`
+  },
+  {
+    question: `¿Cuanto es el deposito para alquilar en ${faqLocation}?`,
+    answer: `El deposito de seguridad tipico es de 1 a 2 meses de alquiler. Algunos propietarios pueden solicitar el primer y ultimo mes por adelantado. Las condiciones varian segun el propietario y el tipo de contrato.`
+  },
+];
+
+// ============================================================================
+// SCHEMAS
+// ============================================================================
+
+const listingSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: titleParts.join(' '),
+  description: pageDescription,
+  numberOfItems: totalCount,
+  itemListElement: properties.slice(0, 10).map((property, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    item: {
+      '@type': 'RealEstateListing',
+      name: property.title,
+      description: property.description?.substring(0, 160),
+      url: `https://ubikala.com/propiedad/${property.slug}`,
+      image: property.images[0]?.url,
+      offers: {
+        '@type': 'Offer',
+        price: property.rentalPrice || property.price,
+        priceCurrency: property.currency,
+      },
+    },
+  })),
+};
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: dynamicFAQs.map(faq => ({
+    '@type': 'Question',
+    name: faq.question,
+    acceptedAnswer: { '@type': 'Answer', text: faq.answer },
+  })),
+};
+
+// ============================================================================
+// NAVIGATION DATA
+// ============================================================================
+
+let citiesWithType: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  const cityResult = await searchProperties({
+    tipo: typeInfo?.dbValue,
+    operacion: 'renta',
+    pais,
+    limit: 0,
+    facets: ['ciudad'],
+  });
+  const distribution = cityResult.facetDistribution?.ciudad || {};
+  citiesWithType = Object.entries(distribution)
+    .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+} catch { /* ignore */ }
+
+let popularSectors: Array<{ name: string; slug: string; count: number }> = [];
+if (cityInfo && totalCount > 0) {
+  try {
+    const allSectors = await getSectorsWithCounts(
+      cityInfo.names.length > 1 ? cityInfo.names : cityInfo.name,
+      pais
+    );
+    if (sectorInfo) {
+      popularSectors = allSectors.filter(s => toSlug(s.name) !== sectorInfo.slug).slice(0, 12);
+    } else {
+      popularSectors = allSectors.slice(0, 12);
+    }
+  } catch { /* ignore */ }
+}
+
+const tipoDisplay: Record<string, { plural: string; slug: string; icon: string }> = {
+  'apartamento': { plural: 'Apartamentos', slug: 'apartamento', icon: '🏢' },
+  'casa': { plural: 'Casas', slug: 'casa', icon: '🏠' },
+  'villa': { plural: 'Villas', slug: 'villa', icon: '🏡' },
+  'penthouse': { plural: 'Penthouses', slug: 'penthouse', icon: '🌆' },
+  'terreno': { plural: 'Terrenos', slug: 'terreno', icon: '🌳' },
+  'local comercial': { plural: 'Locales Comerciales', slug: 'local-comercial', icon: '🏪' },
+  'oficina': { plural: 'Oficinas', slug: 'oficina', icon: '🏛️' },
+  'nave': { plural: 'Naves Industriales', slug: 'nave', icon: '🏭' },
+  'finca': { plural: 'Fincas', slug: 'finca', icon: '🌾' },
+  'estudio': { plural: 'Estudios', slug: 'estudio', icon: '🛏️' },
+};
+
+let altCitiesForType: Array<{ name: string; slug: string; count: number }> = [];
+let altTypesInCity: Array<{ name: string; slug: string; count: number; icon: string }> = [];
+
+if (totalCount === 0) {
+  try {
+    if (typeInfo) {
+      const citiesResult = await searchProperties({
+        tipo: typeInfo.dbValue,
+        operacion: 'renta',
+        pais,
+        limit: 0,
+        facets: ['ciudad'],
+      });
+      const cityDist = citiesResult.facetDistribution?.ciudad || {};
+      altCitiesForType = Object.entries(cityDist)
+        .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+    }
+
+    if (cityInfo) {
+      const typesResult = await searchProperties({
+        operacion: 'renta',
+        ciudad: cityInfo.names.length > 1 ? cityInfo.names : cityInfo.name,
+        pais,
+        limit: 0,
+        facets: ['tipo'],
+      });
+      const typeDist = typesResult.facetDistribution?.tipo || {};
+      altTypesInCity = Object.entries(typeDist)
+        .filter(([dbType]) => (!typeInfo || dbType !== typeInfo.dbValue) && tipoDisplay[dbType])
+        .map(([dbType, count]) => ({
+          name: tipoDisplay[dbType].plural,
+          slug: tipoDisplay[dbType].slug,
+          count: count as number,
+          icon: tipoDisplay[dbType].icon,
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 6);
+    }
+  } catch { /* ignore */ }
+}
+
+const relatedTypes = totalCount > 0
+  ? Object.entries(PROPERTY_TYPE_MAP)
+      .filter(([slug, info]) => (!typeInfo || info.dbValue !== typeInfo.dbValue) && !slug.endsWith('s') && slug !== 'solar' && slug !== 'local')
+      .slice(0, 4)
+      .map(([slug, info]) => ({ slug, ...info }))
+  : [];
+
+// ============================================================================
+// BREADCRUMBS
+// ============================================================================
+
+const breadcrumbItems: Array<{ label: string; href?: string }> = [
+  { label: 'Inicio', href: '/' },
+  { label: 'Alquilar', href: '/alquilar' },
+];
+if (typeInfo) {
+  if (cityInfo || sectorInfo) {
+    breadcrumbItems.push({ label: typeInfo.plural, href: `/alquilar/${typeInfo.slug}` });
+  } else {
+    breadcrumbItems.push({ label: typeInfo.plural });
+  }
+}
+if (cityInfo) {
+  if (sectorInfo) {
+    const cityHref = typeInfo ? `/alquilar/${typeInfo.slug}/${cityInfo.slug}` : `/alquilar/${cityInfo.slug}`;
+    breadcrumbItems.push({ label: cityInfo.name, href: cityHref });
+  } else {
+    breadcrumbItems.push({ label: cityInfo.name });
+  }
+}
+if (sectorInfo) {
+  breadcrumbItems.push({ label: sectorInfo.name });
+}
+
+function buildLink(type?: string, city?: string, sector?: string): string {
+  const parts = ['/alquilar'];
+  if (type) parts.push(type);
+  if (city) parts.push(city);
+  if (sector) parts.push(sector);
+  return parts.join('/');
+}
+
+const marketTypeSlug = typeInfo?.slug || undefined;
+const marketLocationSlug = sectorInfo
+  ? `${cityInfo?.slug}/${sectorInfo.slug}`
+  : cityInfo?.slug || undefined;
+---
+
+<Layout
+  title={pageTitle}
+  description={pageDescription}
+  keywords={`${typeName.toLowerCase()} en alquiler ${locationLabel.toLowerCase()}, alquilar ${typeSingular.toLowerCase()} ${locationLabel.toLowerCase()}`}
+  alternateLanguages={alternateUrls}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />
+
+  <Breadcrumb items={breadcrumbItems} />
+
+  <!-- Hero -->
+  <section class="bg-gradient-to-r from-primary-600 to-primary-700 py-12">
+    <div class="container-custom">
+      <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">
+        {typeName} en Alquiler {locationLabel ? `en ${locationLabel}` : `en ${pais}`}
+      </h1>
+      <p class="text-primary-100 text-lg max-w-3xl">
+        {totalCount > 0
+          ? `Explora ${totalCount} ${typeName.toLowerCase()} disponibles en alquiler${locationLabel ? ` en ${locationLabel}` : ''}.`
+          : `Actualmente no hay ${typeName.toLowerCase()} disponibles en alquiler${locationLabel ? ` en ${locationLabel}` : ''}. Explora otras zonas o tipos de propiedad.`
+        }
+      </p>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="py-4 bg-gray-50 border-b">
+    <div class="container-custom">
+      <details>
+        <summary class="cursor-pointer text-sm font-medium text-primary-600 hover:text-primary-700 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          Modificar Busqueda
+        </summary>
+        <div class="mt-4">
+          <SearchBox variant="compact" />
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- Results or Empty State -->
+  <section class="section">
+    <div class="container-custom">
+      {properties.length > 0 ? (
+        <>
+          <div class="flex items-center justify-between mb-8">
+            <p class="text-gray-600">
+              <span class="font-semibold text-gray-900">{totalCount}</span> {typeName.toLowerCase()} en alquiler
+              {locationLabel ? ` en ${locationLabel}` : ''}
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard property={property} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div class="mt-12">
+              <Pagination currentPage={currentPage} totalPages={totalPages} baseUrl={canonicalPath} />
+            </div>
+          )}
+        </>
+      ) : (
+        <div class="py-12">
+          <div class="text-center mb-12">
+            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">
+              No hay {typeName.toLowerCase()} en alquiler {locationLabel ? `en ${locationLabel}` : ''}
+            </h2>
+            <p class="text-gray-600 max-w-md mx-auto">
+              Pero puedes explorar estas alternativas:
+            </p>
+          </div>
+
+          {altCitiesForType.length > 0 && (
+            <div class="mb-10">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                {typeName} en alquiler en otras ciudades
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {altCitiesForType.map((city) => (
+                  <a
+                    href={buildLink(typeInfo?.slug, city.slug)}
+                    class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
+                  >
+                    <span class="font-semibold text-gray-900 group-hover:text-primary-600 block">
+                      {city.name}
+                    </span>
+                    <span class="text-sm text-gray-500">{city.count} {typeName.toLowerCase()}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {altTypesInCity.length > 0 && (
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Otros tipos en alquiler {cityInfo ? `en ${cityInfo.name}` : ''}
+              </h3>
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {altTypesInCity.map((tipo) => (
+                  <a
+                    href={buildLink(tipo.slug, cityInfo?.slug)}
+                    class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all group"
+                  >
+                    <span class="text-xl mr-2">{tipo.icon}</span>
+                    <span class="font-semibold text-gray-900 group-hover:text-primary-600">
+                      {tipo.name}
+                    </span>
+                    <span class="text-sm text-gray-500 block">{tipo.count} en alquiler</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {altCitiesForType.length === 0 && altTypesInCity.length === 0 && (
+            <div class="text-center">
+              <a href="/alquilar" class="btn-primary">Ver todas las propiedades en alquiler</a>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Market Panorama -->
+  {marketTypeSlug && marketLocationSlug && (
+    <MarketPanorama
+      propertyType={marketTypeSlug}
+      locationSlug={marketLocationSlug}
+      operation="alquilar"
+      countryCode={Astro.locals.country?.code}
+      language="es"
+    />
+  )}
+
+  <!-- FAQs -->
+  {(cityInfo || typeInfo) && (
+    <section class="py-16">
+      <div class="container-custom">
+        <h2 class="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-4">
+          Preguntas Frecuentes
+        </h2>
+        <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">
+          Resolvemos tus dudas sobre alquilar {typeName.toLowerCase()} {locationLabel ? `en ${locationLabel}` : ''}
+        </p>
+
+        <div class="max-w-3xl mx-auto space-y-4">
+          {dynamicFAQs.map((faq) => (
+            <details class="bg-white rounded-xl shadow-sm group">
+              <summary class="flex items-center justify-between p-6 cursor-pointer">
+                <span class="font-semibold text-gray-900 pr-4">{faq.question}</span>
+                <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div class="px-6 pb-6 text-gray-600">
+                {faq.answer}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Cities with this type -->
+  {!cityInfo && citiesWithType.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">
+          {typeName} en Alquiler por Ciudad
+        </h2>
+        <p class="text-gray-600 mb-8">
+          Explora {typeName.toLowerCase()} disponibles en las principales ciudades de {pais}.
+        </p>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {citiesWithType.map((city) => (
+            <a
+              href={buildLink(typeInfo?.slug, city.slug)}
+              class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600 block">
+                {city.name}
+              </span>
+              <span class="text-sm text-gray-500">{city.count} {typeName.toLowerCase()}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Sectors -->
+  {popularSectors.length > 0 && (
+    <section class="py-16 bg-gray-50">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+          {typeName} en Alquiler por Sector en {cityName}
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {popularSectors.map((s) => (
+            <a
+              href={buildLink(typeInfo?.slug, cityInfo?.slug, s.slug)}
+              class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow group"
+            >
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600 block">
+                {s.name}
+              </span>
+              <span class="text-sm text-gray-500">{s.count} {typeName.toLowerCase()}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Other types -->
+  {relatedTypes.length > 0 && (
+    <section class="py-16">
+      <div class="container-custom">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">
+          Otros Tipos de Propiedad {locationLabel ? `en ${locationLabel}` : ''}
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {relatedTypes.map((type) => (
+            <a
+              href={buildLink(type.slug, cityInfo?.slug, sectorInfo?.slug)}
+              class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow text-center group"
+            >
+              <span class="text-3xl block mb-2">{type.icon}</span>
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600">
+                {type.plural}
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA -->
+  <section class="py-16 bg-gradient-to-r from-primary-600 to-primary-700">
+    <div class="container-custom">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="text-3xl font-bold text-white mb-4">
+          ¿Necesitas ayuda para encontrar tu {typeSingular.toLowerCase()} en alquiler?
+        </h2>
+        <p class="text-primary-100 text-lg mb-8">
+          Nuestros asesores {locationLabel ? `conocen ${locationLabel} y ` : ''}pueden ayudarte a encontrar la propiedad ideal para alquilar.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="/asesores" class="bg-white text-primary-600 hover:bg-primary-50 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Contactar un Asesor
+          </a>
+          <a href="/alquilar" class="border-2 border-white text-white hover:bg-white/10 font-semibold px-8 py-3 rounded-lg transition-colors">
+            Ver Mas Propiedades
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Related Links -->
+  <section class="py-12">
+    <div class="container-custom">
+      <h2 class="text-xl font-bold text-gray-900 mb-6">Enlaces Relacionados</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {cityInfo && (
+          <a href={`/propiedades/${cityInfo.slug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              </svg>
+            </div>
+            <div>
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600">Todo en {cityInfo.name}</span>
+              <p class="text-sm text-gray-500">Todas las propiedades</p>
+            </div>
+          </a>
+        )}
+
+        {cityInfo && (
+          <a href={`/comprar/${cityInfo.slug}`} class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div class="w-10 h-10 bg-secondary-100 rounded-lg flex items-center justify-center">
+              <svg class="w-5 h-5 text-secondary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            </div>
+            <div>
+              <span class="font-semibold text-gray-900 group-hover:text-primary-600">Comprar en {cityInfo.name}</span>
+              <p class="text-sm text-gray-500">Propiedades en venta</p>
+            </div>
+          </a>
+        )}
+
+        <a href="/guias" class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <span class="font-semibold text-gray-900 group-hover:text-primary-600">Guias Inmobiliarias</span>
+            <p class="text-sm text-gray-500">Recursos utiles</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
