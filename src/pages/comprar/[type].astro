@@ -59,11 +59,37 @@ const dbType = slugToDbType[typeSlug || ''] || typeSlug;
 const typeName = typeNames[typeSlug || ''] || typeSlug?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Propiedades';
 const typeDescription = typeDescriptions[typeSlug || ''] || `Encuentra ${typeName.toLowerCase()} en venta en ${pais}.`;
 
+// Read advanced filter query params
+const precioParam = Astro.url.searchParams.get('precio');
+const habitacionesParam = Astro.url.searchParams.get('habitaciones');
+const banosParam = Astro.url.searchParams.get('banos');
+
+let precioMin: number | undefined;
+let precioMax: number | undefined;
+if (precioParam) {
+  if (precioParam.endsWith('+')) {
+    precioMin = parseInt(precioParam);
+  } else if (precioParam.includes('-')) {
+    const [min, max] = precioParam.split('-').map(Number);
+    precioMin = min || undefined;
+    precioMax = max || undefined;
+  }
+}
+
 // Fetch properties from MeiliSearch
 let typeProperties: Property[] = [];
 let totalCount = 0;
 try {
-  const result = await searchProperties({ tipo: dbType, operacion: 'venta', limit: 24, pais });
+  const result = await searchProperties({
+    tipo: dbType,
+    operacion: 'venta',
+    precioMin,
+    precioMax,
+    habitacionesMin: habitacionesParam ? parseInt(habitacionesParam) : undefined,
+    banosMin: banosParam ? parseInt(banosParam) : undefined,
+    limit: 24,
+    pais,
+  });
   typeProperties = result.properties;
   totalCount = result.total;
 } catch (error) {

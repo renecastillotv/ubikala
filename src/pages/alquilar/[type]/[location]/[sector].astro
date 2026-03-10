@@ -54,6 +54,23 @@ let locationData = {
   province: pais || '',
 };
 
+// Read advanced filter query params
+const precioParam = Astro.url.searchParams.get('precio');
+const habitacionesParam = Astro.url.searchParams.get('habitaciones');
+const banosParam = Astro.url.searchParams.get('banos');
+
+let precioMin: number | undefined;
+let precioMax: number | undefined;
+if (precioParam) {
+  if (precioParam.endsWith('+')) {
+    precioMin = parseInt(precioParam);
+  } else if (precioParam.includes('-')) {
+    const [min, max] = precioParam.split('-').map(Number);
+    precioMin = min || undefined;
+    precioMax = max || undefined;
+  }
+}
+
 let properties: Property[] = [];
 let totalCount = 0;
 
@@ -65,6 +82,10 @@ try {
     tipo: typeInfo.dbValue,
     ciudad: cityNames.length > 1 ? cityNames : resolvedCityName,
     sector: resolvedSectorName,
+    precioMin,
+    precioMax,
+    habitacionesMin: habitacionesParam ? parseInt(habitacionesParam) : undefined,
+    banosMin: banosParam ? parseInt(banosParam) : undefined,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,

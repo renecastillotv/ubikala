@@ -47,6 +47,23 @@ if (!typeInfo) {
 const ITEMS_PER_PAGE = 24;
 const currentPage = Math.max(1, parseInt(Astro.url.searchParams.get('page') || '1'));
 
+// Read advanced filter query params
+const precioParam = Astro.url.searchParams.get('precio');
+const habitacionesParam = Astro.url.searchParams.get('habitaciones');
+const banosParam = Astro.url.searchParams.get('banos');
+
+let precioMin: number | undefined;
+let precioMax: number | undefined;
+if (precioParam) {
+  if (precioParam.endsWith('+')) {
+    precioMin = parseInt(precioParam);
+  } else if (precioParam.includes('-')) {
+    const [min, max] = precioParam.split('-').map(Number);
+    precioMin = min || undefined;
+    precioMax = max || undefined;
+  }
+}
+
 const pais = Astro.locals.country?.name;
 
 // Resolve city from slug
@@ -74,6 +91,10 @@ try {
     tipo: typeInfo.dbValue,
     ciudad: cityNames.length > 1 ? cityNames : resolvedCityName,
     sector: resolvedSectorName,
+    precioMin,
+    precioMax,
+    habitacionesMin: habitacionesParam ? parseInt(habitacionesParam) : undefined,
+    banosMin: banosParam ? parseInt(banosParam) : undefined,
     limit: ITEMS_PER_PAGE,
     offset,
     pais,

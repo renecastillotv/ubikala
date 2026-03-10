@@ -19,9 +19,8 @@ const containerClass = {
 }[variant];
 ---
 
-{/* SEO URL routing: when user selects sale + type + location, go to /comprar/type/location */}
+{/* SEO URL routing: always use clean /comprar/type/location URLs, advanced filters as query params */}
 <script>
-  // Map frontend property type values to Spanish URL slugs
   const typeToSlug: Record<string, string> = {
     house: 'casa', apartment: 'apartamento', villa: 'villa',
     penthouse: 'penthouse', land: 'terreno', commercial: 'local-comercial', office: 'oficina',
@@ -42,24 +41,51 @@ const containerClass = {
       const minArea = data.get('minArea') as string;
       const maxArea = data.get('maxArea') as string;
 
-      // Only redirect to SEO URL if there are no advanced filters
-      const hasAdvancedFilters = priceRange || bedrooms || bathrooms || minArea || maxArea;
+      // Build query params from advanced filters (Spanish param names for SEO)
+      const params = new URLSearchParams();
+      if (priceRange) params.set('precio', priceRange);
+      if (bedrooms) params.set('habitaciones', bedrooms);
+      if (bathrooms) params.set('banos', bathrooms);
+      if (minArea) params.set('area_min', minArea);
+      if (maxArea) params.set('area_max', maxArea);
+      const qs = params.toString() ? `?${params.toString()}` : '';
 
-      if (!hasAdvancedFilters && transaction && transaction !== 'all' && propType && propType !== 'all' && location) {
-        const opSlug = operationToSlug[transaction];
-        const tSlug = typeToSlug[propType];
-        if (opSlug && tSlug) {
-          e.preventDefault();
-          window.location.href = `/${opSlug}/${tSlug}/${location}`;
-          return;
-        }
+      const opSlug = transaction && transaction !== 'all' ? operationToSlug[transaction] : null;
+      const tSlug = propType && propType !== 'all' ? typeToSlug[propType] : null;
+
+      // operation + type + location → /comprar/apartamento/santo-domingo(?filters)
+      if (opSlug && tSlug && location) {
+        e.preventDefault();
+        window.location.href = `/${opSlug}/${tSlug}/${location}${qs}`;
+        return;
       }
 
-      // Sale + location (no type) → /comprar?location=...  (keep as query for now)
-      // If only location selected → /propiedades/{location}
-      if (!hasAdvancedFilters && (!transaction || transaction === 'all') && (!propType || propType === 'all') && location) {
+      // operation + type (no location) → /comprar/apartamento(?filters)
+      if (opSlug && tSlug) {
         e.preventDefault();
-        window.location.href = `/propiedades/${location}`;
+        window.location.href = `/${opSlug}/${tSlug}${qs}`;
+        return;
+      }
+
+      // operation + location (no type) → /comprar?ubicacion=location(&filters)
+      if (opSlug && location) {
+        params.set('ubicacion', location);
+        e.preventDefault();
+        window.location.href = `/${opSlug}?${params.toString()}`;
+        return;
+      }
+
+      // location only → /propiedades/location(?filters)
+      if (location && !opSlug && !tSlug) {
+        e.preventDefault();
+        window.location.href = `/propiedades/${location}${qs}`;
+        return;
+      }
+
+      // operation only → /comprar(?filters)
+      if (opSlug) {
+        e.preventDefault();
+        window.location.href = `/${opSlug}${qs}`;
         return;
       }
     });
