@@ -49,7 +49,7 @@ if (!agent) {
     name: agent.name,
     url: `https://ubikala.com/asesor/${agent.slug}`,
     image: agent.photo && !agent.photo.includes('placeholder') ? agent.photo : undefined,
-    description: agent.bio || `Asesor inmobiliario verificado en Republica Dominicana`,
+    description: agent.bio || `Asesor inmobiliario verificado en ${pais}`,
     telephone: agent.phone,
     email: agent.email,
     jobTitle: 'Asesor Inmobiliario',

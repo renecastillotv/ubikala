@@ -4,6 +4,7 @@ import PropertyCard from '../../../components/PropertyCard.astro';
 import SearchBox from '../../../components/SearchBox.astro';
 import { useTranslations, getAlternateUrls } from '../../../i18n';
 import { searchProperties } from '../../../lib/meilisearch';
+import { toSlug } from '../../../lib/slug-utils';
 import type { Property } from '../../../data/types';
 import Breadcrumb from '../../../components/Breadcrumb.astro';
 
@@ -88,13 +89,30 @@ try {
   console.error('Error fetching properties by type:', error);
 }
 
+// Fetch cities with this type for sale
+let citiesWithType: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  const cityResult = await searchProperties({
+    tipo: dbType,
+    operacion: 'venta',
+    pais,
+    limit: 0,
+    facets: ['ciudad'],
+  });
+  const distribution = cityResult.facetDistribution?.ciudad || {};
+  citiesWithType = Object.entries(distribution)
+    .map(([name, count]) => ({ name, slug: toSlug(name), count: count as number }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+} catch { /* ignore */ }
+
 const pageTitle = `${typeName} for Sale in ${pais} | Ubikala`;
 ---
 
 <Layout
   title={pageTitle}
   description={typeDescription}
-  keywords={`${typeName.toLowerCase()} for sale dominican republic, buy ${typeName.toLowerCase()} dr, ${typeName.toLowerCase()} santo domingo, ${typeName.toLowerCase()} punta cana`}
+  keywords={`${typeName.toLowerCase()} for sale ${pais.toLowerCase()}, buy ${typeName.toLowerCase()} ${pais.toLowerCase()}, ${typeName.toLowerCase()} real estate`}
   alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
@@ -162,13 +180,16 @@ const pageTitle = `${typeName} for Sale in ${pais} | Ubikala`;
           to get more details and schedule viewings.
         </p>
 
-        <h3>Popular Areas for {typeName}</h3>
-        <ul>
-          <li><strong>Santo Domingo:</strong> Piantini, Naco, Bella Vista, Arroyo Hondo, Ensanche Paraiso</li>
-          <li><strong>Punta Cana:</strong> Cap Cana, Bavaro, Cocotal, Punta Cana Village</li>
-          <li><strong>Santiago:</strong> Cerros de Gurabo, Jardines Metropolitanos, Los Jardines</li>
-          <li><strong>Puerto Plata:</strong> Sosua, Cabarete, Costambar</li>
-        </ul>
+        {citiesWithType.length > 0 && (
+          <>
+            <h3>Popular Areas for {typeName}</h3>
+            <ul>
+              {citiesWithType.slice(0, 6).map(city => (
+                <li><a href={`/en/buy/${typeSlug}/${city.slug}`} class="text-primary-600 hover:underline"><strong>{city.name}</strong></a> — {city.count} {typeName.toLowerCase()} available</li>
+              ))}
+            </ul>
+          </>
+        )}
 
         <h3>Buying Process for Foreign Buyers</h3>
         <p>
