@@ -4,7 +4,7 @@ import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Pagination from '../../components/Pagination.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations, tPais } from '../../i18n';
+import { useTranslations, tPais, getAlternateUrls } from '../../i18n';
 import { searchProperties, getMarketStats, getCitiesWithCounts } from '../../lib/meilisearch';
 import MarketStatsBar from '../../components/MarketStatsBar.astro';
 import type { Property } from '../../data/types';
@@ -19,6 +19,7 @@ import SEOFAQSection from '../../components/SEOFAQSection.astro';
 export const prerender = false;
 
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls('/comprar');
 const country = Astro.locals.country;
 const pais = country.name;
 
@@ -91,7 +92,8 @@ const listingSchema = {
 <Layout
   title={pageTitle}
   description={pageDescription}
-  keywords="comprar casa republica dominicana, propiedades en venta rd, apartamentos venta santo domingo, casas venta punta cana"
+  keywords={`comprar casa ${pais.toLowerCase()}, propiedades en venta ${pais.toLowerCase()}, apartamentos venta, casas venta`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
 

@@ -4,12 +4,13 @@ import Hero from '../components/Hero.astro';
 import FeaturedProperties from '../components/FeaturedProperties.astro';
 import LocationsGrid from '../components/LocationsGrid.astro';
 import CTASection from '../components/CTASection.astro';
-import { useTranslations } from '../i18n';
+import { useTranslations, getAlternateUrls } from '../i18n';
 import { getCitiesWithCounts } from '../lib/meilisearch';
 import SEOBenefits from '../components/SEOBenefits.astro';
 import { getBenefitsContent, getDestinations, getDestinationsHeader, getHeroContent } from '../lib/seo-content-db';
 
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls('/');
 const country = Astro.locals.country;
 const pais = country.name;
 
@@ -68,6 +69,7 @@ const organizationSchema = {
   title={t.pages.home.title}
   description={t.pages.home.description}
   keywords={t.meta.keywords}
+  alternateLanguages={alternateUrls}
 >
   <script is:inline type="application/ld+json" set:html={JSON.stringify(homeSchema)} slot="head" />
   <script is:inline type="application/ld+json" set:html={JSON.stringify(organizationSchema)} slot="head" />

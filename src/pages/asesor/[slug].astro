@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations, localizedUrl } from '../../i18n';
+import { useTranslations, localizedUrl, getAlternateUrls } from '../../i18n';
 import { getAgentBySlug, getPropertiesByAgent, searchAgents } from '../../lib/meilisearch';
 import AgentNotFound from '../../components/AgentNotFound.astro';
 import type { Agent, Property } from '../../data/types';
@@ -13,6 +13,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls(`/asesor/${slug}`);
 const pais = Astro.locals.country.name;
 
 // Buscar agente en la base de datos
@@ -98,6 +99,7 @@ if (!agent) {
   title={pageTitle}
   description={pageDescription}
   image={agent.photo}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(agentSchema)} slot="head" />
 

@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import PropertyCard from '../../components/PropertyCard.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { useTranslations } from '../../i18n';
+import { useTranslations, getAlternateUrls } from '../../i18n';
 import { searchProperties } from '../../lib/meilisearch';
 import { toSlug } from '../../lib/slug-utils';
 import type { Property } from '../../data/types';
@@ -40,6 +40,7 @@ const typeNames: Record<string, string> = {
 
 const { type: typeSlug } = Astro.params;
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls(`/alquilar/${typeSlug}`);
 const pais = Astro.locals.country.name;
 
 const typeDescriptions: Record<string, string> = {
@@ -141,6 +142,7 @@ const listingSchema = {
   title={pageTitle}
   description={typeDescription}
   keywords={`${typeName.toLowerCase()} en alquiler ${pais.toLowerCase()}, rentar ${typeName.toLowerCase()} ${pais.toLowerCase()}${citiesWithType.length > 0 ? `, ${typeName.toLowerCase()} ${citiesWithType[0].name.toLowerCase()}` : ''}`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(listingSchema)} slot="head" />
   <Breadcrumb items={[

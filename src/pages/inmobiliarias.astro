@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { useTranslations } from '../i18n';
+import { useTranslations, getAlternateUrls } from '../i18n';
 import { getPortalInmobiliarias } from '../lib/meilisearch';
 import { getUbikalaInmobiliarias } from '../lib/ubikala-db';
 import { transformUbikalaAgents } from '../lib/transformers';
@@ -13,6 +13,7 @@ import type { Agent } from '../data/types';
 export const prerender = false;
 
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls('/inmobiliarias');
 const pais = Astro.locals.country?.name;
 
 // Configuración de paginación
@@ -61,7 +62,8 @@ if (currentPage > totalPages && totalPages > 0) {
 <Layout
   title="Inmobiliarias | Ubíkala"
   description="Encuentra las mejores inmobiliarias y empresas de bienes raíces. Compra, venta y alquiler de propiedades."
-  keywords="inmobiliarias, empresas bienes raices, directorio inmobiliarias"
+  keywords={`inmobiliarias ${pais?.toLowerCase() || ''}, empresas bienes raices, directorio inmobiliarias`}
+  alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

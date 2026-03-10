@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import AgentCard from '../components/AgentCard.astro';
 import Pagination from '../components/Pagination.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { useTranslations } from '../i18n';
+import { useTranslations, getAlternateUrls } from '../i18n';
 import { searchAgents } from '../lib/meilisearch';
 import { getUbikalaAgents } from '../lib/ubikala-db';
 import { transformUbikalaAgents } from '../lib/transformers';
@@ -13,6 +13,7 @@ import type { Agent } from '../data/types';
 export const prerender = false;
 
 const t = useTranslations('es');
+const alternateUrls = getAlternateUrls('/asesores');
 const pais = Astro.locals.country?.name;
 
 // Configuración de paginación
@@ -67,6 +68,7 @@ if (currentPage > totalPages && totalPages > 0) {
   title={t.pages.agents.title}
   description={t.pages.agents.description}
   keywords={`asesores inmobiliarios ${pais?.toLowerCase() || ''}, agentes bienes raices ${pais?.toLowerCase() || ''}, inmobiliarias, corredores inmobiliarios`}
+  alternateLanguages={alternateUrls}
 >
   <Breadcrumb items={[
     { label: 'Inicio', href: '/' },

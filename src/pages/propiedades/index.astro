@@ -4,10 +4,12 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import { searchProperties, getLocationsWithStats } from '../../lib/meilisearch';
 import { toSlug } from '../../lib/slug-utils';
+import { getAlternateUrls } from '../../i18n';
 
 export const prerender = false;
 
 const country = Astro.locals.country;
+const alternateUrls = getAlternateUrls('/propiedades');
 const pais = country.name;
 const countryCode = country.code;
 
@@ -154,6 +156,7 @@ const defaultImage = 'https://images.unsplash.com/photo-1507525428034-b723cf961d
   title={pageTitle}
   description={pageDescription}
   keywords={`propiedades ${pais.toLowerCase()}, inmuebles ${pais.toLowerCase()}, comprar ${pais.toLowerCase()}, alquilar ${pais.toLowerCase()}, casas, apartamentos, ubikala`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(pageSchema)} slot="head" />
 

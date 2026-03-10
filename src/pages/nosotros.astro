@@ -4,7 +4,9 @@ import Icon from '../components/Icons.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getPlatformStats } from '../lib/meilisearch';
 import { getSiteConfig } from '../lib/config';
+import { getAlternateUrls } from '../i18n';
 
+const alternateUrls = getAlternateUrls('/nosotros');
 const pais = Astro.locals.country?.name || '';
 const config = await getSiteConfig(Astro.locals.country?.code);
 
@@ -54,6 +56,7 @@ const organizationSchema = {
   title={`Sobre Ubikala | Portal Inmobiliario en ${pais}`}
   description={`Conoce Ubikala, el portal que conecta compradores e inquilinos con asesores inmobiliarios en ${pais}. ${stats.totalProperties} propiedades, ${stats.totalAgents} asesores, ${stats.totalCities} ciudades.`}
   keywords={`portal inmobiliario ${pais.toLowerCase()}, sobre ubikala, quienes somos, inmobiliarias ${pais.toLowerCase()}`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} slot="head" />
   <Breadcrumb items={[

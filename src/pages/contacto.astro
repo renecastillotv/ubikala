@@ -2,10 +2,10 @@
 import Layout from '../layouts/Layout.astro';
 import Icon from '../components/Icons.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { useTranslations } from '../i18n';
+import { getAlternateUrls } from '../i18n';
 import { getSiteConfig } from '../lib/config';
 
-const t = useTranslations('es');
+const alternateUrls = getAlternateUrls('/contacto');
 
 // Fetch site config for this country
 const config = await getSiteConfig(Astro.locals.country?.code);
@@ -71,6 +71,7 @@ const faqSchema = {
   title={`Contacto | ${config.company_name}`}
   description={`Contactanos para soporte, consultas o informacion sobre como publicar en ${config.company_name}. Estamos aqui para ayudarte.`}
   keywords={`contacto ubikala, soporte inmobiliario ${pais.toLowerCase()}, ayuda portal inmobiliario`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(contactSchema)} slot="head" />
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} slot="head" />

@@ -3,9 +3,11 @@ import Layout from '../../layouts/Layout.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getSiteConfig } from '../../lib/config';
 import { getGuidesForCountry } from '../../lib/guides-db';
+import { getAlternateUrls } from '../../i18n';
 
 const country = Astro.locals.country;
 const config = await getSiteConfig(country?.code);
+const alternateUrls = getAlternateUrls('/guias');
 const lang = 'es';
 
 const guides = await getGuidesForCountry(country?.code || 'DO', lang);
@@ -32,6 +34,7 @@ const collectionSchema = {
   title={`Guias Inmobiliarias en ${country?.name || 'Latinoamerica'} | ${config.company_name}`}
   description={`Guias y recursos para comprar, vender o invertir en propiedades en ${country?.name || 'Latinoamerica'}. Aprende sobre financiamiento, impuestos, fideicomisos y mas.`}
   keywords={`guias inmobiliarias ${country?.name?.toLowerCase() || ''}, comprar propiedad ${country?.name?.toLowerCase() || ''}, inversion inmobiliaria, impuestos inmobiliarios`}
+  alternateLanguages={alternateUrls}
 >
   <script type="application/ld+json" set:html={JSON.stringify(collectionSchema)} slot="head" />
   <Breadcrumb items={[
