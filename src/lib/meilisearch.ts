@@ -433,8 +433,9 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
 
   const filters: string[] = [];
 
-  // Only show published properties
+  // Only show published properties with complete agent info
   filters.push(`estado_propiedad = "disponible"`);
+  filters.push(`agente_completo = true`);
 
   // Property filters
   if (tipo) filters.push(`tipo = "${tipo}"`);
@@ -488,10 +489,25 @@ export async function searchProperties(options: SearchOptions = {}): Promise<{
     body.facets = facets;
   }
 
-  const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  let result;
+  try {
+    result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  } catch (err: any) {
+    // If agente_completo filter fails (not yet in index), retry without it
+    if (err.message?.includes('agente_completo')) {
+      const fallbackFilters = filters.filter(f => f !== 'agente_completo = true');
+      body.filter = fallbackFilters.join(' AND ');
+      result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+    } else {
+      throw err;
+    }
+  }
 
   const isRental = operacion === 'renta';
   const isSale = operacion === 'venta';
