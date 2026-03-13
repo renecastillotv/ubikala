@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import SearchBox from '../../components/SearchBox.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { type Lang } from '../../i18n';
-import { searchProperties } from '../../lib/meilisearch';
+import { searchProperties, getSectorsWithCounts } from '../../lib/meilisearch';
 import { getPageFAQs, getFAQSchema } from '../../lib/seo-content-db';
 import SEOFAQSection from '../../components/SEOFAQSection.astro';
 import { slugToName, slugToCityNames } from '../../lib/location-utils';
@@ -89,6 +89,13 @@ const pageDescription = `Encuentra propiedades en ${resolvedName}: ${ventaTotal}
 const country = Astro.locals.country;
 const slugLower = (locationSlug || '').toLowerCase();
 const faqs = await getPageFAQs(country.code, 'es', `location:${slugLower}`, pais);
+
+// Get popular sectors in this city
+let popularSectors: Array<{ name: string; slug: string; count: number }> = [];
+try {
+  popularSectors = await getSectorsWithCounts(cityFilter, pais);
+  popularSectors = popularSectors.slice(0, 16);
+} catch { /* ignore */ }
 
 // Get other popular cities for internal linking
 let otherCities: Array<{ name: string; slug: string; count: number }> = [];
@@ -215,6 +222,39 @@ try {
                 {tipo.name}
               </span>
               <span class="text-sm text-gray-500">{tipo.count} en alquiler</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Popular Sectors -->
+  {popularSectors.length > 0 && (
+    <section class="py-12">
+      <div class="container-custom">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-gray-900">Sectores en {resolvedName}</h2>
+            <p class="text-gray-500 text-sm">Explora propiedades por sector</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {popularSectors.map((sector) => (
+            <a
+              href={`/comprar/${locationSlug}/${sector.slug}`}
+              class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-200 transition-all group"
+            >
+              <span class="font-semibold text-gray-900 group-hover:text-amber-600 block">
+                {sector.name}
+              </span>
+              <span class="text-sm text-gray-500">{sector.count} propiedades</span>
             </a>
           ))}
         </div>
