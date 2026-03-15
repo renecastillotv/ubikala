@@ -116,10 +116,8 @@ const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes]
 
       <!-- Agent info overlay on image -->
       {property.agent && (
-        <a
-          href={localizedUrl(property.agent.isUbikalaUser ? `/usuario/${property.agent.slug}` : `/asesor/${property.agent.slug}`, lang)}
+        <div
           class="card-agent-overlay"
-          onclick="event.stopPropagation();"
         >
           <div class="agent-avatar-wrap">
             <img
@@ -140,7 +138,7 @@ const typeLabel = t.propertyTypes[property.type as keyof typeof t.propertyTypes]
               <span class="agent-company"> · {property.agent.parentCompany}</span>
             )}
           </span>
-        </a>
+        </div>
       )}
     </div>
 

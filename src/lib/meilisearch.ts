@@ -955,6 +955,25 @@ export async function getAgentBySlug(slug: string): Promise<Agent | null> {
   return hit ? meiliToAgent(hit) : null;
 }
 
+/**
+ * Count active properties for a given agent slug.
+ */
+export async function getAgentPropertyCount(agentSlug: string): Promise<number> {
+  try {
+    const result = await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/search`, {
+      method: 'POST',
+      body: JSON.stringify({
+        q: '',
+        filter: `agente_slug = "${agentSlug}" AND estado_propiedad = "disponible"`,
+        limit: 0,
+      }),
+    });
+    return result.estimatedTotalHits || 0;
+  } catch {
+    return 0;
+  }
+}
+
 // ============================================================================
 // PLATFORM STATS (counts via MeiliSearch)
 // ============================================================================

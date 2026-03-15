@@ -87,6 +87,12 @@ const datasetSchema = (inventoryCount > 0 || medianPrice > 0) ? {
   description: panorama.narrative?.substring(0, 300) || `Real estate market data: ${panorama.header.title}`,
   url: Astro.url.href,
   temporalCoverage: '2025/..',
+  license: 'https://creativecommons.org/licenses/by/4.0/',
+  creator: {
+    '@type': 'Organization',
+    name: 'Ubíkala',
+    url: 'https://ubikala.com',
+  },
   variableMeasured: [
     ...(medianPrice > 0 ? [{ '@type': 'PropertyValue', name: 'Median Price USD', value: medianPrice, unitCode: 'USD' }] : []),
     ...(pricePerM2 > 0 ? [{ '@type': 'PropertyValue', name: 'Price per m² USD', value: pricePerM2, unitCode: 'USD' }] : []),

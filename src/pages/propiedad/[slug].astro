@@ -6,7 +6,7 @@ import PropertyMap from '../../components/PropertyMap.astro';
 import Icon from '../../components/Icons.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { useTranslations, localizedUrl, getAlternateUrls } from '../../i18n';
-import { getPropertyBySlug, getSimilarProperties, getAgentBySlug, getFeaturedProperties } from '../../lib/meilisearch';
+import { getPropertyBySlug, getSimilarProperties, getAgentBySlug, getFeaturedProperties, getAgentPropertyCount } from '../../lib/meilisearch';
 import PropertyNotFound from '../../components/PropertyNotFound.astro';
 import { getLocationCoordinates, hasValidCoordinates } from '../../lib/location-coordinates';
 import type { Property, Agent } from '../../data/types';
@@ -44,6 +44,12 @@ try {
 
 // Use full agent if available, otherwise use embedded agent from property
 const agent = fullAgent || property?.agent;
+
+// Get real property count for the agent from MeiliSearch
+if (agent?.slug) {
+  const realCount = await getAgentPropertyCount(agent.slug);
+  if (realCount > 0) agent.propertiesCount = realCount;
+}
 
 let fallbackProperties: Property[] = [];
 let mapCoordinates: { lat: number; lng: number; zoom?: number } = { lat: 0, lng: 0, zoom: 10 };
