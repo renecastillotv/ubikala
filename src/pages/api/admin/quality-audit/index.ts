@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
 import { runQualityAudit } from '../../../../lib/quality-audit';
 import type { AuditSummary } from '../../../../lib/quality-audit';
-import { meiliRequest, PROPIEDADES_INDEX } from '../../../../lib/meilisearch';
+
+
+const CRM_API_URL = import.meta.env.CRM_API_URL || 'https://api.denlla.com';
+const UBIKALA_WEBHOOK_SECRET = import.meta.env.UBIKALA_WEBHOOK_SECRET;
 
 // Simple in-memory cache (5 min TTL)
 let cache: { data: AuditSummary; ts: number } | null = null;
@@ -63,13 +66,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (action === 'remove') {
-      // Delete from Ubikala MeiliSearch index
-      await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/documents/${propertyId}`, {
-        method: 'DELETE',
+      // Call crm-api webhook to persistently block the property
+      const reason = body.reason || 'Bloqueada por auditoría de calidad Ubikala';
+      const webhookRes = await fetch(`${CRM_API_URL}/api/webhooks/ubikala/property-block`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ubikala-secret': UBIKALA_WEBHOOK_SECRET || '',
+        },
+        body: JSON.stringify({
+          property_id: propertyId,
+          action: 'block',
+          reason,
+        }),
       });
+
+      if (!webhookRes.ok) {
+        const err = await webhookRes.json().catch(() => ({}));
+        return new Response(JSON.stringify({ error: 'Error al bloquear propiedad', detail: err }), {
+          status: webhookRes.status,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       // Invalidate cache
       cache = null;
-      return new Response(JSON.stringify({ ok: true, message: 'Propiedad eliminada del índice' }), {
+      return new Response(JSON.stringify({ ok: true, message: 'Propiedad bloqueada permanentemente' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
