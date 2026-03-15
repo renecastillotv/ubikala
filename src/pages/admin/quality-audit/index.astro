@@ -1,0 +1,623 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+const user = Astro.locals.user;
+
+if (!user || user.role !== 'admin') {
+  return Astro.redirect('/admin/dashboard');
+}
+---
+
+<AdminLayout title="Auditoría de Calidad">
+  <div class="audit-page">
+    <div class="page-header">
+      <div>
+        <h2>Auditoría de Calidad</h2>
+        <p class="subtitle">Verifica la calidad de todas las propiedades publicadas en Ubikala</p>
+      </div>
+      <button id="run-audit" class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+          <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Ejecutar Auditoría
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row" style="display:none">
+      <div class="stat-card total">
+        <span class="stat-number" id="stat-total">0</span>
+        <span class="stat-label">Total Propiedades</span>
+      </div>
+      <div class="stat-card passing">
+        <span class="stat-number" id="stat-passing">0</span>
+        <span class="stat-label">Sin problemas</span>
+      </div>
+      <div class="stat-card failing">
+        <span class="stat-number" id="stat-failing">0</span>
+        <span class="stat-label">Con errores</span>
+      </div>
+      <div class="stat-card warnings">
+        <span class="stat-number" id="stat-warnings">0</span>
+        <span class="stat-label">Con advertencias</span>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar" id="filters-bar" style="display:none">
+      <select id="filter-severity">
+        <option value="all">Todos</option>
+        <option value="errors">Solo con errores</option>
+        <option value="warnings">Solo advertencias</option>
+        <option value="clean">Sin problemas</option>
+        <option value="duplicates">Posibles duplicados</option>
+      </select>
+      <select id="filter-issue">
+        <option value="all">Todos los problemas</option>
+      </select>
+      <span class="results-count" id="results-count"></span>
+    </div>
+
+    <!-- Loading state -->
+    <div class="loading-state" id="loading-state" style="display:none">
+      <div class="spinner"></div>
+      <p>Analizando propiedades... esto puede tomar unos segundos</p>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+      <h3>Ejecuta la auditoría</h3>
+      <p>Haz clic en "Ejecutar Auditoría" para analizar todas las propiedades publicadas.</p>
+    </div>
+
+    <!-- Results table -->
+    <div class="results-container" id="results-container" style="display:none">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Propiedad</th>
+            <th>Tipo</th>
+            <th>Precio</th>
+            <th>Ciudad</th>
+            <th>Agente</th>
+            <th>Score</th>
+            <th>Problemas</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Issue breakdown -->
+    <div class="breakdown-section" id="breakdown-section" style="display:none">
+      <h3>Resumen de Problemas</h3>
+      <div class="breakdown-grid" id="breakdown-grid"></div>
+    </div>
+  </div>
+
+  <style>
+    .audit-page {
+      max-width: 1200px;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+    .page-header h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0 0 4px;
+    }
+    .subtitle {
+      font-size: 0.8125rem;
+      color: #6B7280;
+      margin: 0;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--ubikala-olive);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--ubikala-olive-dark); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-icon { width: 18px; height: 18px; }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 4px solid #E5E7EB;
+    }
+    .stat-card.total { border-left-color: #6366F1; }
+    .stat-card.passing { border-left-color: #10B981; }
+    .stat-card.failing { border-left-color: #EF4444; }
+    .stat-card.warnings { border-left-color: #F59E0B; }
+    .stat-number {
+      display: block;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #111827;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Filters */
+    .filters-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+    }
+    .filters-bar select {
+      padding: 6px 12px;
+      border: 1px solid #D1D5DB;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      color: #374151;
+      background: #fff;
+    }
+    .results-count {
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #6B7280;
+    }
+
+    /* Loading */
+    .loading-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6B7280;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #E5E7EB;
+      border-top-color: var(--ubikala-olive);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6B7280;
+    }
+    .empty-state svg {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      color: #D1D5DB;
+    }
+    .empty-state h3 {
+      font-size: 1rem;
+      color: #374151;
+      margin: 0 0 8px;
+    }
+
+    /* Table */
+    .results-container {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .audit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    .audit-table thead {
+      background: #F9FAFB;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    .audit-table th {
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 600;
+      color: #6B7280;
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .audit-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #F3F4F6;
+      color: #374151;
+      vertical-align: top;
+    }
+    .audit-table tr:last-child td { border-bottom: none; }
+    .audit-table tr:hover { background: #FAFAFA; }
+
+    /* Property cell */
+    .prop-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 280px;
+    }
+    .prop-thumb {
+      width: 48px;
+      height: 36px;
+      border-radius: 6px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #F3F4F6;
+    }
+    .prop-title {
+      font-weight: 500;
+      color: #111827;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 200px;
+      display: block;
+    }
+    .prop-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .prop-title a:hover { color: var(--ubikala-olive); }
+
+    /* Score badge */
+    .score-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 28px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.75rem;
+    }
+    .score-good { background: #D1FAE5; color: #065F46; }
+    .score-ok { background: #FEF3C7; color: #92400E; }
+    .score-bad { background: #FEE2E2; color: #991B1B; }
+
+    /* Issue badges */
+    .issue-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .issue-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      cursor: default;
+    }
+    .issue-error { background: #FEE2E2; color: #991B1B; }
+    .issue-warning { background: #FEF3C7; color: #92400E; }
+
+    /* Expandable row */
+    .expand-row td {
+      padding: 0 16px 16px 74px;
+      border-bottom: 1px solid #E5E7EB;
+      background: #FAFAFA;
+    }
+    .expand-row td ul {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .expand-row td li {
+      padding: 4px 0;
+      font-size: 0.75rem;
+      color: #4B5563;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .expand-row td li .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .expand-row td li .dot-error { background: #EF4444; }
+    .expand-row td li .dot-warning { background: #F59E0B; }
+
+    /* Duplicates section in expanded row */
+    .dup-section {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #D1D5DB;
+    }
+    .dup-section strong {
+      font-size: 0.6875rem;
+      color: #6B7280;
+      text-transform: uppercase;
+    }
+    .dup-item {
+      font-size: 0.75rem;
+      color: #4B5563;
+      padding: 3px 0;
+    }
+    .dup-item a { color: var(--ubikala-olive); text-decoration: none; }
+    .dup-item a:hover { text-decoration: underline; }
+    .dup-score {
+      display: inline-block;
+      background: #FEF3C7;
+      color: #92400E;
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 6px;
+    }
+
+    /* Breakdown */
+    .breakdown-section {
+      margin-bottom: 32px;
+    }
+    .breakdown-section h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin: 0 0 12px;
+    }
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 10px;
+    }
+    .breakdown-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+    }
+    .breakdown-item .code {
+      color: #4B5563;
+      font-weight: 500;
+    }
+    .breakdown-item .count {
+      font-weight: 700;
+      color: #111827;
+      background: #F3F4F6;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .page-header { flex-direction: column; gap: 12px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .filters-bar { flex-wrap: wrap; }
+      .audit-table { font-size: 0.75rem; }
+      .prop-cell { max-width: 160px; }
+    }
+  </style>
+
+  <script>
+    const ISSUE_LABELS: Record<string, string> = {
+      TITULO_CORTO: 'Título corto',
+      DESCRIPCION_CORTA: 'Descripción corta',
+      FOTOS_INSUFICIENTES: 'Pocas fotos',
+      PRECIO_FALTANTE: 'Sin precio',
+      PRECIO_VENTA_BAJO: 'Precio venta bajo',
+      PRECIO_VENTA_ALTO: 'Precio venta alto',
+      PRECIO_RENTA_BAJO: 'Precio renta bajo',
+      PRECIO_RENTA_ALTO: 'Precio renta alto',
+      UBICACION_INCOMPLETA: 'Ubicación incompleta',
+      SIN_AGENTE: 'Sin agente',
+      AGENTE_SIN_CONTACTO: 'Agente sin contacto',
+      SIN_IMAGEN_PRINCIPAL: 'Sin imagen principal',
+      POSIBLE_DUPLICADO: 'Posible duplicado',
+    };
+
+    interface Issue { code: string; message: string; severity: 'error' | 'warning'; }
+    interface Duplicate { id: string; titulo: string; score: number; }
+    interface Result {
+      id: string; titulo: string; slug: string; imagen: string | null;
+      tipo: string; operacion: string; precio: number | null; moneda: string;
+      ciudad: string | null; sector: string | null;
+      agente_nombre: string | null; agente_slug: string | null;
+      score: number; issues: Issue[]; duplicates: Duplicate[];
+    }
+    interface AuditData {
+      totalProperties: number; passing: number; failing: number; withWarnings: number;
+      issueBreakdown: Record<string, number>; results: Result[]; executedAt: string;
+    }
+
+    let auditData: AuditData | null = null;
+
+    const btn = document.getElementById('run-audit') as HTMLButtonElement;
+    const statsRow = document.getElementById('stats-row')!;
+    const filtersBar = document.getElementById('filters-bar')!;
+    const loadingState = document.getElementById('loading-state')!;
+    const emptyState = document.getElementById('empty-state')!;
+    const resultsContainer = document.getElementById('results-container')!;
+    const resultsBody = document.getElementById('results-body')!;
+    const breakdownSection = document.getElementById('breakdown-section')!;
+    const breakdownGrid = document.getElementById('breakdown-grid')!;
+    const filterSeverity = document.getElementById('filter-severity') as HTMLSelectElement;
+    const filterIssue = document.getElementById('filter-issue') as HTMLSelectElement;
+    const resultsCount = document.getElementById('results-count')!;
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Analizando...';
+      emptyState.style.display = 'none';
+      loadingState.style.display = 'block';
+      resultsContainer.style.display = 'none';
+      statsRow.style.display = 'none';
+      filtersBar.style.display = 'none';
+      breakdownSection.style.display = 'none';
+
+      try {
+        const refresh = auditData ? 'true' : 'false';
+        const res = await fetch(`/api/admin/quality-audit?refresh=${refresh}`);
+        if (!res.ok) throw new Error('Error en la auditoría');
+        auditData = await res.json();
+        renderAll();
+      } catch (err) {
+        loadingState.innerHTML = '<p style="color:#EF4444">Error al ejecutar la auditoría. Intenta de nuevo.</p>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Re-ejecutar`;
+      }
+    });
+
+    filterSeverity.addEventListener('change', renderTable);
+    filterIssue.addEventListener('change', renderTable);
+
+    function renderAll() {
+      if (!auditData) return;
+      loadingState.style.display = 'none';
+
+      // Stats
+      document.getElementById('stat-total')!.textContent = String(auditData.totalProperties);
+      document.getElementById('stat-passing')!.textContent = String(auditData.passing);
+      document.getElementById('stat-failing')!.textContent = String(auditData.failing);
+      document.getElementById('stat-warnings')!.textContent = String(auditData.withWarnings);
+      statsRow.style.display = 'grid';
+
+      // Issue filter dropdown
+      filterIssue.innerHTML = '<option value="all">Todos los problemas</option>';
+      for (const [code, count] of Object.entries(auditData.issueBreakdown).sort((a, b) => b[1] - a[1])) {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `${ISSUE_LABELS[code] || code} (${count})`;
+        filterIssue.appendChild(opt);
+      }
+      filtersBar.style.display = 'flex';
+
+      // Breakdown
+      breakdownGrid.innerHTML = '';
+      for (const [code, count] of Object.entries(auditData.issueBreakdown).sort((a, b) => b[1] - a[1])) {
+        breakdownGrid.innerHTML += `<div class="breakdown-item"><span class="code">${ISSUE_LABELS[code] || code}</span><span class="count">${count}</span></div>`;
+      }
+      breakdownSection.style.display = 'block';
+
+      renderTable();
+    }
+
+    function renderTable() {
+      if (!auditData) return;
+
+      const severity = filterSeverity.value;
+      const issue = filterIssue.value;
+
+      let filtered = auditData.results;
+
+      if (severity === 'errors') filtered = filtered.filter(r => r.issues.some(i => i.severity === 'error'));
+      else if (severity === 'warnings') filtered = filtered.filter(r => r.issues.length > 0 && !r.issues.some(i => i.severity === 'error'));
+      else if (severity === 'clean') filtered = filtered.filter(r => r.issues.length === 0);
+      else if (severity === 'duplicates') filtered = filtered.filter(r => r.duplicates.length > 0);
+
+      if (issue !== 'all') filtered = filtered.filter(r => r.issues.some(i => i.code === issue));
+
+      resultsCount.textContent = `${filtered.length} de ${auditData.results.length} propiedades`;
+
+      resultsBody.innerHTML = '';
+      for (const r of filtered) {
+        const scoreClass = r.score >= 80 ? 'score-good' : r.score >= 50 ? 'score-ok' : 'score-bad';
+        const errorCount = r.issues.filter(i => i.severity === 'error').length;
+        const warnCount = r.issues.filter(i => i.severity === 'warning').length;
+        const precio = r.precio ? `${r.moneda} ${r.precio.toLocaleString()}` : '—';
+        const img = r.imagen || '/images/property-placeholder.svg';
+
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.innerHTML = `
+          <td>
+            <div class="prop-cell">
+              <img src="${img}" class="prop-thumb" alt="" loading="lazy" />
+              <span class="prop-title"><a href="/propiedad/${r.slug}" target="_blank">${escapeHtml(r.titulo)}</a></span>
+            </div>
+          </td>
+          <td>${r.tipo}<br><small style="color:#9CA3AF">${r.operacion}</small></td>
+          <td>${precio}</td>
+          <td>${r.ciudad || '—'}<br><small style="color:#9CA3AF">${r.sector || ''}</small></td>
+          <td>${r.agente_nombre || '<span style="color:#EF4444">Sin agente</span>'}</td>
+          <td><span class="score-badge ${scoreClass}">${r.score}</span></td>
+          <td>
+            <div class="issue-badges">
+              ${errorCount > 0 ? `<span class="issue-badge issue-error">${errorCount} error${errorCount > 1 ? 'es' : ''}</span>` : ''}
+              ${warnCount > 0 ? `<span class="issue-badge issue-warning">${warnCount} aviso${warnCount > 1 ? 's' : ''}</span>` : ''}
+              ${r.issues.length === 0 ? '<span class="issue-badge" style="background:#D1FAE5;color:#065F46">OK</span>' : ''}
+            </div>
+          </td>
+        `;
+
+        // Create expandable detail row
+        const expandTr = document.createElement('tr');
+        expandTr.className = 'expand-row';
+        expandTr.style.display = 'none';
+
+        let detailHtml = '<td colspan="7"><ul>';
+        for (const iss of r.issues) {
+          const dotClass = iss.severity === 'error' ? 'dot-error' : 'dot-warning';
+          detailHtml += `<li><span class="dot ${dotClass}"></span>${escapeHtml(iss.message)}</li>`;
+        }
+        detailHtml += '</ul>';
+
+        if (r.duplicates.length > 0) {
+          detailHtml += '<div class="dup-section"><strong>Posibles duplicados:</strong>';
+          for (const dup of r.duplicates) {
+            detailHtml += `<div class="dup-item">${escapeHtml(dup.titulo)} <span class="dup-score">${dup.score}% similar</span></div>`;
+          }
+          detailHtml += '</div>';
+        }
+        detailHtml += '</td>';
+        expandTr.innerHTML = detailHtml;
+
+        tr.addEventListener('click', () => {
+          expandTr.style.display = expandTr.style.display === 'none' ? '' : 'none';
+        });
+
+        resultsBody.appendChild(tr);
+        resultsBody.appendChild(expandTr);
+      }
+
+      resultsContainer.style.display = 'block';
+    }
+
+    function escapeHtml(text: string): string {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</AdminLayout>

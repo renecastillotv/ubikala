@@ -22,6 +22,7 @@ const navItems = [
   ...(user?.role === 'admin' ? [{ href: '/admin/messages', label: 'Mensajes', icon: 'mail' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/activity', label: 'Actividad', icon: 'activity' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/seo-content', label: 'Contenido SEO', icon: 'content' }] : []),
+  ...(user?.role === 'admin' ? [{ href: '/admin/quality-audit', label: 'Auditoría', icon: 'audit' }] : []),
   ...(user?.role === 'admin' ? [{ href: '/admin/site-config', label: 'Ubikala.com', icon: 'globe' }] : []),
 ];
 ---
@@ -66,12 +67,14 @@ const navItems = [
       .sidebar {
         width: 260px;
         background: linear-gradient(135deg, var(--ubikala-olive) 0%, var(--ubikala-olive-dark) 100%);
-        min-height: 100vh;
+        height: 100vh;
         position: fixed;
         left: 0;
         top: 0;
         color: white;
         padding: 1.5rem 0;
+        display: flex;
+        flex-direction: column;
       }
       .logo {
         padding: 0 1.5rem 1.5rem;
@@ -104,11 +107,11 @@ const navItems = [
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.875rem 1.5rem;
+        padding: 0.625rem 1.5rem;
         color: rgba(255,255,255,0.7);
         text-decoration: none;
         transition: all 0.2s;
-        font-size: 0.9375rem;
+        font-size: 0.875rem;
       }
       .nav-item:hover {
         background: rgba(255,255,255,0.1);
@@ -297,9 +300,20 @@ const navItems = [
         display: flex;
         flex-direction: column;
         height: 100%;
+        overflow: hidden;
       }
       .sidebar nav {
         flex: 1;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,0.2) transparent;
+      }
+      .sidebar nav::-webkit-scrollbar {
+        width: 4px;
+      }
+      .sidebar nav::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.2);
+        border-radius: 4px;
       }
       @media (max-width: 1024px) {
         .sidebar {
@@ -337,6 +351,7 @@ const navItems = [
                 {item.icon === 'verify' && <><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></>}
                 {item.icon === 'activity' && <path d="M22 12h-4l-3 9L9 3l-3 9H2" />}
                 {item.icon === 'content' && <><path d="M4 6h16M4 12h16M4 18h10" /><path d="M20 16l2 2-2 2" /></>}
+                {item.icon === 'audit' && <><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></>}
                 {item.icon === 'globe' && <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>}
                 {item.icon === 'webhook' && <><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>}
                 {item.icon === 'account' && <><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M6 12h12M6 16h8" /></>}

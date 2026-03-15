@@ -13,7 +13,7 @@ import { toSlug } from './slug-utils';
 const MEILI_HOST = import.meta.env.MEILISEARCH_HOST || process.env.MEILISEARCH_HOST || 'https://search.ubikala.com';
 const MEILI_KEY = import.meta.env.MEILISEARCH_API_KEY || process.env.MEILISEARCH_API_KEY || '';
 
-const PROPIEDADES_INDEX = 'propiedades';
+export const PROPIEDADES_INDEX = 'propiedades';
 const ASESORES_INDEX = 'asesores';
 
 // Dedicated Ubikala MeiliSearch — no portal filter needed, all docs belong to Ubikala
@@ -182,7 +182,7 @@ const specMap: Record<string, PropertyType> = {
 // HTTP CLIENT
 // ============================================================================
 
-async function meiliRequest(path: string, options: RequestInit = {}): Promise<any> {
+export async function meiliRequest(path: string, options: RequestInit = {}): Promise<any> {
   const url = `${MEILI_HOST}${path}`;
   const response = await fetch(url, {
     ...options,
