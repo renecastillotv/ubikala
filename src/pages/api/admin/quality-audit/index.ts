@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { runQualityAudit } from '../../../../lib/quality-audit';
 import type { AuditSummary } from '../../../../lib/quality-audit';
+import { meiliRequest, PROPIEDADES_INDEX } from '../../../../lib/meilisearch';
 
 // Simple in-memory cache (5 min TTL)
 let cache: { data: AuditSummary; ts: number } | null = null;
@@ -35,6 +36,59 @@ export const GET: APIRoute = async ({ locals, url }) => {
   } catch (error) {
     console.error('Error running quality audit:', error);
     return new Response(JSON.stringify({ error: 'Error al ejecutar auditoría' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const user = locals.user;
+  if (!user || user.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const { propertyId, action } = body;
+
+    if (!propertyId || !action) {
+      return new Response(JSON.stringify({ error: 'propertyId y action requeridos' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'remove') {
+      // Delete from Ubikala MeiliSearch index
+      await meiliRequest(`/indexes/${PROPIEDADES_INDEX}/documents/${propertyId}`, {
+        method: 'DELETE',
+      });
+      // Invalidate cache
+      cache = null;
+      return new Response(JSON.stringify({ ok: true, message: 'Propiedad eliminada del índice' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'keep') {
+      return new Response(JSON.stringify({ ok: true, message: 'Propiedad marcada como revisada' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: 'Acción no válida' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error processing audit action:', error);
+    return new Response(JSON.stringify({ error: 'Error al procesar acción' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
